@@ -66,9 +66,28 @@ pnpm start   # 需要先构建；由 Node 同时提供 API 与静态前端
 
 ## Docker Compose 部署
 
+GitHub Actions 会在 `main` 分支推送时自动构建并发布镜像，默认标签为 `latest`：
+
+```bash
+docker pull ghcr.io/akarinliu/steamgames-monitor:latest
+```
+
+直接用镜像运行：
+
 ```bash
 cp .env.example .env
 # 填写 APP_SECRET、PUBLIC_BASE_URL（公网 HTTPS 地址）、COOKIE_SECURE=1、TRUST_PROXY=1
+docker run -d --name steam-monitor \
+  --env-file .env \
+  -p 8787:8787 \
+  -v sgm-data:/data \
+  --restart unless-stopped \
+  ghcr.io/akarinliu/steamgames-monitor:latest
+```
+
+本地构建 Compose：
+
+```bash
 docker compose up -d --build
 ```
 
