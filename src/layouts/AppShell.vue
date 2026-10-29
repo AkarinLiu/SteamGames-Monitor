@@ -1,0 +1,103 @@
+<script setup lang="ts">
+import { computed, ref, watch } from 'vue'
+import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
+import { APP_NAME } from '@shared/constants'
+import { useSessionStore } from '@/stores/session'
+import { useToastStore } from '@/stores/toast'
+
+const route = useRoute()
+const router = useRouter()
+const session = useSessionStore()
+const toast = useToastStore()
+const menuOpen = ref(false)
+
+const pageTitle = computed(() => (route.meta.title as string | undefined) ?? '')
+const pageSubtitle = computed(() => (route.meta.subtitle as string | undefined) ?? '')
+
+watch(
+  () => route.fullPath,
+  () => {
+    menuOpen.value = false
+  },
+)
+
+async function logout(): Promise<void> {
+  try {
+    await session.logout()
+    toast.success('已退出登录')
+    await router.replace({ name: 'login' })
+  } catch {
+    toast.error('退出失败，请重试')
+  }
+}
+</script>
+
+<template>
+  <div class="app-shell">
+    <aside class="app-sidebar" :class="{ open: menuOpen }">
+      <RouterLink :to="{ name: 'dashboard' }" class="brand">
+        <span class="brand-mark">S</span>
+        <span>{{ APP_NAME }}</span>
+      </RouterLink>
+
+      <div class="nav-section">监控</div>
+      <RouterLink :to="{ name: 'dashboard' }" class="nav-link">概览</RouterLink>
+      <RouterLink :to="{ name: 'monitors' }" class="nav-link">监控项</RouterLink>
+      <RouterLink :to="{ name: 'events' }" class="nav-link">事件记录</RouterLink>
+
+      <div class="nav-section">通知与机器人</div>
+      <RouterLink :to="{ name: 'channels' }" class="nav-link">通知渠道</RouterLink>
+      <RouterLink :to="{ name: 'bots' }" class="nav-link">指令机器人</RouterLink>
+
+      <template v-if="session.isAdmin">
+        <div class="nav-section">管理</div>
+        <RouterLink :to="{ name: 'admin-users' }" class="nav-link">用户管理</RouterLink>
+        <RouterLink :to="{ name: 'admin-system' }" class="nav-link">系统状态</RouterLink>
+      </template>
+
+      <div class="nav-section">其他</div>
+      <RouterLink :to="{ name: 'settings' }" class="nav-link">个人设置</RouterLink>
+      <RouterLink :to="{ name: 'help' }" class="nav-link">帮助</RouterLink>
+
+      <div class="sidebar-spacer" />
+      <div class="sidebar-footer">
+        <div>
+          <div style="color: var(--color-text-strong)">{{ session.user?.displayName }}</div>
+          <div class="faint">@{{ session.user?.username }}</div>
+        </div>
+        <button class="btn btn-sm" type="button" @click="logout">退出登录</button>
+      </div>
+    </aside>
+
+    <div class="app-main">
+      <header class="app-header">
+        <div class="inline">
+          <button
+            class="btn btn-sm mobile-only"
+            type="button"
+            aria-label="打开菜单"
+            @click="menuOpen = !menuOpen"
+          >
+            菜单
+          </button>
+          <div>
+            <div style="color: var(--color-text-strong); font-weight: 600">{{ pageTitle }}</div>
+            <div v-if="pageSubtitle" class="faint small">{{ pageSubtitle }}</div>
+          </div>
+        </div>
+        <div class="inline">
+          <span v-if="session.user?.region" class="badge badge-neutral">
+            {{ session.user.region.toUpperCase() }} / {{ session.user.language }}
+          </span>
+          <span v-if="session.isAdmin" class="badge badge-accent">管理员</span>
+        </div>
+      </header>
+
+      <main class="app-content">
+        <RouterView />
+      </main>
+    </div>
+
+    <div v-if="menuOpen" class="mobile-only" style="position: fixed; inset: 0; z-index: 18" @click="menuOpen = false" />
+  </div>
+</template>

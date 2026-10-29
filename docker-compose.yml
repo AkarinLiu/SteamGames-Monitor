@@ -1,0 +1,14 @@
+services:
+  steam-monitor:
+    build: .
+    image: steamgames-monitor:latest
+    env_file: .env
+    ports:
+      - '8787:8787'
+    volumes:
+      - sgm-data:/data
+    restart: unless-stopped
+    stop_grace_period: 20s
+
+volumes:
+  sgm-data:

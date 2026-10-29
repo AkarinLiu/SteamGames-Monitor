@@ -1,0 +1,45 @@
+:root {
+  color-scheme: dark;
+
+  --color-bg: #1b2838;
+  --color-bg-deep: #171a21;
+  --color-panel: #16202d;
+  --color-panel-raised: #1f2f42;
+  --color-panel-hover: #2a3f54;
+  --color-border: #2a475e;
+  --color-border-strong: #3d6a8f;
+
+  --color-text: #c7d5e0;
+  --color-text-strong: #ffffff;
+  --color-muted: #8f98a0;
+  --color-faint: #6b7785;
+
+  --color-accent: #66c0f4;
+  --color-accent-strong: #1a9fff;
+  --color-accent-soft: rgba(102, 192, 244, 0.14);
+
+  --color-green: #a4d007;
+  --color-green-bg: #4c6b22;
+  --color-green-soft: rgba(164, 208, 7, 0.14);
+
+  --color-warning: #e5a00d;
+  --color-warning-soft: rgba(229, 160, 13, 0.14);
+  --color-danger: #e5554b;
+  --color-danger-soft: rgba(229, 85, 75, 0.14);
+  --color-info-soft: rgba(102, 192, 244, 0.14);
+
+  --radius-sm: 3px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+
+  --shadow-panel: 0 2px 12px rgba(0, 0, 0, 0.35);
+  --shadow-pop: 0 8px 32px rgba(0, 0, 0, 0.5);
+
+  --font-sans:
+    'Motiva Sans', 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-mono: 'Cascadia Code', 'JetBrains Mono', Consolas, monospace;
+
+  --sidebar-width: 224px;
+  --header-height: 56px;
+  --content-max: 1320px;
+}

@@ -1,0 +1,214 @@
+# SteamGames-Monitor
+
+自托管的多用户 Steam 游戏 / DLC 销售状态监控系统。使用 SQLite 存储数据，监控**即将停售 / 下架、打折、发售**，并通过企业微信群机器人、飞书机器人、钉钉机器人或 SMTP 邮件通知。
+同一个进程同时提供 Web 界面、REST API、Steam 轮询调度、通知投递队列和三平台回调，适合单机 Docker Compose 部署。
+
+## 功能
+
+- **多用户独立账号**：管理员创建账号，每个用户拥有独立的监控项、事件、通知渠道和指令机器人，数据严格隔离。
+- **监控项**：支持 appid、商店链接、名称搜索；支持批量导入基础游戏的全部 DLC。
+- **状态变化**：发售（coming soon 翻转）、促销开始 / 变化 / 结束、原价变化、不可用（下架）与恢复。
+- **下架判定**：商店可购状态连续两次翻转才确认下架；配合 Steam 新闻关键词做提前预警（启发式，仅作参考）。
+- **通知渠道**：企业微信群机器人、飞书自定义机器人、钉钉自定义机器人、SMTP 邮件；失败自动重试。
+- **指令机器人**：飞书 / 钉钉 / 企业微信原生回调，支持 `/add`、`/list`、`/price`、`/check`、`/pause`、`/resume`、`/remove`、`/adddlc`、`/events`、`/cancel`；微信 ClawBot 与 QQ Bot 正在按平台官方协议接入。
+- **运维友好**：健康检查、Docker 镜像、数据库在线备份、可配置的数据保留策略。
+
+## 技术栈
+
+- Node.js 24 + TypeScript（ESM）、Hono、`node:sqlite`（WAL）、Zod、Nodemailer
+- Vue 3 + Vite + Pinia + Vue Router（构建产物由 Node 进程直接托管）
+- 测试：Vitest（单元）、Playwright（端到端）
+
+## 快速开始（本地开发）
+
+要求 Node.js `^22.18 || >=24.12` 与 pnpm。
+
+```bash
+pnpm install
+cp .env.example .env
+# 编辑 .env：至少填写 APP_SECRET（>=32 字符）
+openssl rand -base64 48
+pnpm dev
+```
+
+- Web 界面：http://localhost:5173
+- 后端 API：http://localhost:8787
+
+首次启动时直接打开 Web 界面创建第一个管理员账号，并选择区域、语言和时区。**区域没有默认值**，未完成初始化的账号不能添加监控项。初始化接口在创建首个管理员后自动失效；由于不再需要初始化令牌，请勿在未初始化状态下把实例暴露到公网，部署后应立即完成初始化。
+
+### 生产构建
+
+```bash
+pnpm build   # 类型检查 + 构建前端 dist/ + 服务端 dist-server/index.js
+pnpm start   # 需要先构建；由 Node 同时提供 API 与静态前端
+```
+
+## 环境变量
+
+| 变量 | 说明 |
+| --- | --- |
+| `NODE_ENV` | `production` 时强制校验 `APP_SECRET` |
+| `HOST` / `PORT` | 监听地址与端口，默认 `0.0.0.0:8787` |
+| `DATA_DIR` | 数据目录，默认 `./data`（Docker 中为 `/data`） |
+| `DATABASE_PATH` | SQLite 文件路径，默认 `${DATA_DIR}/steam-monitor.db` |
+| `APP_SECRET` | 必填，≥32 字符。用于派生密钥加密渠道 / 机器人凭据；**丢失后已保存的密钥无法解密** |
+| `PUBLIC_BASE_URL` | 对外访问地址，用于生成机器人回调地址与 CSRF 校验 |
+| `TRUSTED_ORIGINS` | 额外允许的 Origin，逗号分隔（开发时含 `http://localhost:5173`） |
+| `COOKIE_SECURE` | HTTPS 部署时设为 `1` |
+| `TRUST_PROXY` | 反向代理层数 |
+| `MAX_TOTAL_MONITORS` | 全局监控项上限，默认 2000 |
+| `ALLOW_INSECURE_WEBHOOKS` | 仅测试时设为 `1`，允许 http / 内网 Webhook |
+| `ENABLE_DEV_COMMANDS` / `DEV_COMMAND_TOKEN` | 开发用 `/api/dev/command` 模拟指令 |
+| `LOG_LEVEL` | `debug` / `info` / `warn` / `error` |
+| `STEAM_STORE_BASE_URL` / `STEAM_API_BASE_URL` | 可选，覆盖 Steam 端点（测试 / 代理用） |
+
+代理环境可使用 `HTTPS_PROXY`、`NODE_USE_ENV_PROXY=1` 与 `NO_PROXY`。若系统证书链不被 Node 识别，服务启动时会合并系统 CA（`lib/tls.ts`）。
+
+## Docker Compose 部署
+
+```bash
+cp .env.example .env
+# 填写 APP_SECRET、PUBLIC_BASE_URL（公网 HTTPS 地址）、COOKIE_SECURE=1、TRUST_PROXY=1
+docker compose up -d --build
+```
+
+- 数据持久化在命名卷 `sgm-data`（挂载到容器 `/data`）。
+- 容器内以非 root 用户运行，内置 `HEALTHCHECK` 访问 `/api/health`。
+- 更新镜像：`docker compose up -d --build`；停止：`docker compose down`（数据保留）。
+- 反向代理需注意：
+  - 必须将 `/webhooks/*` 的**原始请求体**原样转发（不要改写或重新序列化）。
+  - `client_max_body_size 1m`，读取超时 ≥10s。
+  - 回调地址必须公网 HTTPS 可达，否则飞书 / 钉钉 / 企业微信无法投递。
+
+## 通知渠道配置
+
+在“通知渠道”页面新增渠道：
+
+- **企业微信群机器人**：群设置 → 群机器人 → 添加机器人，复制 Webhook。
+- **飞书自定义机器人**：群设置 → 群机器人 → 自定义机器人；如开启签名校验，请同时填写签名密钥。
+- **钉钉自定义机器人**：群设置 → 智能群助手 → 添加机器人；如开启加签，请同时填写加签密钥。
+- **SMTP**：填写服务器、端口、SSL/TLS、发件人与收件人（多个地址用逗号分隔）。
+
+密钥使用 `APP_SECRET` 派生的 AES-256-GCM 加密存储；API 不会回传明文，编辑时留空表示保留原值。
+
+“订阅事件”不勾选表示接收除“检查异常”外的全部事件。
+
+## 指令机器人接入
+
+在“指令机器人”页面创建机器人，把回调地址填入对应平台：
+
+| 平台 | 回调地址 | 说明 |
+| --- | --- | --- |
+| 飞书 | `POST /webhooks/feishu/<slug>` | 应用需开启机器人能力，订阅 `im.message.receive_v1`，申请消息读取与发送权限；支持 Encrypt Key / Verification Token |
+| 钉钉 | `POST /webhooks/dingtalk/<slug>` | 机器人使用 Outgoing 回调，填写 App Secret 校验签名；回复走会话 Webhook |
+| 企业微信 | `GET/POST /webhooks/wecom/<slug>` | 自建应用回调，需要 Token、EncodingAESKey、CorpID、AgentID；群聊 @ 能力受企业微信管理端限制 |
+
+机器人的指令始终作用于**机器人所属账号**的数据。所有者平台 ID（`ownerPlatformUserId`）隐式拥有管理员权限；其他平台用户需加入允许名单，可选择 `viewer`（只读）或 `admin`。
+
+微信 ClawBot（iLink）与 QQ Bot 接入正在按平台官方协议集成，完成后会出现在同一页面。
+
+### 指令
+
+```
+/help
+/add <appid | 商店链接 | 名称> [--discount N] [--note 文本] [--force]
+/adddlc <基础游戏> [--max 50]
+/remove <id | appid>
+/pause <id | appid>
+/resume <id | appid>
+/check <id | appid | 名称>
+/price <id | appid | 名称>
+/list [--all] [--sale] [--paused] [--page N]
+/events [--item id] [--limit 10]
+/cancel
+```
+
+支持全角 `／`、`/add@bot`、引号参数与 `--flag=value`。
+
+## 区域与重基线
+
+区域是用户级设置。修改区域时会把该用户已有监控项全部重新基线化：清空促销锚点、重置状态，首轮检查只记录快照、不产生事件，避免因区域价格差异造成误报。其他用户不受影响。
+
+## 重置密码
+
+在服务器终端执行（无需登录 Web）：
+
+```bash
+pnpm reset-password <用户名>
+pnpm reset-password <用户名> --password 'new-password-123'
+pnpm reset-password <用户名> --enable
+```
+
+Docker 部署：
+
+```bash
+docker compose exec steam-monitor node dist-server/reset-password.js <用户名>
+```
+
+- 不指定 `--password` 时会生成随机临时密码并打印到终端。
+- 重置后 `must_change_password=1`，用户下次登录必须修改密码；该用户的现有会话全部失效。
+- 被禁用的账号默认保持禁用；加 `--enable` 可同时启用。
+- 命令直接操作 SQLite，不依赖 `APP_SECRET`；通过 `DATA_DIR` / `DATABASE_PATH` 定位数据库。
+
+## 备份与恢复
+
+```bash
+pnpm backup
+```
+
+脚本使用 `VACUUM INTO` 在 `${DATA_DIR}/backups/` 生成 `steam-monitor-YYYYMMDD-HHmm.db`，默认保留最近 14 份。Docker 中可执行：
+
+```bash
+docker compose exec steam-monitor node_modules/.bin/tsx scripts/backup.ts
+```
+
+恢复步骤：停止容器 → 用备份文件替换 `steam-monitor.db` → 删除同目录下的 `-wal` / `-shm` 文件 → 启动容器。**请同时备份 `.env` 中的 `APP_SECRET`**，否则已加密的渠道与机器人密钥无法恢复，需要重新填写。
+
+## 测试
+
+```bash
+pnpm type-check
+pnpm lint
+pnpm test:unit
+pnpm test:e2e   # 需要先安装 Playwright 浏览器：pnpm exec playwright install chromium
+```
+
+端到端测试会：
+
+1. 在 `data/e2e` 创建全新数据库，启动后端（4180）、Vite（4181）和 mock 服务（9998）；
+2. 使用 mock Steam 接口驱动发售、促销、下架、恢复全流程；
+3. 校验企业微信通知、SMTP 邮件、飞书 / 钉钉 / 企业微信回调与指令、多用户隔离。
+
+`scripts/mock-receiver.ts` 也可单独运行，用于本地联调：
+
+```bash
+pnpm mock:receiver
+# 通知 Webhook：http://127.0.0.1:9999/<任意路径>
+# SMTP sink：127.0.0.1:1025
+# 捕获结果：GET http://127.0.0.1:9999/_requests
+# 模拟 Steam：http://127.0.0.1:9999/steam-store 与 /steam-api
+```
+
+配合 `ALLOW_INSECURE_WEBHOOKS=1` 与 `STEAM_STORE_BASE_URL` / `STEAM_API_BASE_URL` 即可完全离线联调。
+
+## 已知限制
+
+- Steam 商店接口为非官方接口，可能变更或限流；无法区分“已下架 / 区域不可售 / 非法 appid”，系统使用“曾经可售 + 连续两次不可用”降低误报。
+- 新闻关键词预警只覆盖 Steam 新闻 / 公告，属于启发式提示，需人工确认。
+- 无法获知精确促销结束时间，`sale_end` 依赖下一次轮询发现折扣归零。
+- 企业微信群机器人只能发送不能接收；自建应用的群聊 @ 能力受管理端策略限制，双向指令建议优先使用飞书或钉钉。
+- 微信 ClawBot（iLink）与 QQ Bot 正在按平台官方协议接入。
+- 单实例部署、SQLite 单写者；不提供高可用。
+- 用户区域不同会导致同一游戏按不同区域缓存并分别抓取。
+
+## 目录结构
+
+```
+server/            Hono 应用、SQLite、Steam 采集、调度、通知、平台回调、指令
+shared/            前后端共享类型、常量与 Zod schema
+src/               Vue 前端
+scripts/           mock 服务、备份、E2E 启动脚本
+e2e/               Playwright 端到端测试
+Dockerfile         多阶段构建（构建前端与服务端 → 运行时仅生产依赖）
+docker-compose.yml 单服务部署，数据卷 sgm-data
+```
