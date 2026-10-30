@@ -9,7 +9,7 @@
 - **监控项**：支持 appid、商店链接、名称搜索；支持批量导入基础游戏的全部 DLC。
 - **状态变化**：发售（coming soon 翻转）、促销开始 / 变化 / 结束、原价变化、不可用（下架）与恢复。
 - **下架判定**：商店可购状态连续两次翻转才确认下架；配合 Steam 新闻关键词做提前预警（启发式，仅作参考）。
-- **通知渠道**：企业微信群机器人、飞书自定义机器人、钉钉自定义机器人、SMTP 邮件；失败自动重试。
+- **通知渠道**：企业微信群机器人、飞书自定义机器人、钉钉自定义机器人、自定义 WebHook、SMTP 邮件；失败自动重试。
 - **指令机器人**：飞书 / 钉钉原生回调、企业微信智能机器人 WebSocket 长连接（支持扫码创建与未授权网页授权），支持 `/add`、`/list`、`/price`、`/check`、`/pause`、`/resume`、`/remove`、`/adddlc`、`/events`、`/cancel`；微信 ClawBot 与 QQ Bot 正在按平台官方协议接入。
 - **运维友好**：健康检查、Docker 镜像、数据库在线备份、可配置的数据保留策略。
 
@@ -106,6 +106,8 @@ docker compose up -d --build
 
 ### 发布到 Docker Hub
 
+Docker Hub 地址：<https://hub.docker.com/r/akarinliu2000/steamgames-monitor>（`akarinliu2000/steamgames-monitor`）
+
 `.github/workflows/dockerhub.yml` 会在 `main` 分支推送时构建并推送 Docker Hub 镜像，默认标签为 `latest`：
 
 - 仓库 Secrets 需要配置 `DOCKERHUB_USERNAME` 与 `DOCKERHUB_TOKEN`（Docker Hub Access Token，需 Read & Write 权限）。
@@ -143,9 +145,12 @@ gh secret set DOCKERHUB_TOKEN --repo AkarinLiu/SteamGames-Monitor
 - **企业微信群机器人**：群设置 → 群机器人 → 添加机器人，复制 Webhook。
 - **飞书自定义机器人**：群设置 → 群机器人 → 自定义机器人；如开启签名校验，请同时填写签名密钥。
 - **钉钉自定义机器人**：群设置 → 智能群助手 → 添加机器人；如开启加签，请同时填写加签密钥。
+- **自定义 WebHook**：填写任意 HTTPS 接口；系统 POST JSON 事件，可选 HMAC 签名密钥与 Authorization 头。
 - **SMTP**：填写服务器、端口、SSL/TLS、发件人与收件人（多个地址用逗号分隔）。
 
 密钥使用 `APP_SECRET` 派生的 AES-256-GCM 加密存储；API 不会回传明文，编辑时留空表示保留原值。
+
+自定义 WebHook 的请求格式、Payload 字段和签名算法见 [docs/CUSTOM_WEBHOOK.md](docs/CUSTOM_WEBHOOK.md)。
 
 “订阅事件”不勾选表示接收除“检查异常”外的全部事件。
 
@@ -239,7 +244,7 @@ pnpm test:e2e   # 需要先安装 Playwright 浏览器：pnpm exec playwright in
 
 1. 在 `data/e2e` 创建全新数据库，启动后端（4180）、Vite（4181）和 mock 服务（9998）；
 2. 使用 mock Steam 接口驱动发售、促销、下架、恢复全流程；
-3. 校验企业微信通知、SMTP 邮件、飞书 / 钉钉回调、企业微信长连接 / 扫码配置与指令、多用户隔离。
+3. 校验企业微信通知、自定义 WebHook、SMTP 邮件、飞书 / 钉钉回调、企业微信长连接 / 扫码配置与指令、多用户隔离。
 
 `scripts/mock-receiver.ts` 也可单独运行，用于本地联调：
 

@@ -43,6 +43,8 @@ function parseConfig(type: ChannelType, input: unknown): Record<string, unknown>
       return parseWith(CHANNEL_CONFIG_SCHEMAS.feishu_bot, input)
     case 'dingtalk_bot':
       return parseWith(CHANNEL_CONFIG_SCHEMAS.dingtalk_bot, input)
+    case 'webhook':
+      return parseWith(CHANNEL_CONFIG_SCHEMAS.webhook, input)
     case 'smtp':
       return parseWith(CHANNEL_CONFIG_SCHEMAS.smtp, input)
     default:
@@ -91,7 +93,8 @@ function configSummary(type: ChannelType, config: ChannelConfig): Record<string,
     webhookHost = ''
   }
   const secretSet = Boolean((config as { secret?: string }).secret)
-  return { webhookHost, webhookSet: Boolean(webhook), secretSet }
+  const authorizationSet = Boolean((config as { authorization?: string }).authorization)
+  return { webhookHost, webhookSet: Boolean(webhook), secretSet, authorizationSet }
 }
 
 function toChannelView(row: ChannelRow): Record<string, unknown> {
@@ -126,7 +129,7 @@ function mergeConfig(
       merged.password = input.password
     }
   } else {
-    for (const key of ['webhookUrl', 'secret']) {
+    for (const key of ['webhookUrl', 'secret', 'authorization']) {
       const value = input[key]
       if (typeof value === 'string' && (value || replaceSecret)) {
         merged[key] = value

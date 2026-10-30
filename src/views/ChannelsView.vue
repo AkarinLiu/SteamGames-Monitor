@@ -38,6 +38,7 @@ const form = reactive({
   eventTypes: [...DEFAULT_NOTIFY_EVENT_TYPES] as EventType[],
   webhookUrl: '',
   secret: '',
+  authorization: '',
   host: '',
   port: 587,
   secure: true,
@@ -58,6 +59,7 @@ const CHANNEL_DOCS: Record<ChannelType, string> = {
   wecom_bot: 'https://developer.work.weixin.qq.com/document/path/91770',
   feishu_bot: 'https://open.feishu.cn/document/client-docs/bot-v3/add-custom-bot',
   dingtalk_bot: 'https://open.dingtalk.com/document/orgapp/custom-robot-access',
+  webhook: '',
   smtp: 'https://nodemailer.com/smtp/',
 }
 
@@ -77,7 +79,8 @@ function configSummary(channel: ChannelView): string {
   }
   const host = typeof config.webhookHost === 'string' ? config.webhookHost : ''
   const secret = config.secretSet === true ? ' · 已配置签名密钥' : ''
-  return `${host || '未配置 Webhook'}${secret}`
+  const auth = config.authorizationSet === true ? ' · 已配置 Authorization' : ''
+  return `${host || '未配置 Webhook'}${secret}${auth}`
 }
 
 function resetForm(): void {
@@ -87,6 +90,7 @@ function resetForm(): void {
   form.eventTypes = [...DEFAULT_NOTIFY_EVENT_TYPES]
   form.webhookUrl = ''
   form.secret = ''
+  form.authorization = ''
   form.host = ''
   form.port = 587
   form.secure = true
@@ -155,8 +159,11 @@ function buildConfig(): Record<string, unknown> | null {
   const config: Record<string, unknown> = {}
   if (form.webhookUrl.trim()) config.webhookUrl = form.webhookUrl.trim()
   if (form.secret.trim()) config.secret = form.secret.trim()
+  if (form.type === 'webhook' && form.authorization.trim()) {
+    config.authorization = form.authorization.trim()
+  }
   if (!isEditing.value && !config.webhookUrl) {
-    dialogError.value = '请填写机器人 Webhook 地址'
+    dialogError.value = '请填写 Webhook 地址'
     return null
   }
   return Object.keys(config).length ? config : null
@@ -271,7 +278,7 @@ onMounted(() => {
     <div class="page-header">
       <div>
         <h1>通知渠道</h1>
-        <p>通过企业微信、飞书、钉钉群机器人或 SMTP 邮件接收状态变化通知。</p>
+        <p>通过企业微信、飞书、钉钉群机器人、自定义 WebHook 或 SMTP 邮件接收状态变化通知。</p>
       </div>
       <div class="page-actions">
         <button class="btn btn-primary" type="button" @click="openCreate">添加渠道</button>
@@ -294,7 +301,7 @@ onMounted(() => {
     <EmptyState
       v-else-if="store.items.length === 0"
       title="还没有通知渠道"
-      description="配置一个群机器人或 SMTP 邮件，状态变化会自动推送。"
+      description="配置群机器人、自定义 WebHook 或 SMTP 邮件，状态变化会自动推送。"
     >
       <button class="btn btn-primary" type="button" style="margin-top: 12px" @click="openCreate">
         添加第一个渠道
@@ -398,7 +405,7 @@ onMounted(() => {
           </div>
         </div>
 
-        <p class="field-hint" style="margin-top: -6px">
+        <p v-if="channelDocsUrl" class="field-hint" style="margin-top: -6px">
           <a :href="channelDocsUrl" target="_blank" rel="noopener noreferrer">
             查看 {{ typeLabel(form.type) }} 官方接入文档 ↗
           </a>
@@ -456,7 +463,9 @@ onMounted(() => {
 
         <template v-else>
           <div class="field">
-            <label for="ch-webhook">机器人 Webhook 地址</label>
+            <label for="ch-webhook">
+              {{ form.type === 'webhook' ? 'WebHook 地址' : '机器人 Webhook 地址' }}
+            </label>
             <input
               id="ch-webhook"
               v-model="form.webhookUrl"
@@ -469,12 +478,16 @@ onMounted(() => {
                   ? '企业微信群机器人 Webhook，支持 markdown 消息。'
                   : form.type === 'feishu_bot'
                     ? '飞书自定义机器人 Webhook，请填写签名密钥（如已开启签名校验）。'
-                    : '钉钉自定义机器人 Webhook，请填写加签密钥（如已开启加签）。'
+                    : form.type === 'dingtalk_bot'
+                      ? '钉钉自定义机器人 Webhook，请填写加签密钥（如已开启加签）。'
+                      : '系统会向该地址 POST JSON 事件，支持 HMAC-SHA256 签名和可选 Authorization 头。'
               }}
             </span>
           </div>
           <div v-if="form.type !== 'wecom_bot'" class="field">
-            <label for="ch-secret">签名密钥</label>
+            <label for="ch-secret">
+              {{ form.type === 'webhook' ? 'HMAC 签名密钥（可选）' : '签名密钥' }}
+            </label>
             <input
               id="ch-secret"
               v-model="form.secret"
@@ -483,6 +496,23 @@ onMounted(() => {
               autocomplete="new-password"
               :placeholder="isEditing ? '留空保留当前密钥' : '可选'"
             />
+            <span v-if="form.type === 'webhook'" class="field-hint">
+              设置后，请求头会携带 X-SGM-Timestamp 和 X-SGM-Signature。
+            </span>
+          </div>
+          <div v-if="form.type === 'webhook'" class="field">
+            <label for="ch-authorization">Authorization 头（可选）</label>
+            <input
+              id="ch-authorization"
+              v-model="form.authorization"
+              class="input"
+              type="password"
+              autocomplete="new-password"
+              :placeholder="isEditing ? '留空保留当前 Authorization' : '例如 Bearer <token>'"
+            />
+            <span class="field-hint">
+              会原样作为 Authorization 请求头发送，适合需要 Bearer / Basic 认证的接口。
+            </span>
           </div>
         </template>
 

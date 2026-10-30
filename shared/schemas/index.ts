@@ -243,6 +243,18 @@ export const DingtalkChannelConfigSchema = z.object({
   secret: z.string().trim().max(200).optional().default(''),
 })
 
+export const WebhookChannelConfigSchema = z.object({
+  webhookUrl: HttpUrlSchema,
+  secret: z.string().trim().max(200).optional().default(''),
+  authorization: z
+    .string()
+    .trim()
+    .max(1000)
+    .refine((value) => !/[\r\n]/.test(value), 'Authorization 不能包含换行')
+    .optional()
+    .default(''),
+})
+
 export const SmtpConfigSchema = z.object({
   host: trimmed(1, 255),
   port: z.number().int().min(1).max(65535),
@@ -258,6 +270,7 @@ export const CHANNEL_CONFIG_SCHEMAS = {
   wecom_bot: WecomChannelConfigSchema,
   feishu_bot: FeishuChannelConfigSchema,
   dingtalk_bot: DingtalkChannelConfigSchema,
+  webhook: WebhookChannelConfigSchema,
   smtp: SmtpConfigSchema,
 } as const
 
@@ -282,6 +295,11 @@ export const CreateChannelSchema = z.discriminatedUnion('type', [
     type: z.literal('dingtalk_bot'),
     ...channelCommon,
     config: DingtalkChannelConfigSchema,
+  }),
+  z.object({
+    type: z.literal('webhook'),
+    ...channelCommon,
+    config: WebhookChannelConfigSchema,
   }),
   z.object({ type: z.literal('smtp'), ...channelCommon, config: SmtpConfigSchema }),
 ])

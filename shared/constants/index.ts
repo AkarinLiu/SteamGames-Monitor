@@ -195,6 +195,7 @@ export const CHANNEL_TYPE_OPTIONS: Option<ChannelType>[] = [
   { value: 'wecom_bot', label: '企业微信群机器人' },
   { value: 'feishu_bot', label: '飞书机器人' },
   { value: 'dingtalk_bot', label: '钉钉机器人' },
+  { value: 'webhook', label: '自定义 WebHook' },
   { value: 'smtp', label: 'SMTP 邮件' },
 ]
 

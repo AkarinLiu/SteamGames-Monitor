@@ -1,7 +1,7 @@
 import type { EventSeverity, EventType, MonitorEvent } from '../../shared/types'
 import { escapeHtml, formatDateTime, formatPriceLine } from '../../shared/utils'
 import type { MonitorRow } from '../db/rows'
-import type { FeishuCard, RenderedMessage } from './types'
+import type { FeishuCard, RenderedMessage, WebhookPayload } from './types'
 
 function asString(value: unknown): string | null {
   return typeof value === 'string' && value.trim() ? value.trim() : null
@@ -189,6 +189,30 @@ export function renderEventMessage(
     ],
   }
 
+  const webhook: WebhookPayload = {
+    source: 'steamgames-monitor',
+    version: 1,
+    kind: 'event',
+    eventId: event.id,
+    eventType: event.type,
+    severity: event.severity,
+    title,
+    text,
+    markdown,
+    html,
+    monitor: {
+      id: monitor.id,
+      appid: monitor.appid,
+      name,
+      storeUrl,
+      region: asString(event.payload.region) ?? monitor.region,
+      language: monitor.language,
+    },
+    data: event.payload,
+    createdAt: event.createdAt,
+    timestamp: new Date(event.createdAt).toISOString(),
+  }
+
   return {
     title,
     markdown,
@@ -196,6 +220,7 @@ export function renderEventMessage(
     subject: title,
     text,
     html,
+    webhook,
   }
 }
 
@@ -236,5 +261,21 @@ export function renderTestMessage(
     header: { template: 'turquoise', title: { tag: 'plain_text', content: title } },
     elements: [{ tag: 'div', text: { tag: 'lark_md', content: lines.join('\n') } }],
   }
-  return { title, markdown, card, subject: title, text, html }
+  const webhook: WebhookPayload = {
+    source: 'steamgames-monitor',
+    version: 1,
+    kind: 'test',
+    eventId: null,
+    eventType: null,
+    severity: null,
+    title,
+    text,
+    markdown,
+    html,
+    monitor: null,
+    data: {},
+    createdAt: now,
+    timestamp: new Date(now).toISOString(),
+  }
+  return { title, markdown, card, subject: title, text, html, webhook }
 }

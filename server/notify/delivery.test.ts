@@ -1,3 +1,4 @@
+import { createHmac } from 'node:crypto'
 import { createServer } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
@@ -10,6 +11,8 @@ type Reply = { status: number; body: unknown }
 
 interface Received {
   path: string
+  headers: Record<string, string>
+  raw: string
   body: Record<string, unknown>
 }
 
@@ -34,7 +37,11 @@ describe('notification delivery', () => {
         } catch {
           body = { raw }
         }
-        received.push({ path: req.url ?? '', body })
+        const headers: Record<string, string> = {}
+        for (const [key, value] of Object.entries(req.headers)) {
+          headers[key] = Array.isArray(value) ? value.join(',') : (value ?? '')
+        }
+        received.push({ path: req.url ?? '', headers, raw, body })
         const reply = replies.shift() ?? { status: 200, body: { errcode: 0 } }
         res.statusCode = reply.status
         res.setHeader('content-type', 'application/json')
@@ -113,6 +120,27 @@ describe('notification delivery', () => {
     })
   }
 
+  async function addWebhookChannel(userId: number) {
+    const { createChannel } = await import('../db/repo/channels')
+    const { encryptConfig, channelAad, currentKeyVersion } = await import('./secrets')
+    return createChannel(db!, {
+      userId,
+      name: '自定义 WebHook',
+      type: 'webhook',
+      enabled: true,
+      eventTypes: [],
+      configEnc: encryptConfig(
+        {
+          webhookUrl: `${baseUrl}/custom-hook`,
+          secret: 'webhook-secret',
+          authorization: 'Bearer delivery-token',
+        },
+        channelAad(userId, 'webhook'),
+      ),
+      keyVersion: currentKeyVersion(),
+    })
+  }
+
   it('sends a queued event and marks it sent', async () => {
     const { user, event } = await seed()
     await addChannel(user.id)
@@ -137,6 +165,36 @@ describe('notification delivery', () => {
     expect(row.status).toBe('sent')
     expect(row.attempts).toBe(1)
     expect(findDeliveryRow(db!, 1)).toBeTruthy()
+  })
+
+  it('sends a structured custom webhook payload with signature and auth header', async () => {
+    const { user, event } = await seed()
+    await addWebhookChannel(user.id)
+    const { enqueueEventDeliveries } = await import('./dispatcher')
+    const { DeliveryWorker } = await import('./deliveryWorker')
+
+    expect(enqueueEventDeliveries(db!, event)).toBe(1)
+    const worker = new DeliveryWorker(db!)
+    expect(await worker.tick()).toBe(1)
+
+    const request = received[0]!
+    expect(request.path).toBe('/custom-hook')
+    expect(request.headers.authorization).toBe('Bearer delivery-token')
+    expect(request.body).toMatchObject({
+      source: 'steamgames-monitor',
+      version: 1,
+      kind: 'event',
+      eventType: 'sale_start',
+      severity: 'info',
+      monitor: { appid: 1091500 },
+      data: { discountPercent: 50 },
+    })
+    const timestamp = request.headers['x-sgm-timestamp']!
+    const signature = request.headers['x-sgm-signature']!
+    const expected = `sha256=${createHmac('sha256', 'webhook-secret')
+      .update(`${timestamp}.${request.raw}`)
+      .digest('hex')}`
+    expect(signature).toBe(expected)
   })
 
   it('retries after a transient failure and succeeds', async () => {

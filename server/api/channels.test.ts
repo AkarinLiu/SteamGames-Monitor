@@ -139,6 +139,44 @@ describe('channel API', () => {
     expect(config.webhookUrl).toBe(`${baseUrl}/v2`)
   })
 
+  it('creates a custom webhook channel and hides its secrets', async () => {
+    const { cookie } = await loginAs('member', 'alice')
+    const created = await api('/channels', cookie, {
+      method: 'POST',
+      body: JSON.stringify({
+        type: 'webhook',
+        name: '自定义 WebHook',
+        config: {
+          webhookUrl: `${baseUrl}/webhook`,
+          secret: 'webhook-secret',
+          authorization: 'Bearer test-token',
+        },
+      }),
+    })
+    expect(created.status).toBe(201)
+    const { channel } = (await created.json()) as { channel: { id: number } }
+
+    const test = await api(`/channels/${channel.id}/test`, cookie, {
+      method: 'POST',
+      body: '{}',
+    })
+    expect(test.status).toBe(200)
+    expect(await test.json()).toMatchObject({ ok: true })
+
+    const list = await api('/channels', cookie)
+    const body = (await list.json()) as {
+      items: Array<{ config: Record<string, unknown> }>
+    }
+    expect(body.items[0]?.config).toMatchObject({
+      webhookHost: `127.0.0.1:${new URL(baseUrl).port}`,
+      webhookSet: true,
+      secretSet: true,
+      authorizationSet: true,
+    })
+    expect(JSON.stringify(body.items[0]?.config)).not.toContain('webhook-secret')
+    expect(JSON.stringify(body.items[0]?.config)).not.toContain('Bearer test-token')
+  })
+
   it('sends a synchronous test message and records the result', async () => {
     const { cookie } = await loginAs('member', 'alice')
     const created = await api('/channels', cookie, {

@@ -392,6 +392,40 @@ test.describe.serial('Steam 销售监控端到端', () => {
       await page.getByRole('button', { name: '取消' }).click()
     })
 
+    await test.step('自定义 WebHook 渠道', async () => {
+      await page.goto('/channels')
+      await page.getByRole('button', { name: '添加渠道' }).click()
+      await page.getByLabel('渠道名称').fill('自定义 WebHook 测试')
+      await page.getByLabel('类型').selectOption('webhook')
+      await page.getByLabel('WebHook 地址').fill(`${MOCK}/hooks/custom-webhook`)
+      await page.getByLabel('HMAC 签名密钥（可选）').fill('e2e-webhook-secret')
+      await page.getByLabel('Authorization 头（可选）').fill('Bearer e2e-token')
+      await page.getByRole('button', { name: '保存' }).click()
+
+      const row = page.getByRole('row', { name: /自定义 WebHook 测试/ })
+      await expect(row).toBeVisible()
+      await row.getByRole('button', { name: '测试' }).click()
+      await expect(row.getByText('成功', { exact: true })).toBeVisible()
+
+      await expect
+        .poll(async () => {
+          const { requests } = await mockRequests(request)
+          return requests.filter((item) => item.path === '/hooks/custom-webhook').length
+        })
+        .toBeGreaterThan(0)
+      const { requests } = await mockRequests(request)
+      const hook = requests.find((item) => item.path === '/hooks/custom-webhook')
+      expect(hook?.body).toMatchObject({
+        source: 'steamgames-monitor',
+        version: 1,
+        kind: 'test',
+        eventType: null,
+      })
+      expect(hook?.headers.authorization).toBe('Bearer e2e-token')
+      expect(hook?.headers['x-sgm-timestamp']).toMatch(/^\d+$/)
+      expect(hook?.headers['x-sgm-signature']).toMatch(/^sha256=[0-9a-f]{64}$/)
+    })
+
     await test.step('侧栏只高亮当前页面', async () => {
       await page.goto('/events')
       await expect(page.getByRole('heading', { name: '事件记录' })).toBeVisible()

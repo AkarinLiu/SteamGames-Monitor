@@ -1,3 +1,5 @@
+import type { EventPayload, EventSeverity, EventType } from '../../shared/types'
+
 export interface WecomChannelConfig {
   webhookUrl: string
 }
@@ -10,6 +12,12 @@ export interface FeishuChannelConfig {
 export interface DingtalkChannelConfig {
   webhookUrl: string
   secret?: string
+}
+
+export interface WebhookChannelConfig {
+  webhookUrl: string
+  secret?: string
+  authorization?: string
 }
 
 export interface SmtpChannelConfig {
@@ -27,6 +35,7 @@ export type ChannelConfig =
   | WecomChannelConfig
   | FeishuChannelConfig
   | DingtalkChannelConfig
+  | WebhookChannelConfig
   | SmtpChannelConfig
 
 export interface SendResult {
@@ -47,6 +56,32 @@ export interface FeishuCard {
   elements: Array<Record<string, unknown>>
 }
 
+export interface WebhookMonitorInfo {
+  id: number
+  appid: number
+  name: string
+  storeUrl: string
+  region: string
+  language: string
+}
+
+export interface WebhookPayload {
+  source: 'steamgames-monitor'
+  version: 1
+  kind: 'event' | 'test'
+  eventId: number | null
+  eventType: EventType | null
+  severity: EventSeverity | null
+  title: string
+  text: string
+  markdown: string
+  html: string
+  monitor: WebhookMonitorInfo | null
+  data: EventPayload
+  createdAt: number
+  timestamp: string
+}
+
 export interface RenderedMessage {
   title: string
   markdown: string
@@ -54,4 +89,5 @@ export interface RenderedMessage {
   subject: string
   text: string
   html: string
+  webhook: WebhookPayload
 }

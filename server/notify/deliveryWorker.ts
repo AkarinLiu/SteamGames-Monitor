@@ -16,6 +16,7 @@ import { renderEventMessage, renderTestMessage } from './render'
 import { sendWecom } from './transports/wecomBot'
 import { sendFeishu } from './transports/feishuBot'
 import { sendDingtalk } from './transports/dingtalkBot'
+import { sendWebhook } from './transports/webhook'
 import { sendSmtp } from './transports/smtp'
 import type {
   ChannelConfig,
@@ -24,6 +25,7 @@ import type {
   RenderedMessage,
   SendResult,
   SmtpChannelConfig,
+  WebhookChannelConfig,
   WecomChannelConfig,
 } from './types'
 import { logger } from '../lib/logger'
@@ -211,6 +213,8 @@ export function sendByChannel(
       return sendFeishu(config as FeishuChannelConfig, message)
     case 'dingtalk_bot':
       return sendDingtalk(config as DingtalkChannelConfig, message)
+    case 'webhook':
+      return sendWebhook(config as WebhookChannelConfig, message)
     case 'smtp':
       return sendSmtp(config as SmtpChannelConfig, message)
     default:

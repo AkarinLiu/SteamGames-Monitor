@@ -105,6 +105,7 @@ const commands = [
             <li>企业微信群机器人：markdown，单条上限约 4096 字节，20 条/分钟。</li>
             <li>飞书自定义机器人：交互卡片，签名密钥按官方 HMAC-SHA256 规则计算。</li>
             <li>钉钉自定义机器人：markdown，支持加签，90037 等限流错误会自动重试。</li>
+            <li>自定义 WebHook：POST JSON 事件，可选 HMAC-SHA256 签名与 Authorization 头。</li>
             <li>SMTP 邮件：同时发送纯文本与 HTML，主题不超过 200 字符。</li>
             <li>投递失败会按 30 秒 → 2 分钟 → 10 分钟 → 1 小时 → 6 小时 → 24 小时重试，最多 6 次。</li>
           </ul>
