@@ -6,6 +6,7 @@ import { sendFeishuChatText } from '../inbound/reply'
 import { splitReply } from '../inbound/commands/format'
 import { botAad, decryptConfig, SecretDecryptError } from './secrets'
 import { assertSafeOutboundUrl } from './urlGuard'
+import { resolveFeishuApiBase } from '../inbound/feishu/domains'
 import type { RenderedMessage, SendResult } from './types'
 
 const DINGTALK_API = 'https://api.dingtalk.com'
@@ -77,7 +78,7 @@ export async function sendBotEvent(
       return failure('请填写飞书 App ID 和 App Secret 后才能推送事件', true)
     }
     return sendFeishuChatText(
-      apiBase(bot.api_base_url, 'https://open.feishu.cn'),
+      resolveFeishuApiBase(feishu, bot.api_base_url),
       feishu,
       target.chatId,
       message.text,

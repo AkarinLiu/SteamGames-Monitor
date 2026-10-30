@@ -15,8 +15,7 @@ import type {
   ReplyTarget,
   WecomReplyTarget,
 } from './types'
-
-const FEISHU_API = 'https://open.feishu.cn'
+import { resolveFeishuApiBase } from './feishu/domains'
 
 interface CachedToken {
   token: string
@@ -28,10 +27,6 @@ const feishuInflight = new Map<string, Promise<CachedToken | null>>()
 
 function failure(error: string, permanent = false, httpStatus: number | null = null): SendResult {
   return { ok: false, httpStatus, error, permanent }
-}
-
-function apiBase(override: string | null | undefined, fallback: string): string {
-  return (override ?? fallback).replace(/\/+$/, '')
 }
 
 function guard(raw: string): string {
@@ -232,10 +227,11 @@ export async function sendCommandDelivery(
 
   try {
     if (target.type === 'feishu') {
+      const feishu = config as FeishuBotConfig
       return await sendFeishuReply(
         bot.id,
-        apiBase(bot.api_base_url, FEISHU_API),
-        config as FeishuBotConfig,
+        resolveFeishuApiBase(feishu, bot.api_base_url),
+        feishu,
         target,
         text,
       )

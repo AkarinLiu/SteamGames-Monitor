@@ -3,6 +3,10 @@ import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import type {
   BotAccessRole,
   BotPlatform,
+  FeishuBrand,
+  FeishuConnectionMode,
+  FeishuQrPollResult,
+  FeishuQrSession,
   WecomQrPollResult,
   WecomQrSession,
 } from '@shared/types'
@@ -48,6 +52,8 @@ const form = reactive({
   robotCode: '',
   botId: '',
   secret: '',
+  brand: 'feishu' as FeishuBrand,
+  connectionMode: 'webhook' as FeishuConnectionMode,
 })
 
 const deleteTarget = ref<BotView | null>(null)
@@ -58,12 +64,18 @@ const inboundTexts = reactive<Record<number, string>>({})
 const inboundResults = reactive<Record<number, string>>({})
 const inboundBusy = ref<number | null>(null)
 
+type QrPlatform = 'feishu' | 'wecom'
+type QrSessionView = FeishuQrSession | WecomQrSession
+type QrStatusView = FeishuQrPollResult | WecomQrPollResult
+
 const qrOpen = ref(false)
 const qrStarting = ref(false)
 const qrPolling = ref(false)
 const qrError = ref('')
-const qrSession = ref<WecomQrSession | null>(null)
-const qrStatus = ref<WecomQrPollResult | null>(null)
+const qrPlatform = ref<QrPlatform>('wecom')
+const qrBrand = ref<FeishuBrand>('feishu')
+const qrSession = ref<QrSessionView | null>(null)
+const qrStatus = ref<QrStatusView | null>(null)
 const qrName = ref('企业微信智能机器人')
 let qrTimer: number | null = null
 let qrRequestId = 0
@@ -76,6 +88,9 @@ const BOT_DOCS: Record<BotPlatform, string> = {
   dingtalk: 'https://open.dingtalk.com/document/orgapp/receive-message',
   wecom: 'https://developer.work.weixin.qq.com/document/path/101463',
 }
+
+const LARK_DOCS =
+  'https://open.larksuite.com/document/server-docs/event-subscription-guide/event-subscription-configure-/request-url-configuration-case'
 
 const CONNECTION_LABELS: Record<string, string> = {
   connecting: '长连接中',
@@ -96,7 +111,37 @@ function connectionClass(state: string | undefined): string {
   return 'badge-neutral'
 }
 
-const botDocsUrl = computed(() => BOT_DOCS[form.platform])
+const botDocsUrl = computed(() =>
+  form.platform === 'feishu' && form.brand === 'lark'
+    ? LARK_DOCS
+    : BOT_DOCS[form.platform],
+)
+
+const qrLabel = computed(() => {
+  if (qrPlatform.value === 'wecom') return '企业微信'
+  return qrBrand.value === 'lark' ? 'Lark' : '飞书'
+})
+
+const qrTitle = computed(() => `扫码添加${qrLabel.value}机器人`)
+
+function defaultQrName(platform: QrPlatform, brand: FeishuBrand): string {
+  if (platform === 'wecom') return '企业微信智能机器人'
+  return brand === 'lark' ? 'Lark 智能机器人' : '飞书智能机器人'
+}
+
+function usesLongConnection(bot: BotView): boolean {
+  return (
+    bot.platform === 'wecom' ||
+    (bot.platform === 'feishu' && bot.config.connectionMode === 'websocket')
+  )
+}
+
+function usesCallback(bot: BotView): boolean {
+  return (
+    bot.platform === 'dingtalk' ||
+    (bot.platform === 'feishu' && bot.config.connectionMode !== 'websocket')
+  )
+}
 
 function platformLabel(platform: BotPlatform): string {
   return BOT_PLATFORM_OPTIONS.find((option) => option.value === platform)?.label ?? platform
@@ -132,6 +177,8 @@ function resetForm(): void {
   form.robotCode = ''
   form.botId = ''
   form.secret = ''
+  form.brand = 'feishu'
+  form.connectionMode = 'webhook'
   dialogError.value = ''
 }
 
@@ -148,39 +195,51 @@ function stopQrPolling(): void {
   }
 }
 
-function openQrDialog(): void {
+function openQrDialog(platform: QrPlatform, brand: FeishuBrand = 'feishu'): void {
+  qrPlatform.value = platform
+  qrBrand.value = brand
   qrOpen.value = true
   qrError.value = ''
   qrStatus.value = null
   qrSession.value = null
-  qrName.value = '企业微信智能机器人'
+  qrName.value = defaultQrName(platform, brand)
   qrRequestId += 1
   void startQr()
 }
 
 function openQrFromCreate(): void {
   dialogOpen.value = false
-  openQrDialog()
+  const platform: QrPlatform = form.platform === 'wecom' ? 'wecom' : 'feishu'
+  openQrDialog(platform, form.brand)
+  if (form.name.trim()) qrName.value = form.name.trim()
 }
 
 async function startQr(): Promise<void> {
   stopQrPolling()
   const requestId = ++qrRequestId
+  const platform = qrPlatform.value
   qrStarting.value = true
   qrError.value = ''
   qrStatus.value = null
   qrSession.value = null
   try {
-    const session = await store.startWecomQr(qrName.value)
+    const session: QrSessionView =
+      platform === 'wecom'
+        ? await store.startWecomQr(qrName.value)
+        : await store.startFeishuQr({ name: qrName.value, brand: qrBrand.value })
     if (requestId !== qrRequestId || !qrOpen.value) {
-      void store.cancelWecomQr(session.sessionId).catch(() => {})
+      void cancelQrSession(platform, session.sessionId)
       return
     }
     qrSession.value = session
     qrStatus.value = { status: 'pending', message: '等待扫码授权' }
+    const intervalMs =
+      qrPlatform.value === 'feishu'
+        ? Math.max(2500, (session as FeishuQrSession).intervalMs)
+        : 2500
     qrTimer = window.setInterval(() => {
       void pollQr()
-    }, 2500)
+    }, intervalMs)
   } catch (err) {
     if (requestId === qrRequestId) qrError.value = describeError(err)
   } finally {
@@ -193,13 +252,17 @@ async function pollQr(): Promise<void> {
   if (!session || qrPolling.value) return
   qrPolling.value = true
   try {
-    const result = await store.pollWecomQr(session.sessionId)
+    const result: QrStatusView =
+      qrPlatform.value === 'wecom'
+        ? await store.pollWecomQr(session.sessionId)
+        : await store.pollFeishuQr(session.sessionId)
     if (!qrOpen.value || qrSession.value?.sessionId !== session.sessionId) return
     qrStatus.value = result
     if (result.status === 'success') {
       stopQrPolling()
+      if ('brand' in result && result.brand) qrBrand.value = result.brand
       await store.fetchAll()
-      toast.success('企业微信机器人已添加')
+      toast.success(`${qrLabel.value}机器人已添加`)
     } else if (result.status === 'expired' || result.status === 'failed') {
       stopQrPolling()
     }
@@ -211,6 +274,15 @@ async function pollQr(): Promise<void> {
   }
 }
 
+async function cancelQrSession(platform: QrPlatform, sessionId: string): Promise<void> {
+  try {
+    if (platform === 'wecom') await store.cancelWecomQr(sessionId)
+    else await store.cancelFeishuQr(sessionId)
+  } catch {
+    // Session cleanup is best-effort.
+  }
+}
+
 function closeQrDialog(): void {
   stopQrPolling()
   qrRequestId += 1
@@ -218,7 +290,18 @@ function closeQrDialog(): void {
   qrSession.value = null
   qrStatus.value = null
   qrOpen.value = false
-  if (session) void store.cancelWecomQr(session.sessionId).catch(() => {})
+  if (session) void cancelQrSession(qrPlatform.value, session.sessionId)
+}
+
+function switchQrBrand(brand: FeishuBrand): void {
+  if (qrPlatform.value !== 'feishu' || qrBrand.value === brand) return
+  qrBrand.value = brand
+  qrName.value = defaultQrName('feishu', brand)
+  void startQr()
+}
+
+function qrOwnerId(status: QrStatusView | null): string {
+  return status && 'ownerPlatformUserId' in status ? (status.ownerPlatformUserId ?? '') : ''
 }
 
 function onQrOpenChange(open: boolean): void {
@@ -251,6 +334,8 @@ function openEdit(bot: BotView): void {
     typeof config.ownerPlatformUserId === 'string' ? config.ownerPlatformUserId : ''
   if (bot.platform === 'feishu') {
     form.appId = typeof config.appId === 'string' ? config.appId : ''
+    form.brand = config.brand === 'lark' ? 'lark' : 'feishu'
+    form.connectionMode = config.connectionMode === 'websocket' ? 'websocket' : 'webhook'
   } else if (bot.platform === 'dingtalk') {
     form.appKey = typeof config.appKey === 'string' ? config.appKey : ''
     form.robotCode = typeof config.robotCode === 'string' ? config.robotCode : ''
@@ -270,6 +355,8 @@ function buildConfig(): Record<string, unknown> {
     if (form.appSecret.trim()) config.appSecret = form.appSecret.trim()
     if (form.encryptKey.trim()) config.encryptKey = form.encryptKey.trim()
     if (form.verificationToken.trim()) config.verificationToken = form.verificationToken.trim()
+    config.brand = form.brand
+    config.connectionMode = form.connectionMode
   } else if (form.platform === 'dingtalk') {
     if (form.appKey.trim()) config.appKey = form.appKey.trim()
     if (form.appSecret.trim()) config.appSecret = form.appSecret.trim()
@@ -294,6 +381,16 @@ async function save(): Promise<void> {
     }
     if (!isEditing.value && !form.secret.trim()) {
       dialogError.value = '请填写企业微信智能机器人 Secret'
+      return
+    }
+  }
+  if (form.platform === 'feishu' && form.connectionMode === 'websocket') {
+    if (!form.appId.trim()) {
+      dialogError.value = '长连接模式需要填写 App ID'
+      return
+    }
+    if (!isEditing.value && !form.appSecret.trim()) {
+      dialogError.value = '长连接模式需要填写 App Secret'
       return
     }
   }
@@ -433,7 +530,7 @@ onMounted(() => {
   statusTimer = window.setInterval(() => {
     if (
       store.items.some(
-        (bot) => (bot.platform === 'wecom' && bot.enabled) || bot.notifyEnabled,
+        (bot) => (usesLongConnection(bot) && bot.enabled) || bot.notifyEnabled,
       )
     ) {
       void store.fetchAll().catch(() => {})
@@ -454,10 +551,11 @@ onBeforeUnmount(() => {
     <div class="page-header">
       <div>
         <h1>指令机器人</h1>
-        <p>接入飞书、钉钉或企业微信智能机器人，在聊天中用斜杠指令管理监控项。</p>
+        <p>接入飞书 / Lark、钉钉或企业微信智能机器人，在聊天中用斜杠指令管理监控项。</p>
       </div>
       <div class="page-actions">
-        <button class="btn" type="button" @click="openQrDialog">企微扫码添加</button>
+        <button class="btn" type="button" @click="openQrDialog('feishu')">飞书 / Lark 扫码</button>
+        <button class="btn" type="button" @click="openQrDialog('wecom')">企微扫码添加</button>
         <button class="btn btn-primary" type="button" @click="openCreate">添加机器人</button>
       </div>
     </div>
@@ -473,7 +571,7 @@ onBeforeUnmount(() => {
     <EmptyState
       v-else-if="store.items.length === 0"
       title="还没有接入机器人"
-      description="飞书、钉钉填写回调地址；企业微信可扫码自动创建，或手动填写 Bot ID / Secret。接入后即可在聊天中使用 /add、/list 等指令。"
+      description="飞书 / Lark、企业微信可扫码自动创建，也可手动填写凭据；钉钉填写回调地址。接入后即可在聊天中使用 /add、/list 等指令。"
     >
       <button class="btn btn-primary" type="button" style="margin-top: 12px" @click="openCreate">
         添加第一个机器人
@@ -491,7 +589,14 @@ onBeforeUnmount(() => {
             </span>
             <span v-if="bot.notifyEnabled" class="badge badge-accent">事件通知</span>
             <span
-              v-if="bot.platform === 'wecom' && bot.connection"
+              v-if="bot.platform === 'feishu'"
+              class="badge badge-neutral"
+            >
+              {{ bot.config.brand === 'lark' ? 'Lark 国际版' : '飞书' }} ·
+              {{ bot.config.connectionMode === 'websocket' ? '长连接' : 'HTTP 回调' }}
+            </span>
+            <span
+              v-if="bot.connection"
               class="badge"
               :class="connectionClass(bot.connection.state)"
             >
@@ -523,7 +628,7 @@ onBeforeUnmount(() => {
           </div>
         </div>
 
-        <div v-if="bot.platform !== 'wecom' && bot.callbackUrl" class="field">
+        <div v-if="usesCallback(bot) && bot.callbackUrl" class="field">
           <span class="label">回调地址（填入平台后台）</span>
           <div class="inline" style="flex-wrap: nowrap">
             <input class="input flex-1 mono small" :value="bot.callbackUrl" readonly />
@@ -532,15 +637,22 @@ onBeforeUnmount(() => {
         </div>
 
         <div
-          v-else-if="bot.platform === 'wecom'"
+          v-else-if="usesLongConnection(bot)"
           class="banner"
           :class="bot.connection?.state === 'error' ? 'banner-error' : 'banner-info'"
         >
-          长连接模式：无需公网回调地址，服务启动后主动连接企业微信。{{ bot.connection?.message ?? '' }}
+          {{ bot.platform === 'wecom' ? '企业微信长连接' : '飞书 / Lark 长连接' }}模式：无需公网回调地址，服务启动后主动建立连接。{{ bot.connection?.message ?? '' }}
         </div>
 
         <div v-if="bot.platform === 'wecom' && !bot.config.botId" class="banner banner-warning">
           尚未配置 Bot ID / Secret，长连接不会建立。请编辑机器人并填写企业微信智能机器人凭据。
+        </div>
+
+        <div
+          v-if="bot.platform === 'feishu' && bot.config.connectionMode === 'websocket' && !bot.config.appId"
+          class="banner banner-warning"
+        >
+          尚未配置 App ID / App Secret，飞书 / Lark 长连接不会建立。
         </div>
 
         <div v-if="bot.notifyEnabled && !bot.lastChatAt" class="banner banner-warning">
@@ -697,6 +809,28 @@ onBeforeUnmount(() => {
         <template v-if="form.platform === 'feishu'">
           <div class="grid-2">
             <div class="field">
+              <label for="bot-feishu-brand">版本</label>
+              <select id="bot-feishu-brand" v-model="form.brand" class="select">
+                <option value="feishu">飞书（中国版）</option>
+                <option value="lark">Lark（国际版）</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="bot-feishu-mode">事件接收方式</label>
+              <select id="bot-feishu-mode" v-model="form.connectionMode" class="select">
+                <option value="webhook">HTTP 回调</option>
+                <option value="websocket">长连接（推荐）</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="banner banner-info">
+            使用{{ form.brand === 'lark' ? ' Lark ' : '飞书 / Lark ' }}扫码一键创建应用，系统会自动填写 App ID / App Secret、所有者 open_id，并启用长连接。
+            <button class="btn-link" type="button" @click="openQrFromCreate">扫码自动创建</button>
+          </div>
+
+          <div class="grid-2">
+            <div class="field">
               <label for="bot-appid">App ID</label>
               <input id="bot-appid" v-model="form.appId" class="input mono" />
             </div>
@@ -705,7 +839,7 @@ onBeforeUnmount(() => {
               <input id="bot-appsecret" v-model="form.appSecret" class="input" type="password" autocomplete="new-password" :placeholder="isEditing ? '留空保留已保存值' : ''" />
             </div>
           </div>
-          <div class="grid-2">
+          <div v-if="form.connectionMode === 'webhook'" class="grid-2">
             <div class="field">
               <label for="bot-encrypt">Encrypt Key</label>
               <input id="bot-encrypt" v-model="form.encryptKey" class="input" type="password" autocomplete="new-password" :placeholder="isEditing ? '留空保留已保存值' : ''" />
@@ -715,6 +849,10 @@ onBeforeUnmount(() => {
               <input id="bot-verify" v-model="form.verificationToken" class="input" type="password" autocomplete="new-password" :placeholder="isEditing ? '留空保留已保存值' : ''" />
             </div>
           </div>
+          <p v-else class="field-hint" style="margin-top: -6px">
+            长连接无需公网回调地址；飞书 / Lark 开放平台需将事件订阅方式设为「使用长连接接收事件」，并订阅
+            <code>im.message.receive_v1</code>。
+          </p>
         </template>
 
         <template v-else-if="form.platform === 'dingtalk'">
@@ -811,21 +949,54 @@ onBeforeUnmount(() => {
 
     <Modal
       :open="qrOpen"
-      title="扫码添加企业微信机器人"
+      :title="qrTitle"
       width="480px"
       @update:open="onQrOpenChange"
     >
       <ErrorBanner :message="qrError" />
 
+      <div class="inline" v-if="qrPlatform === 'feishu'" style="justify-content: center; margin-bottom: 12px">
+        <button
+          class="btn btn-sm"
+          :class="{ 'btn-primary': qrBrand === 'feishu' }"
+          type="button"
+          :disabled="qrStarting"
+          @click="switchQrBrand('feishu')"
+        >
+          飞书
+        </button>
+        <button
+          class="btn btn-sm"
+          :class="{ 'btn-primary': qrBrand === 'lark' }"
+          type="button"
+          :disabled="qrStarting"
+          @click="switchQrBrand('lark')"
+        >
+          Lark 国际版
+        </button>
+      </div>
+
       <div v-if="qrStarting" class="qr-panel">
-        <p class="small muted">正在向企业微信申请二维码…</p>
+        <p class="small muted">正在向{{ qrLabel }}申请二维码…</p>
       </div>
 
       <div v-else-if="qrSession" class="qr-panel">
         <template v-if="qrStatus?.status === 'pending'">
-          <img class="qr-image" :src="qrSession.qrDataUrl" alt="企业微信扫码添加机器人二维码" />
-          <p class="small">使用企业微信扫一扫，按页面提示创建并授权智能机器人。</p>
-          <p class="small faint">二维码 5 分钟内有效；授权成功后系统会自动添加机器人并建立长连接。</p>
+          <img
+            class="qr-image"
+            :src="qrSession.qrDataUrl"
+            :alt="`${qrLabel}扫码添加机器人二维码`"
+          />
+          <p class="small">
+            {{ qrPlatform === 'wecom'
+              ? '使用企业微信扫一扫，按页面提示创建并授权智能机器人。'
+              : `使用${qrLabel}扫一扫，按页面提示创建并授权应用。` }}
+          </p>
+          <p class="small faint">
+            {{ qrPlatform === 'wecom'
+              ? '二维码 5 分钟内有效；授权成功后系统会自动添加机器人并建立长连接。'
+              : '二维码 10 分钟内有效；授权成功后系统会自动填写 App ID / App Secret，并以长连接接收指令。' }}
+          </p>
           <p class="small faint">{{ qrStatus.message ?? '等待扫码授权…' }}</p>
           <p v-if="qrPolling" class="small faint">正在检查扫码状态…</p>
         </template>
@@ -833,8 +1004,13 @@ onBeforeUnmount(() => {
         <template v-else-if="qrStatus?.status === 'success'">
           <div class="banner banner-info">{{ qrStatus.message }}</div>
           <p class="small">系统内名称：{{ qrName }}</p>
+          <p v-if="qrOwnerId(qrStatus)" class="small">
+            已识别所有者 open_id：<span class="mono">{{ qrOwnerId(qrStatus) }}</span>
+          </p>
           <p class="small faint">
-            建议点击「编辑机器人」填写所有者企业微信 UserID，或将使用成员加入允许名单；否则指令会被拒绝。
+            {{ qrPlatform === 'wecom'
+              ? '建议点击「编辑机器人」填写所有者企业微信 UserID，或将使用成员加入允许名单；否则指令会被拒绝。'
+              : '所有者已自动写入；如需让其他成员使用，请将他们加入允许名单。' }}
           </p>
           <p v-if="qrStatus.enabled === false" class="small faint">
             机器人已创建但未启用：当前平台已有启用中的机器人。

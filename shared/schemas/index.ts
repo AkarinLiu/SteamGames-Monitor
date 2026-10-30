@@ -323,6 +323,8 @@ export const FeishuBotConfigSchema = z.object({
   appSecret: z.string().trim().max(200).optional(),
   encryptKey: z.string().trim().max(200).optional(),
   verificationToken: z.string().trim().max(200).optional(),
+  brand: z.enum(['feishu', 'lark']).optional(),
+  connectionMode: z.enum(['webhook', 'websocket']).optional(),
   ownerPlatformUserId: z.string().trim().max(100).optional(),
 })
 
@@ -358,6 +360,11 @@ export const CreateBotSchema = z.object({
 
 export const WecomQrStartSchema = z.object({
   name: trimmed(1, LIMITS.botNameMaxLength).optional(),
+})
+
+export const FeishuQrStartSchema = z.object({
+  name: trimmed(1, LIMITS.botNameMaxLength).optional(),
+  brand: z.enum(['feishu', 'lark']).default('feishu'),
 })
 
 export const BotAuthApproveSchema = z.object({

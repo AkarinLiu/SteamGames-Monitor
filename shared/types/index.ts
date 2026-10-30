@@ -21,6 +21,8 @@ export type EventSeverity = 'info' | 'warning' | 'critical'
 export type ChannelType = 'wecom_bot' | 'feishu_bot' | 'dingtalk_bot' | 'webhook' | 'smtp'
 export type BotPlatform = 'feishu' | 'dingtalk' | 'wecom'
 export type BotAccessRole = 'admin' | 'viewer'
+export type FeishuBrand = 'feishu' | 'lark'
+export type FeishuConnectionMode = 'webhook' | 'websocket'
 
 export type DeliveryKind = 'event' | 'command' | 'test'
 export type DeliveryStatus = 'pending' | 'sending' | 'sent' | 'failed' | 'canceled'
@@ -214,6 +216,25 @@ export interface WecomQrPollResult {
   status: WecomQrStatus
   botId?: number
   enabled?: boolean
+  message?: string
+}
+
+export type FeishuQrStatus = 'pending' | 'success' | 'expired' | 'failed'
+
+export interface FeishuQrSession {
+  sessionId: string
+  qrDataUrl: string
+  expiresAt: number
+  brand: FeishuBrand
+  intervalMs: number
+}
+
+export interface FeishuQrPollResult {
+  status: FeishuQrStatus
+  botId?: number
+  enabled?: boolean
+  brand?: FeishuBrand
+  ownerPlatformUserId?: string
   message?: string
 }
 

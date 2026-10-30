@@ -5,6 +5,9 @@ import type {
   BotApp,
   BotConnectionStatus,
   BotPlatform,
+  FeishuBrand,
+  FeishuQrPollResult,
+  FeishuQrSession,
   WecomQrPollResult,
   WecomQrSession,
 } from '@shared/types'
@@ -91,6 +94,21 @@ export const useBotsStore = defineStore('bots', () => {
     await api.delete(`/bots/wecom/qr/${encodeURIComponent(sessionId)}`)
   }
 
+  async function startFeishuQr(input: {
+    name?: string
+    brand: FeishuBrand
+  }): Promise<FeishuQrSession> {
+    return api.post<FeishuQrSession>('/bots/feishu/qr', input)
+  }
+
+  async function pollFeishuQr(sessionId: string): Promise<FeishuQrPollResult> {
+    return api.get<FeishuQrPollResult>(`/bots/feishu/qr/${encodeURIComponent(sessionId)}`)
+  }
+
+  async function cancelFeishuQr(sessionId: string): Promise<void> {
+    await api.delete(`/bots/feishu/qr/${encodeURIComponent(sessionId)}`)
+  }
+
   return {
     items,
     quota,
@@ -105,5 +123,8 @@ export const useBotsStore = defineStore('bots', () => {
     startWecomQr,
     pollWecomQr,
     cancelWecomQr,
+    startFeishuQr,
+    pollFeishuQr,
+    cancelFeishuQr,
   }
 })

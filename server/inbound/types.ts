@@ -1,4 +1,8 @@
-import type { BotPlatform } from '../../shared/types'
+import type {
+  BotPlatform,
+  FeishuBrand,
+  FeishuConnectionMode,
+} from '../../shared/types'
 import type { BotAppRow } from '../db/rows'
 
 export interface FeishuBotConfig {
@@ -8,6 +12,8 @@ export interface FeishuBotConfig {
   verificationToken?: string
   webhookUrl?: string
   secret?: string
+  brand?: FeishuBrand
+  connectionMode?: FeishuConnectionMode
   ownerPlatformUserId?: string
 }
 

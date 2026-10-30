@@ -70,41 +70,26 @@ function stripMentions(text: string, mentions: Array<{ key?: string; name?: stri
   return cleaned.replace(/\s+/g, ' ').trim()
 }
 
-export function handleFeishuUpdate(input: {
+export function handleFeishuPayload(input: {
   bot: BotAppRow
-  config: FeishuBotConfig
-  headers: Record<string, string>
-  rawBody: string
+  payload: FeishuEnvelope | null
+  verificationToken?: string | null
   now?: number
 }): PlatformHandleResult {
-  const { bot, config, headers, rawBody } = input
+  const { bot, payload, verificationToken } = input
   const now = input.now ?? Date.now()
-
-  let body = rawBody
-  if (config.encryptKey) {
-    if (!verifySignature(headers, rawBody, config.encryptKey)) {
-      return { kind: 'error', status: 401, message: '飞书签名校验失败' }
-    }
-    try {
-      body = decryptFeishuPayload(rawBody, config.encryptKey)
-    } catch {
-      return { kind: 'error', status: 400, message: '飞书密文解密失败' }
-    }
-  }
-
-  const payload = safeJsonParse<FeishuEnvelope | null>(body, null)
   if (!payload) return { kind: 'error', status: 400, message: '飞书回调不是合法 JSON' }
 
   if (payload.type === 'url_verification') {
-    if (config.verificationToken && payload.token !== config.verificationToken) {
+    if (verificationToken && payload.token !== verificationToken) {
       return { kind: 'error', status: 401, message: '飞书 verification token 不匹配' }
     }
     return { kind: 'challenge', body: { challenge: payload.challenge ?? '' } }
   }
 
-  if (config.verificationToken) {
+  if (verificationToken) {
     const token = payload.header?.token ?? payload.token
-    if (token !== config.verificationToken) {
+    if (token !== verificationToken) {
       return { kind: 'error', status: 401, message: '飞书 verification token 不匹配' }
     }
   }
@@ -150,4 +135,74 @@ export function handleFeishuUpdate(input: {
       receivedAt: now,
     },
   }
+}
+
+export function handleFeishuWsEvent(input: {
+  bot: BotAppRow
+  payload: unknown
+  now?: number
+}): PlatformHandleResult {
+  const parsed =
+    typeof input.payload === 'string'
+      ? safeJsonParse<Record<string, unknown> | null>(input.payload, null)
+      : (input.payload as Record<string, unknown> | null)
+  if (!parsed) {
+    return handleFeishuPayload({ bot: input.bot, payload: null, now: input.now })
+  }
+
+  // The official SDK flattens v2 envelopes before invoking handlers:
+  // header.event_type and event.{sender,message} become top-level fields.
+  if (!('header' in parsed) && typeof parsed.event_type === 'string') {
+    const header: FeishuEnvelope['header'] = {
+      event_type: parsed.event_type,
+      event_id:
+        typeof parsed.event_id === 'string' ? parsed.event_id : undefined,
+      token: typeof parsed.token === 'string' ? parsed.token : undefined,
+    }
+    const event: FeishuEnvelope['event'] = {
+      sender: parsed.sender as NonNullable<FeishuEnvelope['event']>['sender'],
+      message: parsed.message as NonNullable<FeishuEnvelope['event']>['message'],
+    }
+    return handleFeishuPayload({
+      bot: input.bot,
+      payload: { header, event },
+      now: input.now,
+    })
+  }
+
+  return handleFeishuPayload({
+    bot: input.bot,
+    payload: parsed as FeishuEnvelope,
+    now: input.now,
+  })
+}
+
+export function handleFeishuUpdate(input: {
+  bot: BotAppRow
+  config: FeishuBotConfig
+  headers: Record<string, string>
+  rawBody: string
+  now?: number
+}): PlatformHandleResult {
+  const { bot, config, headers, rawBody } = input
+
+  let body = rawBody
+  if (config.encryptKey) {
+    if (!verifySignature(headers, rawBody, config.encryptKey)) {
+      return { kind: 'error', status: 401, message: '飞书签名校验失败' }
+    }
+    try {
+      body = decryptFeishuPayload(rawBody, config.encryptKey)
+    } catch {
+      return { kind: 'error', status: 400, message: '飞书密文解密失败' }
+    }
+  }
+
+  const payload = safeJsonParse<FeishuEnvelope | null>(body, null)
+  return handleFeishuPayload({
+    bot,
+    payload,
+    verificationToken: config.verificationToken,
+    now: input.now,
+  })
 }

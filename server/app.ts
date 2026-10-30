@@ -23,6 +23,7 @@ function safeLogPath(pathname: string): string {
     .replace(/^\/authorize\/[^/]+/, '/authorize/[redacted]')
     .replace(/^\/api\/bot-auth\/[^/]+/, '/api/bot-auth/[redacted]')
     .replace(/^\/api\/bots\/wecom\/qr\/[^/]+/, '/api/bots/wecom/qr/[redacted]')
+    .replace(/^\/api\/bots\/feishu\/qr\/[^/]+/, '/api/bots/feishu/qr/[redacted]')
 }
 
 export function createApp(runtime: Runtime): Hono<AppBindings> {

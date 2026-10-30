@@ -1,7 +1,7 @@
 # SteamGames-Monitor
 
 自托管的多用户 Steam 游戏 / DLC 销售状态监控系统。使用 SQLite 存储数据，监控**即将停售 / 下架、打折、发售**，并通过企业微信群机器人、飞书机器人、钉钉机器人或 SMTP 邮件通知。
-同一个进程同时提供 Web 界面、REST API、Steam 轮询调度、通知投递队列、飞书 / 钉钉回调和企业微信长连接，适合单机 Docker Compose 部署。
+同一个进程同时提供 Web 界面、REST API、Steam 轮询调度、通知投递队列、飞书 / Lark / 钉钉回调以及飞书 / 企业微信长连接，适合单机 Docker Compose 部署。
 
 ## 功能
 
@@ -10,7 +10,7 @@
 - **状态变化**：发售（coming soon 翻转）、促销开始 / 变化 / 结束、原价变化、不可用（下架）与恢复。
 - **下架判定**：商店可购状态连续两次翻转才确认下架；配合 Steam 新闻关键词做提前预警（启发式，仅作参考）。
 - **通知渠道**：企业微信群机器人、飞书自定义机器人、钉钉自定义机器人、自定义 WebHook、SMTP 邮件；失败自动重试。
-- **指令机器人**：飞书 / 钉钉原生回调、企业微信智能机器人 WebSocket 长连接（支持扫码创建、未授权网页授权和事件通知），支持 `/add`、`/list`、`/price`、`/check`、`/pause`、`/resume`、`/remove`、`/adddlc`、`/events`、`/cancel`；微信 ClawBot 与 QQ Bot 正在按平台官方协议接入。
+- **指令机器人**：飞书 / Lark 应用机器人（扫码一键创建、HTTP 回调或 WebSocket 长连接）、钉钉原生回调、企业微信智能机器人长连接，支持扫码创建、未授权网页授权和事件通知；支持 `/add`、`/list`、`/price`、`/check`、`/pause`、`/resume`、`/remove`、`/adddlc`、`/events`、`/cancel`；微信 ClawBot 与 QQ Bot 正在按平台官方协议接入。
 - **运维友好**：健康检查、Docker 镜像、数据库在线备份、可配置的数据保留策略。
 
 ## 技术栈
@@ -52,7 +52,7 @@ pnpm start   # 需要先构建；由 Node 同时提供 API 与静态前端
 | `DATA_DIR` | 数据目录，默认 `./data`（Docker 中为 `/data`） |
 | `DATABASE_PATH` | SQLite 文件路径，默认 `${DATA_DIR}/steam-monitor.db` |
 | `APP_SECRET` | 必填，≥32 字符。用于派生密钥加密渠道 / 机器人凭据；**丢失后已保存的密钥无法解密** |
-| `PUBLIC_BASE_URL` | 对外访问地址，用于生成飞书 / 钉钉回调地址、企业微信网页授权链接与 CSRF 校验；长连接本身不需要公网回调 |
+| `PUBLIC_BASE_URL` | 对外访问地址，用于生成飞书 / Lark / 钉钉回调地址、企业微信网页授权链接与 CSRF 校验；长连接本身不需要公网回调 |
 | `TRUSTED_ORIGINS` | 额外允许的 Origin，逗号分隔（开发时含 `http://localhost:5173`） |
 | `COOKIE_SECURE` | HTTPS 部署时设为 `1` |
 | `TRUST_PROXY` | 反向代理层数 |
@@ -157,7 +157,7 @@ gh secret set DOCKERHUB_TOKEN --repo AkarinLiu/SteamGames-Monitor
 - 反向代理需注意：
   - 必须将 `/webhooks/*` 的**原始请求体**原样转发（不要改写或重新序列化）。
   - `client_max_body_size 1m`，读取超时 ≥10s。
-  - 飞书 / 钉钉的回调地址必须公网 HTTPS 可达；企业微信智能机器人使用出站长连接，不需要回调地址。
+  - 使用 HTTP 回调的飞书 / Lark / 钉钉地址必须公网 HTTPS 可达；飞书 / Lark 与 企业微信智能机器人使用出站长连接时不需要回调地址。
 
 ## 通知渠道配置
 
@@ -181,13 +181,17 @@ gh secret set DOCKERHUB_TOKEN --repo AkarinLiu/SteamGames-Monitor
 
 | 平台 | 接入方式 | 说明 |
 | --- | --- | --- |
-| 飞书 | `POST /webhooks/feishu/<slug>` | 应用需开启机器人能力，订阅 `im.message.receive_v1`，申请消息读取与发送权限；支持 Encrypt Key / Verification Token |
+| 飞书 / Lark | HTTP 回调或 WebSocket 长连接 | 可扫码一键创建应用，也可手动填写 App ID / App Secret；长连接需在开放平台选择「使用长连接接收事件」并订阅 `im.message.receive_v1` |
 | 钉钉 | `POST /webhooks/dingtalk/<slug>` | 机器人使用 Outgoing 回调，填写 App Secret 校验签名；回复走会话 Webhook |
 | 企业微信 | WebSocket 长连接（无需回调地址） | 在管理后台创建智能机器人，选择 API 模式 → 长连接，填写 Bot ID / Secret；服务主动连接 `wss://openws.work.weixin.qq.com` |
 
+飞书 / Lark 的 HTTP 回调地址为 `POST /webhooks/feishu/<slug>`；回调模式支持 Encrypt Key / Verification Token，长连接模式不需要公网回调地址。配置中的「版本」用于切换飞书（`open.feishu.cn`）与 Lark 国际版（`open.larksuite.com`）。
+
+**飞书 / Lark 扫码添加（推荐）**：在「指令机器人」页点击 **飞书 / Lark 扫码**，选择「飞书」或「Lark 国际版」，用对应客户端扫码并按页面提示创建应用。系统会自动获取 App ID / App Secret、写入扫码者 `open_id` 作为所有者，并启用长连接；二维码 10 分钟内有效。扫码创建的是 `PersonalAgent` 应用，已预置机器人能力和消息事件订阅，创建后可在飞书 / Lark 中搜索应用名称开始对话，或添加到群聊。
+
 企业微信长连接由服务端主动建立，不需要公网 IP、Token 或 EncodingAESKey。同一机器人在同一时间只允许一条有效连接，多实例部署时会互相踢下线。旧版企业微信自建应用回调配置已废弃，请改为填写智能机器人的 Bot ID / Secret。
 
-也可以在「指令机器人」页点击 **企微扫码添加**，使用有创建权限的企业微信扫码；系统会自动获取 Bot ID / Secret，创建机器人并建立长连接。二维码 5 分钟内有效，成功后建议补充所有者 UserID。
+也可以点击 **企微扫码添加**，使用有创建权限的企业微信扫码；系统会自动获取 Bot ID / Secret，创建机器人并建立长连接。二维码 5 分钟内有效，成功后建议补充所有者 UserID。
 
 企业微信未授权用户发送指令时，机器人会回复一次性网页授权链接。机器人所有者登录网页后，可为该平台用户选择只读或管理员角色并批准，链接 30 分钟内有效。`PUBLIC_BASE_URL` 必须可从浏览器访问，否则链接无法打开。
 
@@ -267,7 +271,7 @@ pnpm test:e2e   # 需要先安装 Playwright 浏览器：pnpm exec playwright in
 
 1. 在 `data/e2e` 创建全新数据库，启动后端（4180）、Vite（4181）和 mock 服务（9998）；
 2. 使用 mock Steam 接口驱动发售、促销、下架、恢复全流程；
-3. 校验企业微信通知、自定义 WebHook、SMTP 邮件、飞书 / 钉钉回调、企业微信长连接 / 扫码配置与指令、多用户隔离。
+3. 校验企业微信通知、自定义 WebHook、SMTP 邮件、飞书 / Lark 与钉钉回调、飞书 / 企业微信长连接与扫码配置、多用户隔离。
 
 `scripts/mock-receiver.ts` 也可单独运行，用于本地联调：
 

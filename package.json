@@ -28,6 +28,7 @@
   "packageManager": "pnpm@12.15.0",
   "dependencies": {
     "@hono/node-server": "^2.1.5",
+    "@larksuiteoapi/node-sdk": "^1.76.0",
     "@wecom/aibot-node-sdk": "1.0.7",
     "hono": "^4.13.14",
     "nodemailer": "^10.2.1",

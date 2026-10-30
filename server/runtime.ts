@@ -18,6 +18,8 @@ import {
 import { InboundDispatcher } from './inbound/dispatcher'
 import { WecomLongConnectionManager } from './inbound/wecom/manager'
 import { WecomQrService } from './inbound/wecom/qr'
+import { FeishuLongConnectionManager } from './inbound/feishu/manager'
+import { FeishuQrService } from './inbound/feishu/qr'
 import { sendCommandDelivery } from './inbound/reply'
 import { sendBotEvent } from './notify/botEvents'
 import type { CommandServices } from './inbound/commands/executor'
@@ -33,6 +35,8 @@ export interface Runtime {
   dispatcher: InboundDispatcher
   wecomBots: WecomLongConnectionManager
   wecomQr: WecomQrService
+  feishuBots: FeishuLongConnectionManager
+  feishuQr: FeishuQrService
   cacheTtlMs: number
   cleanup: CleanupJob
   checkMonitor: (monitorId: number, options?: CheckOptions) => Promise<CheckOutcome>
@@ -69,6 +73,8 @@ export function createRuntime(): Runtime {
   const dispatcher = new InboundDispatcher({ db, services })
   const wecomBots = new WecomLongConnectionManager({ db, dispatcher })
   const wecomQr = new WecomQrService(db)
+  const feishuBots = new FeishuLongConnectionManager({ db, dispatcher })
+  const feishuQr = new FeishuQrService(db)
 
   deliveryWorker.setCommandSender((delivery) =>
     sendCommandDelivery(db, delivery, {
@@ -85,6 +91,7 @@ export function createRuntime(): Runtime {
   newsScanner.start()
   deliveryWorker.start()
   wecomBots.start()
+  feishuBots.start()
   cleanup.start()
 
   return {
@@ -98,6 +105,8 @@ export function createRuntime(): Runtime {
     dispatcher,
     wecomBots,
     wecomQr,
+    feishuBots,
+    feishuQr,
     cacheTtlMs,
     cleanup,
     checkMonitor,
@@ -106,6 +115,8 @@ export function createRuntime(): Runtime {
       newsScanner.stop()
       wecomBots.stop()
       wecomQr.stop()
+      feishuBots.stop()
+      feishuQr.stop()
       await deliveryWorker.stop()
       cleanup.stop()
       db.checkpoint('TRUNCATE')

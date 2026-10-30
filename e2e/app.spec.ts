@@ -343,6 +343,47 @@ test.describe.serial('Steam 销售监控端到端', () => {
       await page.locator('.modal-footer').getByRole('button', { name: '关闭', exact: true }).click()
       await expect(page.getByRole('heading', { name: '扫码添加企业微信机器人' })).toBeHidden()
       await page.unroute('**/api/bots/wecom/qr**')
+
+      await page.route('**/api/bots/feishu/qr**', async (route) => {
+        if (route.request().method() === 'POST') {
+          const body = route.request().postDataJSON() as { brand?: string }
+          const brand = body.brand === 'lark' ? 'lark' : 'feishu'
+          await route.fulfill({
+            status: 201,
+            contentType: 'application/json',
+            body: JSON.stringify({
+              sessionId: `feishu-qr-${brand}`,
+              qrDataUrl: qrPng,
+              expiresAt: Date.now() + 600_000,
+              brand,
+              intervalMs: 5000,
+            }),
+          })
+          return
+        }
+        if (route.request().method() === 'GET') {
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({ status: 'pending', message: '等待扫码授权' }),
+          })
+          return
+        }
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ ok: true }),
+        })
+      })
+      await page.getByRole('button', { name: /飞书 \/ Lark 扫码/ }).click()
+      await expect(page.getByRole('heading', { name: '扫码添加飞书机器人' })).toBeVisible()
+      await expect(page.getByAltText('飞书扫码添加机器人二维码')).toBeVisible()
+      await page.getByRole('button', { name: 'Lark 国际版' }).click()
+      await expect(page.getByRole('heading', { name: '扫码添加Lark机器人' })).toBeVisible()
+      await expect(page.getByAltText('Lark扫码添加机器人二维码')).toBeVisible()
+      await page.locator('.modal-footer').getByRole('button', { name: '关闭', exact: true }).click()
+      await expect(page.getByRole('heading', { name: '扫码添加Lark机器人' })).toBeHidden()
+      await page.unroute('**/api/bots/feishu/qr**')
     })
 
     await test.step('网页端授权页面', async () => {

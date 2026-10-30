@@ -56,7 +56,7 @@ const commands = [
             名称搜索返回多个结果时会给出序号，直接回复序号即可选择，10 分钟内有效。
           </p>
           <p class="small faint" style="margin-top: 10px">
-            在“指令机器人”页面创建机器人：飞书、钉钉填写回调地址；企业微信填写 Bot ID / Secret 后自动建立长连接。不同平台可以分别配置允许名单。
+            在“指令机器人”页面创建机器人：飞书 / Lark 可扫码一键创建并自动启用长连接，也可填写回调地址或 App ID / App Secret；钉钉填写回调地址；企业微信填写 Bot ID / Secret。不同平台可以分别配置允许名单。
           </p>
           <p class="small faint" style="margin-top: 10px">
             在机器人编辑页可开启“接收事件通知”，事件会推送到最近一次被授权用户使用的会话；需要用户先发送过指令。钉钉事件通知还需要 App Key、App Secret 与 Robot Code。
@@ -65,13 +65,14 @@ const commands = [
 
         <section class="card">
           <div class="card-title">
-            <h2>接入飞书应用机器人</h2>
+            <h2>接入飞书 / Lark 应用机器人</h2>
           </div>
           <ol class="small muted" style="padding-left: 1.2rem">
-            <li>在飞书开放平台创建企业自建应用，开启“机器人”能力。</li>
-            <li>事件订阅地址填写“指令机器人”页面显示的回调地址（<code>/webhooks/feishu/&lt;slug&gt;</code>）。</li>
-            <li>订阅 <code>im.message.receive_v1</code>，并申请 <code>im:message</code>、<code>im:message:send_as_bot</code> 等权限。</li>
-            <li>发布应用并把机器人加入群聊，@机器人后输入 <code>/help</code> 测试。</li>
+            <li>推荐在「指令机器人」点击「飞书 / Lark 扫码」，选择「飞书」或「Lark 国际版」后扫码创建应用；系统会自动填写 App ID / App Secret、所有者 open_id，并启用长连接。</li>
+            <li>手动配置时，在飞书 / Lark 开放平台创建企业自建应用并开启「机器人」能力，填写 App ID 与 App Secret。</li>
+            <li>长连接模式需在「事件与回调」选择「使用长连接接收事件」，订阅 <code>im.message.receive_v1</code>；HTTP 回调模式则填写页面显示的 <code>/webhooks/feishu/&lt;slug&gt;</code> 地址。</li>
+            <li>发布应用并将机器人加入群聊或单聊；群聊中 @机器人 后发送 <code>/help</code> 测试。</li>
+            <li>Lark 国际版使用 <code>open.larksuite.com</code> 与 <code>accounts.larksuite.com</code>，配置中版本选择「Lark（国际版）」即可。</li>
           </ol>
         </section>
 

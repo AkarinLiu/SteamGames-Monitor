@@ -1,13 +1,13 @@
-# 飞书、钉钉、企业微信接入指南
+# 飞书 / Lark、钉钉、企业微信接入指南
 
-本文说明如何把飞书、钉钉和企业微信接入 Steam Games Monitor。项目里有两套互不替代的能力，请先确认目标：
+本文说明如何把飞书 / Lark、钉钉和企业微信接入 Steam Games Monitor。项目里有两套互不替代的能力，请先确认目标：
 
 | 目标 | 平台侧应创建 | 系统入口 | 方向 |
 | --- | --- | --- | --- |
 | 接收发售、促销、下架等事件提醒 | 群自定义机器人 / 群机器人 Webhook | **通知渠道** | 单向：系统 → 群 |
-| 在聊天中发送 `/add`、`/list` 等指令 | 飞书企业自建应用 / 钉钉企业内部机器人（Outgoing） / 企业微信智能机器人（长连接） | **指令机器人** | 双向：平台 → 系统 → 平台 |
+| 在聊天中发送 `/add`、`/list` 等指令 | 飞书 / Lark 企业自建应用 / 钉钉企业内部机器人（Outgoing） / 企业微信智能机器人（长连接） | **指令机器人** | 双向：平台 → 系统 → 平台 |
 
-> 群机器人 Webhook 通常只能发送消息，不能接收指令。飞书、钉钉需要创建应用并配置回调地址；企业微信需要创建智能机器人并使用长连接。
+> 群机器人 Webhook 通常只能发送消息，不能接收指令。飞书 / Lark 可扫码一键创建应用，并选择 HTTP 回调或 WebSocket 长连接；钉钉需要创建应用并配置回调地址；企业微信需要创建智能机器人并使用长连接。
 >
 > 通知渠道与指令机器人是两套独立配置：同一个平台可以只配通知，也可以只配指令，或两者都配。
 
@@ -15,9 +15,9 @@
 
 ## 1. 通用准备
 
-### 1.1 公网 HTTPS 与 PUBLIC_BASE_URL（飞书 / 钉钉）
+### 1.1 公网 HTTPS 与 PUBLIC_BASE_URL（HTTP 回调模式）
 
-飞书和钉钉需要平台主动把消息推送到你的服务器，因此必须满足：
+使用 **HTTP 回调** 的飞书 / Lark / 钉钉需要平台主动把消息推送到你的服务器，因此必须满足：
 
 - 服务可从公网访问，并使用平台认可的 **HTTPS** 地址。
 - `.env` 中的 `PUBLIC_BASE_URL` 与浏览器实际访问地址一致，例如 `https://steam.example.com`。
@@ -27,38 +27,53 @@
 系统中显示的回调地址由以下规则生成：
 
 ```text
-飞书     https://<PUBLIC_BASE_URL 的域名>/webhooks/feishu/<slug>
-钉钉     https://<PUBLIC_BASE_URL 的域名>/webhooks/dingtalk/<slug>
+飞书 / Lark  https://<PUBLIC_BASE_URL 的域名>/webhooks/feishu/<slug>
+钉钉         https://<PUBLIC_BASE_URL 的域名>/webhooks/dingtalk/<slug>
 ```
 
 `<slug>` 在创建机器人时随机生成，每个机器人不同。修改 `PUBLIC_BASE_URL` 后回调地址会变化，需要同步更新平台后台。
 
-> 企业微信智能机器人使用**出站长连接**，由服务端主动连接企业微信，不需要公网回调地址、公网 IP、Token 或 EncodingAESKey。
+> 飞书 / Lark 的**长连接模式**和企业微信智能机器人都由服务端主动建立出站连接，不需要公网回调地址、公网 IP、Token 或 EncodingAESKey。扫码创建的飞书 / Lark 应用默认使用长连接。
 >
 > 但 `PUBLIC_BASE_URL` 仍必须能被机器人的所有者在浏览器中访问：未授权用户收到的网页授权链接会使用该地址。
 
 ### 1.2 反向代理要求
 
-Nginx、Caddy、Traefik 或云负载均衡需要满足（仅影响飞书 / 钉钉回调）：
+Nginx、Caddy、Traefik 或云负载均衡需要满足（仅影响飞书 / Lark / 钉钉的 HTTP 回调）：
 
-- **原样转发请求体**，不要重新序列化 JSON、不要压缩或修改内容；飞书和钉钉的签名基于原始请求体。
+- **原样转发请求体**，不要重新序列化 JSON、不要压缩或修改内容；飞书 / Lark 和钉钉的签名基于原始请求体。
 - 保留平台请求头：飞书的 `X-Lark-Request-Timestamp`、`X-Lark-Request-Nonce`、`X-Lark-Signature`，钉钉的 `timestamp`、`sign`。
 - 保留查询参数，不要丢失签名参数。
 - 不要给 `/webhooks/*` 增加登录、Basic Auth、HTML 跳转或 WAF 交互验证。
 - 请求体上限至少 1 MB；读取超时不少于 10 秒。
 - 使用受信任的 TLS 证书，平台会校验证书链。
 
-企业微信长连接不经过反向代理，只需要服务器能出站访问 `wss://openws.work.weixin.qq.com:443`。
+飞书 / Lark 长连接与企业微信长连接不经过反向代理，只需要服务器能出站访问对应平台（Lark 使用 `open.larksuite.com`）。
 
 ### 1.3 时间同步与密钥
 
-- 服务器需开启 NTP 时间同步。飞书签名允许 ±300 秒偏差，钉钉 Outgoing 回调允许 ±1 小时偏差。
+- 服务器需开启 NTP 时间同步。飞书 / Lark 签名允许 ±300 秒偏差，钉钉 Outgoing 回调允许 ±1 小时偏差。
 - `APP_SECRET`（至少 32 字符）用于加密保存渠道和机器人凭据。**不要随意更换或丢失**：更换后已保存的 App Secret、机器人 Secret、Encrypt Key 等将无法解密，只能重新填写。
 - 机器人凭据保存在 SQLite 中，使用 AES-256-GCM 加密；API 和页面不会回显明文，编辑时留空表示保留原值。
 
 ### 1.4 推荐创建顺序
 
-飞书 / 钉钉：
+飞书 / Lark（扫码，推荐）：
+
+1. 在「指令机器人」点击「飞书 / Lark 扫码」，选择飞书或 Lark 国际版并扫码。
+2. 在平台页面创建应用并确认；系统自动写入 App ID / App Secret、所有者 `open_id`，并启用长连接。
+3. 在飞书 / Lark 中搜索应用名称开始单聊，或把机器人加入群聊。
+4. 发送 `/help` 验证指令与回复链路。
+
+飞书 / Lark（手动）：
+
+1. 在系统中创建机器人，选择版本（飞书 / Lark）和事件接收方式（HTTP 回调 / 长连接）。
+2. HTTP 回调：复制回调地址填入平台后台，并配置 Encrypt Key / Verification Token；长连接：在平台选择「使用长连接接收事件」。
+3. 订阅 `im.message.receive_v1`，申请消息读取与发送权限。
+4. 发布应用、添加机器人到群或设置可见范围。
+5. 发送 `/help` 验证。
+
+钉钉：
 
 1. 在系统中创建机器人，复制回调地址。
 2. 到平台后台创建应用 / 机器人，填写回调地址和密钥。
@@ -161,7 +176,7 @@ Nginx、Caddy、Traefik 或云负载均衡需要满足（仅影响飞书 / 钉�
 
 ## 3. 指令机器人（双向）
 
-指令机器人让用户在飞书、钉钉或企业微信聊天中通过斜杠指令管理监控项。飞书 / 钉钉通过 HTTP 回调接收消息，企业微信通过 WebSocket 长连接接收消息；结果分别通过平台 API 或长连接回复到原会话。
+指令机器人让用户在飞书 / Lark、钉钉或企业微信聊天中通过斜杠指令管理监控项。飞书 / Lark 支持 HTTP 回调或 WebSocket 长连接，钉钉通过 HTTP 回调，企业微信通过 WebSocket 长连接；结果分别通过平台 API 或长连接回复到原会话。
 
 ### 3.1 通用行为
 
@@ -170,61 +185,75 @@ Nginx、Caddy、Traefik 或云负载均衡需要满足（仅影响飞书 / 钉�
 - **允许名单**：其他平台用户必须加入允许名单，角色为：
   - `admin`：可使用全部指令。
   - `viewer`：只能使用 `/help`、`/list`、`/price`、`/events`。
-  - 不在允许名单中的企业微信用户会收到网页授权链接；飞书 / 钉钉用户会收到联系所有者的提示。
+  - 不在允许名单中的企业微信用户会收到网页授权链接；飞书 / Lark / 钉钉用户会收到联系所有者的提示。
 - **事件通知**：机器人可以在编辑页单独开启「接收事件通知」，把事件推送到最近一次被授权用户使用的会话。它和「通知渠道」相互独立，可以同时启用。没有最近会话时不会推送，详见 3.5 节。
 - **消息格式**：当前只处理文本消息。图片、文件、富文本、卡片消息会被忽略。
 - **指令格式**：以 `/` 或全角 `／` 开头；支持 `/add@机器人`、引号参数、`--flag=value`。
 - **去重**：平台重复投递同一条消息时，系统按平台事件 / 消息 ID 去重，只处理一次。
 - **限流**：每个平台用户每分钟最多 10 条指令，每个会话每分钟最多 30 条，每个机器人每分钟最多 60 条；触发限流时每分钟最多提示一次。
-- **异步回复**：飞书 / 钉钉回调会先快速返回成功，企业微信消息通过长连接接收；指令在后台执行，结果通过平台 API 或长连接回复。平台显示回复可能有少量延迟。
+- **异步回复**：飞书 / Lark / 钉钉回调会先快速返回成功，企业微信消息通过长连接接收；指令在后台执行，结果通过平台 API 或长连接回复。平台显示回复可能有少量延迟。
 - **多结果选择**：`/add`、`/adddlc` 按名称搜索命中多个结果时，机器人会返回编号列表；直接回复序号（10 分钟内有效），或发送 `/cancel` 取消。
-- **配额**：每个账号最多创建 3 个机器人；同一平台只能有 1 个启用中的机器人。飞书 / 钉钉机器人停用后回调地址立即失效（返回 404）；企业微信机器人停用后长连接断开。
+- **配额**：每个账号最多创建 3 个机器人；同一平台只能有 1 个启用中的机器人（飞书与 Lark 国际版共用「飞书」平台名额）。飞书 / Lark / 钉钉的 HTTP 回调机器人在停用后回调地址立即失效（返回 404）；长连接机器人在停用后连接断开。
 
-### 3.2 飞书应用机器人
+### 3.2 飞书 / Lark 应用机器人
 
-飞书需要创建**企业自建应用**，开启机器人能力，并订阅消息事件。飞书自定义机器人 Webhook 不能接收指令。
+飞书 / Lark 需要创建**企业自建应用**，开启机器人能力并订阅消息事件。群自定义机器人 Webhook 不能接收指令。飞书（中国版）使用 `open.feishu.cn` / `accounts.feishu.cn`，Lark 国际版使用 `open.larksuite.com` / `accounts.larksuite.com`；系统内通过机器人配置的「版本」区分。
 
-#### 平台侧配置
+#### 扫码一键创建（推荐）
 
-1. 打开[飞书开放平台](https://open.feishu.cn/app)，创建企业自建应用。
+1. 在「指令机器人」点击 **飞书 / Lark 扫码**，在弹窗选择「飞书」或「Lark 国际版」。
+2. 用对应客户端扫码；页面会预填应用名称并只允许创建新应用。
+3. 确认创建后，系统自动获取 App ID / App Secret，写入扫码者 `open_id` 作为所有者，并启用长连接。
+4. 二维码 10 分钟内有效；同一平台已有启用机器人或配额已满时会被拒绝。
+5. 在飞书 / Lark 中搜索应用名称开始单聊，或添加机器人到群聊，发送 `/help`。
+
+> 扫码创建使用飞书官方 `PersonalAgent` 模板，预置机器人能力、消息权限和 `im.message.receive_v1` 事件，事件接收方式为长连接。若你的企业限制扫码创建，可使用下方手动配置。
+>
+> 若飞书二维码被 Lark 租户扫描，系统会自动切换到 `accounts.larksuite.com` 继续完成授权。
+
+#### 手动配置
+
+1. 打开[飞书开放平台](https://open.feishu.cn/app)或 [Lark 开放平台](https://open.larksuite.com/app)，创建企业自建应用。
 2. 在「添加应用能力」中开启 **机器人**。
-3. 在「权限管理」申请消息相关权限，常见为：
-   - `im:message`：获取与发送单聊、群组消息。
+3. 在「权限管理」申请消息相关权限：
+   - `im:message.p2p_msg:readonly`：读取用户发给机器人的单聊消息。
+   - `im:message.group_at_msg:readonly`：接收群聊中 @ 机器人的消息。
    - `im:message:send_as_bot`：以应用身份发送消息。
-   - 如后台按场景拆分权限，请同时申请接收群聊中 @ 机器人消息、读取消息内容、发送消息对应的权限。
-4. 在系统中创建「飞书应用机器人」，复制回调地址。
-5. 在「事件与回调」中将订阅方式设为 **发送至开发者服务器**（本系统使用 HTTP 回调，未接入飞书长连接），请求地址填写系统显示的回调地址。
-6. 添加事件 `im.message.receive_v1`（接收消息）。
-7. 如需加密，在平台开启 Encrypt Key，并把相同的 Encrypt Key 和 Verification Token 填入系统机器人配置。
-8. 创建版本并发布应用；在「应用可用范围」中确保使用者可用。
-9. 将机器人添加到群聊，或直接与机器人单聊。
+   - 如后台按场景拆分权限，请同时申请读取消息内容、发送消息对应的权限。
+4. 在系统中创建「飞书 / Lark 应用机器人」，选择版本和事件接收方式：
+   - **长连接（推荐）**：在平台「事件与回调」选择「使用长连接接收事件」，订阅 `im.message.receive_v1`；无需回调地址。
+   - **HTTP 回调**：将系统显示的 `/webhooks/feishu/<slug>` 填为请求地址；如需加密，填写 Encrypt Key 与 Verification Token。
+5. 创建版本并发布应用；在「应用可用范围」中确保使用者可用。
+6. 将机器人添加到群聊，或直接与机器人单聊。
 
 #### 系统侧字段
 
 | 字段 | 是否必填 | 说明 |
 | --- | --- | --- |
 | 名称 | 是 | 仅用于系统内识别 |
-| App ID | 建议必填 | 获取 `tenant_access_token` 所需；不填会导致无法回复或推送事件 |
-| App Secret | 建议必填 | 与 App ID 配对；不填会导致无法回复或推送事件 |
-| Encrypt Key | 视平台配置 | 必须与飞书后台完全一致；启用加密时必填 |
-| Verification Token | 建议填写 | 与飞书后台一致；用于校验事件来源 |
-| 所有者平台用户 ID | 建议填写 | 填飞书 `open_id`（通常以 `ou_` 开头） |
+| 版本 | 是 | 飞书（中国版）或 Lark（国际版） |
+| 事件接收方式 | 是 | HTTP 回调 / 长连接；扫码创建默认长连接 |
+| App ID | 建议必填 | 获取 `tenant_access_token`、回复和推送事件所需 |
+| App Secret | 建议必填 | 与 App ID 配对 |
+| Encrypt Key | HTTP 回调时视平台 | 必须与飞书 / Lark 后台完全一致；启用加密时必填 |
+| Verification Token | HTTP 回调时建议 | 与平台一致；用于校验事件来源 |
+| 所有者平台用户 ID | 建议填写 | 填飞书 / Lark `open_id`（通常以 `ou_` 开头）；扫码创建会自动填写 |
 | API Base URL | 否 | 仅测试 / 代理使用；生产环境留空 |
 
-#### 回调与签名说明
+#### 回调、长连接与签名
 
-- 平台保存事件订阅地址时会发送 `url_verification` 挑战，系统会返回 `challenge`。
-- 配置了 Encrypt Key 时，系统会校验请求头签名：
-  `SHA256(timestamp + nonce + encryptKey + rawBody)`，允许 ±300 秒偏差，然后解密密文。
-- 配置了 Verification Token 时，系统会校验事件中的 token；不匹配返回 401。
+- **HTTP 回调**：平台保存事件订阅地址时会发送 `url_verification` 挑战，系统会返回 `challenge`。
+  - 配置了 Encrypt Key 时，系统校验请求头签名 `SHA256(timestamp + nonce + encryptKey + rawBody)`，允许 ±300 秒偏差，然后解密密文。
+  - 配置了 Verification Token 时，系统校验事件中的 token；不匹配返回 401。
+- **长连接**：服务端使用 App ID / App Secret 主动连接飞书 / Lark 的长连接端点；事件经已认证连接推送，不需要验签、公网地址或反向代理。连接状态会显示在机器人卡片上。
 - 仅处理 `im.message.receive_v1` 中的文本消息，忽略应用自身发送的消息。
-- 回复优先调用飞书「回复消息」接口；失败时回退为向 `chat_id` 发送消息。
+- 回复优先调用「回复消息」接口；失败时回退为向 `chat_id` 发送消息。
 - 群聊中需要 **@机器人** 再输入指令；单聊可直接发送。
 
 #### 所有者 ID 与允许名单
 
-- 飞书事件中用户标识优先取 `open_id`，因此所有者 ID 和允许名单应填写 `open_id`，不要填手机号、邮箱或姓名。
-- 可在飞书开放平台的事件调试 / 回调日志中查看消息事件里的 `open_id`，或让用户先发一条消息后查看平台事件详情。
+- 飞书 / Lark 事件中用户标识优先取 `open_id`，因此所有者 ID 和允许名单应填写 `open_id`，不要填手机号、邮箱或姓名。
+- 扫码创建会自动把扫码者的 `open_id` 写入所有者；手动配置时可查看事件调试 / 回调日志，或让用户先发一条消息后查看平台事件详情。
 
 ### 3.3 钉钉机器人（Outgoing）
 
@@ -349,7 +378,7 @@ Nginx、Caddy、Traefik 或云负载均衡需要满足（仅影响飞书 / 钉�
 
 各平台的额外要求：
 
-- **飞书**：需要 App ID / App Secret，并具备以应用身份向会话发送消息的权限。事件发送到最近会话的 `chat_id`。
+- **飞书 / Lark**：需要 App ID / App Secret，并具备以应用身份向会话发送消息的权限。事件发送到最近会话的 `chat_id`；HTTP 回调与长连接模式均可。
 - **钉钉**：需要 App Key、App Secret、Robot Code，并具备机器人主动发送消息权限。群聊使用 `openConversationId`，单聊使用发送者 `staffId`。
 - **企业微信**：使用长连接 `aibot_send_msg` 推送到最近会话；单聊 `chat_type=1`，群聊 `chat_type=2`。用户必须先与机器人有过会话。
 
@@ -390,11 +419,14 @@ Nginx、Caddy、Traefik 或云负载均衡需要满足（仅影响飞书 / 钉�
 
 | 现象 | 可能原因 | 处理 |
 | --- | --- | --- |
-| 飞书 / 钉钉保存回调地址失败 | 服务不可公网访问、证书无效、`PUBLIC_BASE_URL` 错误 | 用手机流量访问回调域名；确认 HTTPS 证书链完整；确认机器人已创建并启用 |
-| 飞书 / 钉钉回调返回 404 | 机器人被停用、删除，或 `<slug>` 填错 | 在「指令机器人」页面复制最新回调地址；启用机器人 |
-| 飞书提示挑战失败 / 401 | Verification Token 或 Encrypt Key 不一致；代理改写了请求体 | 两边重新核对；关闭请求体压缩 / 重写；保留 `X-Lark-*` 请求头 |
-| 飞书开启加密后机器人无反应 | 平台开启了 Encrypt Key，但系统未填写，密文无法解析；也可能因 Verification Token 校验直接返回 401 | 在系统填写相同的 Encrypt Key 和 Verification Token，或关闭平台加密后重新保存 |
-| 飞书能收消息但无法回复 | App ID / App Secret 未填，或缺少发消息权限 | 补全凭据；在开放平台申请并发布消息发送权限 |
+| 飞书 / Lark / 钉钉保存回调地址失败 | 服务不可公网访问、证书无效、`PUBLIC_BASE_URL` 错误 | 用手机流量访问回调域名；确认 HTTPS 证书链完整；确认机器人已创建并启用 |
+| 飞书 / Lark / 钉钉回调返回 404 | 机器人被停用、删除，或 `<slug>` 填错 | 在「指令机器人」页面复制最新回调地址；启用机器人 |
+| 飞书 / Lark 提示挑战失败 / 401 | Verification Token 或 Encrypt Key 不一致；代理改写了请求体 | 两边重新核对；关闭请求体压缩 / 重写；保留 `X-Lark-*` 请求头 |
+| 飞书 / Lark 开启加密后机器人无反应 | 平台开启了 Encrypt Key，但系统未填写，密文无法解析；也可能因 Verification Token 校验直接返回 401 | 在系统填写相同的 Encrypt Key 和 Verification Token，或关闭平台加密后重新保存 |
+| 飞书 / Lark 能收消息但无法回复 | App ID / App Secret 未填，或缺少发消息权限 | 补全凭据；在开放平台申请并发布消息发送权限 |
+| 飞书 / Lark 长连接一直显示连接中 / 异常 | App ID / App Secret 错误；应用未开启「使用长连接接收事件」；企业限制扫码创建 | 核对凭据；在事件与回调切换为长连接并发布版本；或改用 HTTP 回调 |
+| 扫码后搜索不到飞书 / Lark 机器人 | 应用未发布或可用范围不包含该成员 | 在开放平台创建版本并发布，调整可用范围；使用应用名称搜索 |
+| 扫了飞书二维码但创建的是 Lark 应用 | 扫码账号属于 Lark 租户，系统自动切换了授权域 | 属正常行为；到 Lark 中搜索应用名称即可 |
 | 钉钉回调 401 | App Secret 填错；请求头被代理删除；服务器时间偏差超过 1 小时 | 核对应用 App Secret（不是加签密钥）；保留 `timestamp`、`sign`；同步 NTP |
 | 钉钉回复超时 / 失败 | `sessionWebhook` 已过期 | 重新发送指令；确保回调在数秒内完成 |
 | 企业微信长连接未连接 / 异常 | Bot ID 或 Secret 填错；服务器无法出站访问 `openws.work.weixin.qq.com:443`；另一个实例使用了同一机器人；机器人已停用 | 核对 Bot ID / Secret；检查出站防火墙与代理；确认没有重复部署；在机器人卡片查看状态与错误信息 |
@@ -406,7 +438,7 @@ Nginx、Caddy、Traefik 或云负载均衡需要满足（仅影响飞书 / 钉�
 | 通知渠道测试失败 | Webhook 失效、签名密钥错误、关键词 / IP 白名单限制 | 重新复制 Webhook；核对签名密钥；检查平台安全设置 |
 | 群内没有任何事件通知 | 渠道停用、事件类型未勾选、群机器人被移除 | 检查渠道状态与事件订阅；重新发送测试消息 |
 | 机器人没有推送事件通知 | 未开启“接收事件通知”；没有最近授权会话；钉钉缺少 App Key / Robot Code；机器人被停用 | 编辑机器人开启通知；让授权用户先发一条指令；补全钉钉凭据；检查投递记录 |
-| 飞书 / 钉钉重复推送同一条消息 | 平台未及时收到 ACK 或网络抖动 | 系统按消息 ID 去重；确保回调在 10 秒内返回 |
+| 飞书 / Lark / 钉钉重复推送同一条消息 | 平台未及时收到 ACK 或网络抖动 | 系统按消息 ID 去重；确保回调在 10 秒内返回 |
 
 ### 调试建议
 
@@ -419,19 +451,22 @@ Nginx、Caddy、Traefik 或云负载均衡需要满足（仅影响飞书 / 钉�
 
 ## 6. 安全建议
 
-- 飞书 / 钉钉回调地址、群机器人 Webhook、企业微信 Bot ID / Secret 都视为凭据，不要提交到公开仓库或发到公开群。
-- 飞书建议启用 Encrypt Key + Verification Token；钉钉必须填写 App Secret 验签；企业微信必须保护 Bot ID 与长连接 Secret。
+- 飞书 / Lark / 钉钉回调地址、群机器人 Webhook、企业微信 Bot ID / Secret 都视为凭据，不要提交到公开仓库或发到公开群。
+- 飞书 / Lark 的 HTTP 回调建议启用 Encrypt Key + Verification Token；长连接凭据同样需要保密。钉钉必须填写 App Secret 验签；企业微信必须保护 Bot ID 与长连接 Secret。
 - 允许名单遵循最小权限：普通成员使用 `viewer`，仅管理员使用 `admin`。
 - 不要在公网暴露 SQLite 文件；定期备份数据库，并同时备份 `.env` 中的 `APP_SECRET`。
-- 修改 `PUBLIC_BASE_URL` 或更换域名后，及时更新飞书 / 钉钉后台的回调地址；企业微信长连接不受影响。
-- 怀疑凭据泄露时：飞书重置 App Secret / Encrypt Key，钉钉重置 App Secret，企业微信重新生成智能机器人 Secret，并在系统中重新填写。
+- 修改 `PUBLIC_BASE_URL` 或更换域名后，及时更新飞书 / Lark / 钉钉后台的回调地址；长连接模式不受影响。
+- 怀疑凭据泄露时：飞书 / Lark 重置 App Secret / Encrypt Key，钉钉重置 App Secret，企业微信重新生成智能机器人 Secret，并在系统中重新填写。
 
 ---
 
 ## 7. 官方文档
 
 - 飞书事件订阅与请求地址配置：<https://open.feishu.cn/document/server-docs/event-subscription-guide/event-subscription-configure-/request-url-configuration-case>
+- 飞书一键创建应用：<https://open.feishu.cn/document/mcp_open_tools/scan-to-create-an-app-in-one-click>
 - 飞书自定义机器人：<https://open.feishu.cn/document/client-docs/bot-v3/add-custom-bot>
+- Lark 事件订阅与请求地址配置：<https://open.larksuite.com/document/server-docs/event-subscription-guide/event-subscription-configure-/request-url-configuration-case>
+- Lark 一键创建应用：<https://open.larksuite.com/document/mcp_open_tools/scan-to-create-an-app-in-one-click>
 - 钉钉机器人接收消息：<https://open.dingtalk.com/document/orgapp/receive-message>
 - 钉钉自定义机器人：<https://open.dingtalk.com/document/orgapp/custom-robot-access>
 - 企业微信智能机器人长连接：<https://developer.work.weixin.qq.com/document/path/101463>
@@ -441,6 +476,7 @@ Nginx、Caddy、Traefik 或云负载均衡需要满足（仅影响飞书 / 钉�
 平台后台入口：
 
 - 飞书开放平台：<https://open.feishu.cn/app>
+- Lark 开放平台：<https://open.larksuite.com/app>
 - 钉钉开放平台：<https://open.dingtalk.com/>
 - 企业微信管理后台：<https://work.weixin.qq.com/>
 

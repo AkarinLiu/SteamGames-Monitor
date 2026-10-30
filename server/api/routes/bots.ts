@@ -5,6 +5,7 @@ import {
   AllowlistEntrySchema,
   UpdateBotSchema,
   WecomQrStartSchema,
+  FeishuQrStartSchema,
 } from '../../../shared/schemas'
 import type { BotPlatform } from '../../../shared/types'
 import { LIMITS } from '../../../shared/constants'
@@ -30,7 +31,8 @@ import {
 import { botAad, currentKeyVersion, decryptConfig, encryptConfig, SecretDecryptError } from '../../notify/secrets'
 import { generateBotSlug } from '../../lib/botSlug'
 import { env } from '../../env'
-import type { BotConfig } from '../../inbound/types'
+import type { BotConfig, FeishuBotConfig } from '../../inbound/types'
+import { resolveFeishuConnectionMode } from '../../inbound/feishu/domains'
 
 function configSummary(platform: BotPlatform, config: BotConfig): Record<string, unknown> {
   if (platform === 'feishu') {
@@ -40,6 +42,8 @@ function configSummary(platform: BotPlatform, config: BotConfig): Record<string,
       appSecretSet: Boolean(feishu.appSecret),
       encryptKeySet: Boolean(feishu.encryptKey),
       verificationTokenSet: Boolean(feishu.verificationToken),
+      brand: feishu.brand ?? 'feishu',
+      connectionMode: feishu.connectionMode ?? 'webhook',
       ownerPlatformUserId: feishu.ownerPlatformUserId ?? '',
     }
   }
@@ -84,21 +88,26 @@ function toBotView(
     if (!(error instanceof SecretDecryptError)) throw error
     configError = error.message
   }
-  const isWebhookBot = row.platform !== 'wecom'
+  const feishuWs =
+    row.platform === 'feishu' &&
+    resolveFeishuConnectionMode(config as FeishuBotConfig) === 'websocket'
+  const usesWebhook = row.platform === 'dingtalk' || (row.platform === 'feishu' && !feishuWs)
+  const usesLongConnection = row.platform === 'wecom' || feishuWs
   return {
     ...bot,
     config,
     configError,
-    webhookPath: isWebhookBot ? `/webhooks/${row.platform}/${row.webhook_slug}` : null,
-    callbackUrl: isWebhookBot
+    webhookPath: usesWebhook ? `/webhooks/${row.platform}/${row.webhook_slug}` : null,
+    callbackUrl: usesWebhook
       ? `${env.PUBLIC_BASE_URL}/webhooks/${row.platform}/${row.webhook_slug}`
       : null,
-    connection:
-      row.platform === 'wecom'
-        ? row.enabled === 1
+    connection: usesLongConnection
+      ? row.enabled === 1
+        ? row.platform === 'wecom'
           ? runtime.wecomBots.statusFor(row.id)
-          : { state: 'disabled', since: row.updated_at }
-        : null,
+          : runtime.feishuBots.statusFor(row.id)
+        : { state: 'disabled', since: row.updated_at }
+      : null,
   }
 }
 
@@ -124,6 +133,8 @@ const BOT_STRING_KEYS = [
   'verificationToken',
   'robotCode',
   'botId',
+  'brand',
+  'connectionMode',
   'ownerPlatformUserId',
 ] as const
 
@@ -180,6 +191,28 @@ export function botRoutes(runtime: Runtime): Hono<AppBindings> {
     return c.json({ ok: true })
   })
 
+  router.post('/feishu/qr', async (c) => {
+    const user = c.get('user') as UserRow
+    const input = await parseJson(c, FeishuQrStartSchema)
+    const session = await runtime.feishuQr.start(user.id, input.name, input.brand)
+    c.header('cache-control', 'no-store')
+    return c.json(session, 201)
+  })
+
+  router.get('/feishu/qr/:sessionId', async (c) => {
+    const user = c.get('user') as UserRow
+    const result = await runtime.feishuQr.poll(user.id, c.req.param('sessionId'))
+    if (result.status === 'success' && result.botId) runtime.feishuBots.sync()
+    c.header('cache-control', 'no-store')
+    return c.json(result)
+  })
+
+  router.delete('/feishu/qr/:sessionId', (c) => {
+    const user = c.get('user') as UserRow
+    runtime.feishuQr.cancel(user.id, c.req.param('sessionId'))
+    return c.json({ ok: true })
+  })
+
   router.post('/', async (c) => {
     const user = c.get('user') as UserRow
     const input = await parseJson(c, CreateBotSchema)
@@ -208,6 +241,7 @@ export function botRoutes(runtime: Runtime): Hono<AppBindings> {
         apiBaseUrl: input.apiBaseUrl ?? null,
       })
       if (input.platform === 'wecom') runtime.wecomBots.sync()
+      if (input.platform === 'feishu') runtime.feishuBots.sync()
       return c.json({ bot: toBotView(runtime, row, []) }, 201)
     } catch (error) {
       if (isSlugConflict(error)) throw conflict('回调地址冲突，请重试')
@@ -251,6 +285,7 @@ export function botRoutes(runtime: Runtime): Hono<AppBindings> {
       keyVersion: configEnc ? currentKeyVersion() : undefined,
     })
     if (row.platform === 'wecom') runtime.wecomBots.sync()
+    if (row.platform === 'feishu') runtime.feishuBots.sync()
     return c.json({ bot: toBotView(runtime, updated!, listAllowlist(db, id)) })
   })
 
@@ -259,6 +294,7 @@ export function botRoutes(runtime: Runtime): Hono<AppBindings> {
     const id = parseIdParam(c)
     if (!deleteBot(db, user.id, id)) throw notFound('机器人不存在')
     runtime.wecomBots.sync()
+    runtime.feishuBots.sync()
     return c.json({ ok: true })
   })
 
