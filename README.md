@@ -91,6 +91,19 @@ docker run -d --name steam-monitor \
 docker compose up -d --build
 ```
 
+### 发布到 Docker Hub
+
+`.github/workflows/dockerhub.yml` 会在 `main` 分支推送时构建并推送 Docker Hub 镜像，默认标签为 `latest`：
+
+- 仓库 Secrets 需要配置 `DOCKERHUB_USERNAME` 与 `DOCKERHUB_TOKEN`（Docker Hub Access Token，需 Read & Write 权限）。
+- 镜像地址默认为 `<DOCKERHUB_USERNAME>/steamgames-monitor:latest`。
+- 如需使用组织命名空间，可添加仓库变量 `DOCKERHUB_REPOSITORY`（例如 `myorg/steamgames-monitor`）。
+
+```bash
+gh secret set DOCKERHUB_USERNAME --repo AkarinLiu/SteamGames-Monitor
+gh secret set DOCKERHUB_TOKEN --repo AkarinLiu/SteamGames-Monitor
+```
+
 - 数据持久化在命名卷 `sgm-data`（挂载到容器 `/data`）。
 - 容器内始终使用 `/data` 作为数据目录，Compose 会覆盖 `.env` 中的 `DATA_DIR` / `DATABASE_PATH`，不要改成容器内相对路径。
 - `PUBLIC_BASE_URL` 必须与浏览器实际访问地址一致（例如 `http://192.168.1.10:8787`）；使用域名 / HTTPS 反代时也要同步修改。
