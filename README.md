@@ -110,7 +110,7 @@ docker compose up -d --build
 
 - 仓库 Secrets 需要配置 `DOCKERHUB_USERNAME` 与 `DOCKERHUB_TOKEN`（Docker Hub Access Token，需 Read & Write 权限）。
 - 当前镜像：`docker.io/akarinliu2000/steamgames-monitor:latest`（Debian）与 `:latest-alpine`（Alpine），均为 amd64/arm64 多架构。
-- Docker Hub 仓库目前为私有；如需匿名拉取，请在 Docker Hub 仓库 Settings 中将 Visibility 改为 Public，或先 `docker login`。
+- Docker Hub 仓库已公开，可直接匿名拉取。
 - 如需使用组织命名空间，可添加仓库变量 `DOCKERHUB_REPOSITORY`（例如 `myorg/steamgames-monitor`）。
 
 ```bash
@@ -123,6 +123,7 @@ gh secret set DOCKERHUB_TOKEN --repo AkarinLiu/SteamGames-Monitor
 ```
 
 - 数据持久化在命名卷 `sgm-data`（挂载到容器 `/data`）。
+- 镜像入口脚本会把 `.env` 中的相对 `DATA_DIR` / `DATABASE_PATH` 自动映射到 `/data`，单独 `docker run --env-file .env` 也能正常进入初始化向导。
 - 容器内始终使用 `/data` 作为数据目录，Compose 会覆盖 `.env` 中的 `DATA_DIR` / `DATABASE_PATH`，不要改成容器内相对路径。
 - `PUBLIC_BASE_URL` 必须与浏览器实际访问地址一致（例如 `http://192.168.1.10:8787`）；使用域名 / HTTPS 反代时也要同步修改。
 - `APP_SECRET` 必填，缺失时容器会退出；可执行 `docker compose logs -f steam-monitor` 查看启动错误。

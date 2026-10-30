@@ -132,3 +132,40 @@ jobs:
       - name: Remove Alpine container
         if: always()
         run: docker rm -f steam-monitor-alpine || true
+
+  standalone-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build standalone image
+        run: docker build -t steam-monitor:standalone .
+
+      - name: Run with host-style relative .env paths
+        run: |
+          cat > /tmp/standalone.env <<'EOF'
+          APP_SECRET=standalone-smoke-secret-0123456789abcdef0123456789abcdef
+          PUBLIC_BASE_URL=http://127.0.0.1:8787
+          NODE_ENV=production
+          DATA_DIR=./data
+          DATABASE_PATH=./data/steam-monitor.db
+          EOF
+          docker run -d --name steam-monitor-standalone \
+            --env-file /tmp/standalone.env \
+            -p 8787:8787 \
+            steam-monitor:standalone
+          for i in $(seq 1 40); do
+            if curl -fsS http://127.0.0.1:8787/api/health >/dev/null; then
+              echo "standalone health check passed"
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "standalone health check failed"
+          docker logs steam-monitor-standalone
+          exit 1
+
+      - name: Remove standalone container
+        if: always()
+        run: docker rm -f steam-monitor-standalone || true
