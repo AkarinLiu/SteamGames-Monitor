@@ -19,9 +19,22 @@ concurrency:
 jobs:
   docker:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        variant:
+          - name: debian
+            base: node:24-bookworm-slim
+            suffix: ''
+          - name: alpine
+            base: node:24-alpine
+            suffix: '-alpine'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -40,19 +53,22 @@ jobs:
         with:
           images: ghcr.io/${{ github.repository }}
           tags: |
-            type=raw,value=latest
-            type=sha,prefix=sha-
-            type=semver,pattern={{version}}
+            type=raw,value=latest${{ matrix.variant.suffix }}
+            type=sha,prefix=sha-,suffix=${{ matrix.variant.suffix }}
+            type=semver,pattern={{version}},suffix=${{ matrix.variant.suffix }}
 
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
           context: .
+          build-args: |
+            BASE_IMAGE=${{ matrix.variant.base }}
+          platforms: ${{ github.event_name == 'pull_request' && 'linux/amd64' || 'linux/amd64,linux/arm64' }}
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=${{ matrix.variant.name }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.variant.name }}
 
   compose-smoke:
     runs-on: ubuntu-latest
@@ -85,3 +101,34 @@ jobs:
         if: always()
         run: docker compose down -v
 
+  alpine-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build Alpine image
+        run: docker build --build-arg BASE_IMAGE=node:24-alpine -t steam-monitor:alpine .
+
+      - name: Run Alpine image and check health
+        run: |
+          docker run -d --name steam-monitor-alpine \
+            -e APP_SECRET=alpine-smoke-secret-0123456789abcdef0123456789abcdef \
+            -e NODE_ENV=production \
+            -e PUBLIC_BASE_URL=http://127.0.0.1:8787 \
+            -p 8787:8787 \
+            steam-monitor:alpine
+          for i in $(seq 1 40); do
+            if curl -fsS http://127.0.0.1:8787/api/health >/dev/null; then
+              echo "alpine health check passed"
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "alpine health check failed"
+          docker logs steam-monitor-alpine
+          exit 1
+
+      - name: Remove Alpine container
+        if: always()
+        run: docker rm -f steam-monitor-alpine || true

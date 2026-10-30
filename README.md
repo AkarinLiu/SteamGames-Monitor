@@ -72,6 +72,19 @@ GitHub Actions 会在 `main` 分支推送时自动构建并发布镜像，默认
 docker pull ghcr.io/akarinliu/steamgames-monitor:latest
 ```
 
+镜像支持 `linux/amd64` 与 `linux/arm64`，Docker 会按宿主机架构自动选择。提供两种基础镜像：
+
+| 标签 | 基础镜像 |
+| --- | --- |
+| `latest` | Debian slim（`node:24-bookworm-slim`） |
+| `latest-alpine` | Alpine（`node:24-alpine`） |
+
+```bash
+docker pull ghcr.io/akarinliu/steamgames-monitor:latest-alpine
+# 本地构建 Alpine 版本
+docker build --build-arg BASE_IMAGE=node:24-alpine -t steam-monitor:alpine .
+```
+
 直接用镜像运行：
 
 ```bash
@@ -96,7 +109,7 @@ docker compose up -d --build
 `.github/workflows/dockerhub.yml` 会在 `main` 分支推送时构建并推送 Docker Hub 镜像，默认标签为 `latest`：
 
 - 仓库 Secrets 需要配置 `DOCKERHUB_USERNAME` 与 `DOCKERHUB_TOKEN`（Docker Hub Access Token，需 Read & Write 权限）。
-- 当前镜像：`docker.io/akarinliu2000/steamgames-monitor:latest`。
+- 当前镜像：`docker.io/akarinliu2000/steamgames-monitor:latest`（Debian）与 `:latest-alpine`（Alpine），均为 amd64/arm64 多架构。
 - Docker Hub 仓库目前为私有；如需匿名拉取，请在 Docker Hub 仓库 Settings 中将 Visibility 改为 Public，或先 `docker login`。
 - 如需使用组织命名空间，可添加仓库变量 `DOCKERHUB_REPOSITORY`（例如 `myorg/steamgames-monitor`）。
 
