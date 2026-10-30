@@ -96,8 +96,13 @@ docker compose up -d --build
 `.github/workflows/dockerhub.yml` 会在 `main` 分支推送时构建并推送 Docker Hub 镜像，默认标签为 `latest`：
 
 - 仓库 Secrets 需要配置 `DOCKERHUB_USERNAME` 与 `DOCKERHUB_TOKEN`（Docker Hub Access Token，需 Read & Write 权限）。
-- 镜像地址默认为 `<DOCKERHUB_USERNAME>/steamgames-monitor:latest`。
+- 当前镜像：`docker.io/akarinliu2000/steamgames-monitor:latest`。
+- Docker Hub 仓库目前为私有；如需匿名拉取，请在 Docker Hub 仓库 Settings 中将 Visibility 改为 Public，或先 `docker login`。
 - 如需使用组织命名空间，可添加仓库变量 `DOCKERHUB_REPOSITORY`（例如 `myorg/steamgames-monitor`）。
+
+```bash
+docker pull akarinliu2000/steamgames-monitor:latest
+```
 
 ```bash
 gh secret set DOCKERHUB_USERNAME --repo AkarinLiu/SteamGames-Monitor
