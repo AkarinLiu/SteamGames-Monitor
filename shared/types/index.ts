@@ -189,6 +189,19 @@ export interface BotAllowlistEntry {
   createdAt: number
 }
 
+export type BotConnectionState =
+  | 'connecting'
+  | 'connected'
+  | 'disconnected'
+  | 'error'
+  | 'disabled'
+
+export interface BotConnectionStatus {
+  state: BotConnectionState
+  message?: string
+  since: number
+}
+
 export interface BotApp {
   id: number
   userId: number
@@ -200,6 +213,7 @@ export interface BotApp {
   createdAt: number
   updatedAt: number
   allowlist: BotAllowlistEntry[]
+  connection?: BotConnectionStatus | null
 }
 
 export interface SteamSearchResult {

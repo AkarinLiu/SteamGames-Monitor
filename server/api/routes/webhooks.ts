@@ -4,10 +4,9 @@ import type { Runtime } from '../../runtime'
 import { findBotBySlug } from '../../db/repo/bots'
 import { decryptConfig, botAad, SecretDecryptError } from '../../notify/secrets'
 import { logger } from '../../lib/logger'
-import type { BotConfig, DingtalkBotConfig, FeishuBotConfig, WecomBotConfig } from '../../inbound/types'
+import type { BotConfig, DingtalkBotConfig, FeishuBotConfig } from '../../inbound/types'
 import { handleFeishuUpdate } from '../../inbound/platforms/feishu'
 import { handleDingtalkUpdate } from '../../inbound/platforms/dingtalk'
-import { handleWecomUpdate, verifyWecomUrl } from '../../inbound/platforms/wecom'
 
 const log = logger.child('webhook')
 
@@ -37,45 +36,6 @@ export function webhookRoutes(runtime: Runtime): Hono<AppBindings> {
       throw error
     }
   }
-
-  router.get('/wecom/:slug', (c) => {
-    const loaded = loadBot(c.req.param('slug'))
-    if (!loaded) return c.text('not found', 404)
-    const query = c.req.query()
-    const result = verifyWecomUrl({
-      config: loaded.config as WecomBotConfig,
-      msgSignature: query.msg_signature,
-      timestamp: query.timestamp,
-      nonce: query.nonce,
-      echostr: query.echostr,
-    })
-    if (result.kind === 'text') {
-      return c.body(result.body, 200, { 'content-type': 'text/plain; charset=utf-8' })
-    }
-    if (result.kind === 'error') return c.text(result.message, result.status as 400 | 401)
-    return c.text('invalid', 400)
-  })
-
-  router.post('/wecom/:slug', async (c) => {
-    const loaded = loadBot(c.req.param('slug'))
-    if (!loaded) return c.text('not found', 404)
-    const rawBody = await c.req.text()
-    const result = handleWecomUpdate({
-      bot: loaded.bot,
-      config: loaded.config as WecomBotConfig,
-      query: c.req.query(),
-      rawBody,
-    })
-    if (result.kind === 'event') {
-      await runtime.dispatcher.accept(result.event)
-      return c.text('success', 200, { 'content-type': 'text/plain; charset=utf-8' })
-    }
-    if (result.kind === 'ignored' || result.kind === 'text') {
-      return c.text('success', 200, { 'content-type': 'text/plain; charset=utf-8' })
-    }
-    if (result.kind === 'error') return c.text(result.message, result.status as 400 | 401)
-    return c.text('invalid', 400)
-  })
 
   router.post('/feishu/:slug', async (c) => {
     const loaded = loadBot(c.req.param('slug'))

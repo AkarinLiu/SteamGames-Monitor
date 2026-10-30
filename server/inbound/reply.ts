@@ -12,12 +12,10 @@ import type {
   FeishuBotConfig,
   FeishuReplyTarget,
   ReplyTarget,
-  WecomBotConfig,
   WecomReplyTarget,
 } from './types'
 
 const FEISHU_API = 'https://open.feishu.cn'
-const WECOM_API = 'https://qyapi.weixin.qq.com'
 
 interface CachedToken {
   token: string
@@ -26,8 +24,6 @@ interface CachedToken {
 
 const feishuTokens = new Map<string, CachedToken>()
 const feishuInflight = new Map<string, Promise<CachedToken | null>>()
-const wecomTokens = new Map<string, CachedToken>()
-const wecomInflight = new Map<string, Promise<CachedToken | null>>()
 
 function failure(error: string, permanent = false, httpStatus: number | null = null): SendResult {
   return { ok: false, httpStatus, error, permanent }
@@ -158,83 +154,33 @@ async function sendDingtalkReply(
   return { ok: true, httpStatus: 200 }
 }
 
-async function getWecomToken(config: WecomBotConfig, base: string): Promise<CachedToken | null> {
-  if (!config.corpId || !config.corpSecret) return null
-  const key = `${base}:${config.corpId}`
-  const cached = wecomTokens.get(key)
-  if (cached && cached.expiresAt > Date.now() + 60_000) return cached
-  const existing = wecomInflight.get(key)
-  if (existing) return existing
-  const task = (async () => {
-    try {
-      const url = new URL(guard(`${base}/cgi-bin/gettoken`))
-      url.searchParams.set('corpid', config.corpId!)
-      url.searchParams.set('corpsecret', config.corpSecret!)
-      const response = await fetch(url, { signal: AbortSignal.timeout(10_000) })
-      const payload = (await response.json()) as {
-        errcode?: number
-        access_token?: string
-        expires_in?: number
-      }
-      if (payload.errcode !== 0 || !payload.access_token) return null
-      const token = {
-        token: payload.access_token,
-        expiresAt: Date.now() + Number(payload.expires_in ?? 7200) * 1000 - 300_000,
-      }
-      wecomTokens.set(key, token)
-      return token
-    } catch {
-      return null
-    } finally {
-      wecomInflight.delete(key)
-    }
-  })()
-  wecomInflight.set(key, task)
-  return task
+export interface CommandReplyServices {
+  sendWecom: (target: WecomReplyTarget, text: string) => Promise<SendResult>
 }
 
-async function sendWecomReply(
-  base: string,
-  config: WecomBotConfig,
-  target: WecomReplyTarget,
-  text: string,
+export async function sendCommandDelivery(
+  db: Db,
+  delivery: DeliveryRow,
+  services: CommandReplyServices,
 ): Promise<SendResult> {
-  if (!config.agentId) return failure('企业微信 AgentID 缺失', true)
-  const token = await getWecomToken(config, base)
-  if (!token) return failure('企业微信 access_token 获取失败', true)
-
-  for (const chunk of splitReply(text, 'wecom')) {
-    const response = await fetch(guard(`${base}/cgi-bin/message/send?access_token=${encodeURIComponent(token.token)}`), {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        touser: target.toUser,
-        msgtype: 'text',
-        agentid: Number(config.agentId),
-        text: { content: chunk },
-      }),
-      signal: AbortSignal.timeout(15_000),
-    })
-    const payload = (await response.json().catch(() => ({}))) as {
-      errcode?: number
-      errmsg?: string
-    }
-    if (payload.errcode === 40014 || payload.errcode === 42001) {
-      wecomTokens.clear()
-      return failure('企业微信 access_token 已失效，请重试')
-    }
-    if (payload.errcode !== 0) {
-      return failure(`企业微信回复失败：${payload.errmsg ?? payload.errcode ?? '未知错误'}`)
-    }
-  }
-  return { ok: true, httpStatus: 200 }
-}
-
-export async function sendCommandDelivery(db: Db, delivery: DeliveryRow): Promise<SendResult> {
   if (!delivery.bot_app_id) return failure('指令回复缺少机器人', true)
   const bot = findBotByIdInternal(db, delivery.bot_app_id)
   if (!bot) return failure('机器人已删除', true)
   if (bot.enabled !== 1) return { ok: false, httpStatus: null, canceled: true }
+
+  const target = (safeJsonParse<{ reply?: ReplyTarget }>(delivery.target_json, {}) ?? {}).reply
+  if (!target) return failure('指令回复目标缺失', true)
+  const payload = safeJsonParse<{ text?: string }>(delivery.payload_json, {}) ?? {}
+  const text = payload.text ?? ''
+  if (!text) return failure('指令回复内容为空', true)
+
+  if (target.type === 'wecom') {
+    try {
+      return await services.sendWecom(target, text)
+    } catch (error) {
+      return failure((error as Error)?.message ?? '企业微信回复失败')
+    }
+  }
 
   let config: BotConfig
   try {
@@ -243,12 +189,6 @@ export async function sendCommandDelivery(db: Db, delivery: DeliveryRow): Promis
     if (error instanceof SecretDecryptError) return failure(error.message, true)
     throw error
   }
-
-  const target = (safeJsonParse<{ reply?: ReplyTarget }>(delivery.target_json, {}) ?? {}).reply
-  if (!target) return failure('指令回复目标缺失', true)
-  const payload = safeJsonParse<{ text?: string }>(delivery.payload_json, {}) ?? {}
-  const text = payload.text ?? ''
-  if (!text) return failure('指令回复内容为空', true)
 
   try {
     if (target.type === 'feishu') {
@@ -262,14 +202,6 @@ export async function sendCommandDelivery(db: Db, delivery: DeliveryRow): Promis
     }
     if (target.type === 'dingtalk') {
       return await sendDingtalkReply(target, text)
-    }
-    if (target.type === 'wecom') {
-      return await sendWecomReply(
-        apiBase(bot.api_base_url, WECOM_API),
-        config as WecomBotConfig,
-        target,
-        text,
-      )
     }
     return failure(`未知回复平台：${(target as { type?: string }).type ?? 'unknown'}`, true)
   } catch (error) {

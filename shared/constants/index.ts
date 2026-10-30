@@ -201,7 +201,7 @@ export const CHANNEL_TYPE_OPTIONS: Option<ChannelType>[] = [
 export const BOT_PLATFORM_OPTIONS: Option<BotPlatform>[] = [
   { value: 'feishu', label: '飞书应用机器人' },
   { value: 'dingtalk', label: '钉钉机器人（Outgoing）' },
-  { value: 'wecom', label: '企业微信自建应用' },
+  { value: 'wecom', label: '企业微信智能机器人（长连接）' },
 ]
 
 export const ROLE_OPTIONS: Option<Role>[] = [

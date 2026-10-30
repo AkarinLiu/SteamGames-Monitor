@@ -322,7 +322,7 @@ onBeforeUnmount(() => {
               <li>定期备份 SQLite 数据文件与 <code>.env</code> 中的 <code>APP_SECRET</code>。</li>
               <li>丢失 <code>APP_SECRET</code> 将无法解密渠道与机器人密钥，需要重新填写。</li>
               <li>生产环境务必使用 HTTPS，并设置 <code>COOKIE_SECURE=true</code>。</li>
-              <li>机器人回调地址需公网 HTTPS 可达，反向代理需原样透传 <code>/webhooks/*</code> 的请求体。</li>
+              <li>飞书 / 钉钉机器人回调地址需公网 HTTPS 可达；企业微信智能机器人使用出站长连接。反向代理需原样透传 <code>/webhooks/*</code> 的请求体。</li>
             </ul>
           </section>
         </div>

@@ -57,11 +57,8 @@ function configSummary(platform: BotPlatform, config: BotConfig): Record<string,
   }
   const wecom = config as Record<string, unknown>
   return {
-    corpId: wecom.corpId ?? '',
-    agentId: wecom.agentId ?? '',
-    corpSecretSet: Boolean(wecom.corpSecret),
-    tokenSet: Boolean(wecom.token),
-    encodingAesKeySet: Boolean(wecom.encodingAesKey),
+    botId: wecom.botId ?? '',
+    secretSet: Boolean(wecom.secret),
     ownerPlatformUserId: wecom.ownerPlatformUserId ?? '',
   }
 }
@@ -90,12 +87,21 @@ function toBotView(
     if (!(error instanceof SecretDecryptError)) throw error
     configError = error.message
   }
+  const isWebhookBot = row.platform !== 'wecom'
   return {
     ...bot,
     config,
     configError,
-    webhookPath: `/webhooks/${row.platform}/${row.webhook_slug}`,
-    callbackUrl: `${env.PUBLIC_BASE_URL}/webhooks/${row.platform}/${row.webhook_slug}`,
+    webhookPath: isWebhookBot ? `/webhooks/${row.platform}/${row.webhook_slug}` : null,
+    callbackUrl: isWebhookBot
+      ? `${env.PUBLIC_BASE_URL}/webhooks/${row.platform}/${row.webhook_slug}`
+      : null,
+    connection:
+      row.platform === 'wecom'
+        ? row.enabled === 1
+          ? runtime.wecomBots.statusFor(row.id)
+          : { state: 'disabled', since: row.updated_at }
+        : null,
   }
 }
 
@@ -113,18 +119,13 @@ function parseBotConfig(platform: BotPlatform, input: unknown): Record<string, u
 }
 
 const BOT_STRING_KEYS = [
-  'webhookUrl',
   'secret',
   'appId',
   'appSecret',
   'encryptKey',
   'verificationToken',
   'robotCode',
-  'corpId',
-  'agentId',
-  'corpSecret',
-  'token',
-  'encodingAesKey',
+  'botId',
   'ownerPlatformUserId',
 ] as const
 
@@ -185,6 +186,7 @@ export function botRoutes(runtime: Runtime): Hono<AppBindings> {
         keyVersion: currentKeyVersion(),
         apiBaseUrl: input.apiBaseUrl ?? null,
       })
+      if (input.platform === 'wecom') runtime.wecomBots.sync()
       return c.json({ bot: toBotView(runtime, row, []) }, 201)
     } catch (error) {
       if (isSlugConflict(error)) throw conflict('回调地址冲突，请重试')
@@ -226,6 +228,7 @@ export function botRoutes(runtime: Runtime): Hono<AppBindings> {
       configEnc,
       keyVersion: configEnc ? currentKeyVersion() : undefined,
     })
+    if (row.platform === 'wecom') runtime.wecomBots.sync()
     return c.json({ bot: toBotView(runtime, updated!, listAllowlist(db, id)) })
   })
 
@@ -233,6 +236,7 @@ export function botRoutes(runtime: Runtime): Hono<AppBindings> {
     const user = c.get('user') as UserRow
     const id = parseIdParam(c)
     if (!deleteBot(db, user.id, id)) throw notFound('机器人不存在')
+    runtime.wecomBots.sync()
     return c.json({ ok: true })
   })
 

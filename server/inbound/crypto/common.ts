@@ -1,9 +1,5 @@
 import { createDecipheriv, createHash, createHmac, timingSafeEqual } from 'node:crypto'
 
-export function sha1Hex(parts: string[]): string {
-  return createHash('sha1').update(parts.join('')).digest('hex')
-}
-
 export function sha256Hex(input: string | Buffer): string {
   return createHash('sha256').update(input).digest('hex')
 }

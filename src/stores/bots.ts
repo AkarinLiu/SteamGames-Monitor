@@ -1,13 +1,14 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import type { BotAccessRole, BotApp, BotPlatform } from '@shared/types'
+import type { BotAccessRole, BotApp, BotConnectionStatus, BotPlatform } from '@shared/types'
 import { api } from '@/api/client'
 
 export interface BotView extends BotApp {
   config: Record<string, unknown>
   configError?: string
-  webhookPath: string
-  callbackUrl: string
+  webhookPath: string | null
+  callbackUrl: string | null
+  connection?: BotConnectionStatus | null
 }
 
 export interface BotPayload {

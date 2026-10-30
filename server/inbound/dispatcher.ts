@@ -106,7 +106,7 @@ export class InboundDispatcher {
       platformUserId: 'console',
       userName: null,
       text,
-      reply: { type: 'wecom', toUser: 'console' },
+      reply: { type: 'wecom', reqId: 'console', chatId: 'console', chatType: 'single' },
       receivedAt: started,
     }, text.split(/\s+/)[0] ?? '', {}, result.result, result.lines.join(' '), started)
     return { lines: result.lines, result: result.result }

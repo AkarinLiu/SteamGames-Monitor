@@ -1,7 +1,7 @@
 # SteamGames-Monitor
 
 自托管的多用户 Steam 游戏 / DLC 销售状态监控系统。使用 SQLite 存储数据，监控**即将停售 / 下架、打折、发售**，并通过企业微信群机器人、飞书机器人、钉钉机器人或 SMTP 邮件通知。
-同一个进程同时提供 Web 界面、REST API、Steam 轮询调度、通知投递队列和三平台回调，适合单机 Docker Compose 部署。
+同一个进程同时提供 Web 界面、REST API、Steam 轮询调度、通知投递队列、飞书 / 钉钉回调和企业微信长连接，适合单机 Docker Compose 部署。
 
 ## 功能
 
@@ -10,7 +10,7 @@
 - **状态变化**：发售（coming soon 翻转）、促销开始 / 变化 / 结束、原价变化、不可用（下架）与恢复。
 - **下架判定**：商店可购状态连续两次翻转才确认下架；配合 Steam 新闻关键词做提前预警（启发式，仅作参考）。
 - **通知渠道**：企业微信群机器人、飞书自定义机器人、钉钉自定义机器人、SMTP 邮件；失败自动重试。
-- **指令机器人**：飞书 / 钉钉 / 企业微信原生回调，支持 `/add`、`/list`、`/price`、`/check`、`/pause`、`/resume`、`/remove`、`/adddlc`、`/events`、`/cancel`；微信 ClawBot 与 QQ Bot 正在按平台官方协议接入。
+- **指令机器人**：飞书 / 钉钉原生回调、企业微信智能机器人 WebSocket 长连接，支持 `/add`、`/list`、`/price`、`/check`、`/pause`、`/resume`、`/remove`、`/adddlc`、`/events`、`/cancel`；微信 ClawBot 与 QQ Bot 正在按平台官方协议接入。
 - **运维友好**：健康检查、Docker 镜像、数据库在线备份、可配置的数据保留策略。
 
 ## 技术栈
@@ -52,7 +52,7 @@ pnpm start   # 需要先构建；由 Node 同时提供 API 与静态前端
 | `DATA_DIR` | 数据目录，默认 `./data`（Docker 中为 `/data`） |
 | `DATABASE_PATH` | SQLite 文件路径，默认 `${DATA_DIR}/steam-monitor.db` |
 | `APP_SECRET` | 必填，≥32 字符。用于派生密钥加密渠道 / 机器人凭据；**丢失后已保存的密钥无法解密** |
-| `PUBLIC_BASE_URL` | 对外访问地址，用于生成机器人回调地址与 CSRF 校验 |
+| `PUBLIC_BASE_URL` | 对外访问地址，用于生成飞书 / 钉钉回调地址与 CSRF 校验；企业微信长连接不需要公网回调 |
 | `TRUSTED_ORIGINS` | 额外允许的 Origin，逗号分隔（开发时含 `http://localhost:5173`） |
 | `COOKIE_SECURE` | HTTPS 部署时设为 `1` |
 | `TRUST_PROXY` | 反向代理层数 |
@@ -134,7 +134,7 @@ gh secret set DOCKERHUB_TOKEN --repo AkarinLiu/SteamGames-Monitor
 - 反向代理需注意：
   - 必须将 `/webhooks/*` 的**原始请求体**原样转发（不要改写或重新序列化）。
   - `client_max_body_size 1m`，读取超时 ≥10s。
-  - 回调地址必须公网 HTTPS 可达，否则飞书 / 钉钉 / 企业微信无法投递。
+  - 飞书 / 钉钉的回调地址必须公网 HTTPS 可达；企业微信智能机器人使用出站长连接，不需要回调地址。
 
 ## 通知渠道配置
 
@@ -151,15 +151,17 @@ gh secret set DOCKERHUB_TOKEN --repo AkarinLiu/SteamGames-Monitor
 
 ## 指令机器人接入
 
-在“指令机器人”页面创建机器人，把回调地址填入对应平台：
+在“指令机器人”页面创建机器人：
 
-| 平台 | 回调地址 | 说明 |
+| 平台 | 接入方式 | 说明 |
 | --- | --- | --- |
 | 飞书 | `POST /webhooks/feishu/<slug>` | 应用需开启机器人能力，订阅 `im.message.receive_v1`，申请消息读取与发送权限；支持 Encrypt Key / Verification Token |
 | 钉钉 | `POST /webhooks/dingtalk/<slug>` | 机器人使用 Outgoing 回调，填写 App Secret 校验签名；回复走会话 Webhook |
-| 企业微信 | `GET/POST /webhooks/wecom/<slug>` | 自建应用回调，需要 Token、EncodingAESKey、CorpID、AgentID；群聊 @ 能力受企业微信管理端限制 |
+| 企业微信 | WebSocket 长连接（无需回调地址） | 在管理后台创建智能机器人，选择 API 模式 → 长连接，填写 Bot ID / Secret；服务主动连接 `wss://openws.work.weixin.qq.com` |
 
-机器人的指令始终作用于**机器人所属账号**的数据。所有者平台 ID（`ownerPlatformUserId`）隐式拥有管理员权限；其他平台用户需加入允许名单，可选择 `viewer`（只读）或 `admin`。
+企业微信长连接由服务端主动建立，不需要公网 IP、Token 或 EncodingAESKey。同一机器人在同一时间只允许一条有效连接，多实例部署时会互相踢下线。旧版企业微信自建应用回调配置已废弃，请改为填写智能机器人的 Bot ID / Secret。
+
+机器人的指令始终作用于**机器人所属账号**的数据。所有者平台 ID（`ownerPlatformUserId`）隐式拥有管理员权限；其他平台用户需加入允许名单，可选择 `viewer`（只读）或 `admin`。详细步骤见 [docs/BOT_INTEGRATION.md](docs/BOT_INTEGRATION.md)。
 
 微信 ClawBot（iLink）与 QQ Bot 接入正在按平台官方协议集成，完成后会出现在同一页面。
 
@@ -233,7 +235,7 @@ pnpm test:e2e   # 需要先安装 Playwright 浏览器：pnpm exec playwright in
 
 1. 在 `data/e2e` 创建全新数据库，启动后端（4180）、Vite（4181）和 mock 服务（9998）；
 2. 使用 mock Steam 接口驱动发售、促销、下架、恢复全流程；
-3. 校验企业微信通知、SMTP 邮件、飞书 / 钉钉 / 企业微信回调与指令、多用户隔离。
+3. 校验企业微信通知、SMTP 邮件、飞书 / 钉钉回调、企业微信长连接配置与指令、多用户隔离。
 
 `scripts/mock-receiver.ts` 也可单独运行，用于本地联调：
 
@@ -252,7 +254,7 @@ pnpm mock:receiver
 - Steam 商店接口为非官方接口，可能变更或限流；无法区分“已下架 / 区域不可售 / 非法 appid”，系统使用“曾经可售 + 连续两次不可用”降低误报。
 - 新闻关键词预警只覆盖 Steam 新闻 / 公告，属于启发式提示，需人工确认。
 - 无法获知精确促销结束时间，`sale_end` 依赖下一次轮询发现折扣归零。
-- 企业微信群机器人只能发送不能接收；自建应用的群聊 @ 能力受管理端策略限制，双向指令建议优先使用飞书或钉钉。
+- 企业微信群机器人只能发送；群内指令请使用企业微信智能机器人长连接。长连接同一机器人仅支持一条有效连接，多实例部署会互相踢下线。
 - 微信 ClawBot（iLink）与 QQ Bot 正在按平台官方协议接入。
 - 单实例部署、SQLite 单写者；不提供高可用。
 - 用户区域不同会导致同一游戏按不同区域缓存并分别抓取。
@@ -260,7 +262,7 @@ pnpm mock:receiver
 ## 目录结构
 
 ```
-server/            Hono 应用、SQLite、Steam 采集、调度、通知、平台回调、指令
+server/            Hono 应用、SQLite、Steam 采集、调度、通知、平台回调 / 长连接、指令
 shared/            前后端共享类型、常量与 Zod schema
 src/               Vue 前端
 scripts/           mock 服务、备份、E2E 启动脚本

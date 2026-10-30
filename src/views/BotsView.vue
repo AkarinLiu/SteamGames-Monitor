@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import type { BotAccessRole, BotPlatform } from '@shared/types'
 import { BOT_PLATFORM_OPTIONS, LIMITS } from '@shared/constants'
 import { describeError } from '@/api/client'
@@ -39,11 +39,8 @@ const form = reactive({
   encryptKey: '',
   verificationToken: '',
   robotCode: '',
-  corpId: '',
-  agentId: '',
-  corpSecret: '',
-  token: '',
-  encodingAesKey: '',
+  botId: '',
+  secret: '',
 })
 
 const deleteTarget = ref<BotView | null>(null)
@@ -60,7 +57,26 @@ const BOT_DOCS: Record<BotPlatform, string> = {
   feishu:
     'https://open.feishu.cn/document/server-docs/event-subscription-guide/event-subscription-configure-/request-url-configuration-case',
   dingtalk: 'https://open.dingtalk.com/document/orgapp/receive-message',
-  wecom: 'https://developer.work.weixin.qq.com/document/path/90930',
+  wecom: 'https://developer.work.weixin.qq.com/document/path/101463',
+}
+
+const CONNECTION_LABELS: Record<string, string> = {
+  connecting: '长连接中',
+  connected: '长连接已连接',
+  disconnected: '长连接已断开',
+  error: '长连接异常',
+  disabled: '长连接未启用',
+}
+
+function connectionLabel(state: string | undefined): string {
+  return state ? (CONNECTION_LABELS[state] ?? state) : '未知状态'
+}
+
+function connectionClass(state: string | undefined): string {
+  if (state === 'connected') return 'badge-green'
+  if (state === 'connecting') return 'badge-warning'
+  if (state === 'error') return 'badge-danger'
+  return 'badge-neutral'
 }
 
 const botDocsUrl = computed(() => BOT_DOCS[form.platform])
@@ -95,11 +111,8 @@ function resetForm(): void {
   form.encryptKey = ''
   form.verificationToken = ''
   form.robotCode = ''
-  form.corpId = ''
-  form.agentId = ''
-  form.corpSecret = ''
-  form.token = ''
-  form.encodingAesKey = ''
+  form.botId = ''
+  form.secret = ''
   dialogError.value = ''
 }
 
@@ -124,11 +137,7 @@ function openEdit(bot: BotView): void {
   } else if (bot.platform === 'dingtalk') {
     form.robotCode = typeof config.robotCode === 'string' ? config.robotCode : ''
   } else {
-    form.corpId = typeof config.corpId === 'string' ? config.corpId : ''
-    form.agentId =
-      typeof config.agentId === 'string' || typeof config.agentId === 'number'
-        ? String(config.agentId)
-        : ''
+    form.botId = typeof config.botId === 'string' ? config.botId : ''
   }
   dialogOpen.value = true
 }
@@ -147,11 +156,8 @@ function buildConfig(): Record<string, unknown> {
     if (form.appSecret.trim()) config.appSecret = form.appSecret.trim()
     if (form.robotCode.trim()) config.robotCode = form.robotCode.trim()
   } else {
-    if (form.corpId.trim()) config.corpId = form.corpId.trim()
-    if (form.agentId.trim()) config.agentId = form.agentId.trim()
-    if (form.corpSecret.trim()) config.corpSecret = form.corpSecret.trim()
-    if (form.token.trim()) config.token = form.token.trim()
-    if (form.encodingAesKey.trim()) config.encodingAesKey = form.encodingAesKey.trim()
+    if (form.botId.trim()) config.botId = form.botId.trim()
+    if (form.secret.trim()) config.secret = form.secret.trim()
   }
   return config
 }
@@ -162,13 +168,25 @@ async function save(): Promise<void> {
     dialogError.value = '请填写机器人名称'
     return
   }
+  if (form.platform === 'wecom') {
+    if (!form.botId.trim()) {
+      dialogError.value = '请填写企业微信智能机器人 Bot ID'
+      return
+    }
+    if (!isEditing.value && !form.secret.trim()) {
+      dialogError.value = '请填写企业微信智能机器人 Secret'
+      return
+    }
+  }
   dialogBusy.value = true
   try {
+    const apiBaseUrl =
+      form.platform === 'wecom' ? null : form.apiBaseUrl.trim() || null
     if (editing.value) {
       const patch: Record<string, unknown> = {
         name: form.name.trim(),
         enabled: form.enabled,
-        apiBaseUrl: form.apiBaseUrl.trim() || null,
+        apiBaseUrl,
         config: buildConfig(),
       }
       await store.update(editing.value.id, patch)
@@ -178,7 +196,7 @@ async function save(): Promise<void> {
         platform: form.platform,
         name: form.name.trim(),
         enabled: form.enabled,
-        apiBaseUrl: form.apiBaseUrl.trim() || undefined,
+        apiBaseUrl: apiBaseUrl ?? undefined,
         config: buildConfig(),
       })
       toast.success('机器人已创建')
@@ -275,8 +293,22 @@ async function load(): Promise<void> {
   }
 }
 
+let statusTimer: number | null = null
+
 onMounted(() => {
   void load()
+  statusTimer = window.setInterval(() => {
+    if (store.items.some((bot) => bot.platform === 'wecom' && bot.enabled)) {
+      void store.fetchAll().catch(() => {})
+    }
+  }, 5000)
+})
+
+onBeforeUnmount(() => {
+  if (statusTimer !== null) {
+    window.clearInterval(statusTimer)
+    statusTimer = null
+  }
 })
 </script>
 
@@ -285,7 +317,7 @@ onMounted(() => {
     <div class="page-header">
       <div>
         <h1>指令机器人</h1>
-        <p>接入飞书、钉钉或企业微信机器人，在群聊中用斜杠指令管理监控项。</p>
+        <p>接入飞书、钉钉或企业微信智能机器人，在聊天中用斜杠指令管理监控项。</p>
       </div>
       <div class="page-actions">
         <button class="btn btn-primary" type="button" @click="openCreate">添加机器人</button>
@@ -303,7 +335,7 @@ onMounted(() => {
     <EmptyState
       v-else-if="store.items.length === 0"
       title="还没有接入机器人"
-      description="创建机器人后，把回调地址填入对应平台的应用配置，即可在群聊中使用 /add、/list 等指令。"
+      description="飞书、钉钉填写回调地址，企业微信填写 Bot ID / Secret 后自动建立长连接，即可在聊天中使用 /add、/list 等指令。"
     >
       <button class="btn btn-primary" type="button" style="margin-top: 12px" @click="openCreate">
         添加第一个机器人
@@ -318,6 +350,13 @@ onMounted(() => {
             <span class="badge badge-accent">{{ platformLabel(bot.platform) }}</span>
             <span class="badge" :class="bot.enabled ? 'badge-green' : 'badge-neutral'">
               {{ bot.enabled ? '已启用' : '已停用' }}
+            </span>
+            <span
+              v-if="bot.platform === 'wecom' && bot.connection"
+              class="badge"
+              :class="connectionClass(bot.connection.state)"
+            >
+              {{ connectionLabel(bot.connection.state) }}
             </span>
             <span v-if="bot.configError" class="badge badge-danger">密钥无法解密</span>
           </div>
@@ -337,12 +376,24 @@ onMounted(() => {
           </div>
         </div>
 
-        <div class="field">
+        <div v-if="bot.platform !== 'wecom' && bot.callbackUrl" class="field">
           <span class="label">回调地址（填入平台后台）</span>
           <div class="inline" style="flex-wrap: nowrap">
             <input class="input flex-1 mono small" :value="bot.callbackUrl" readonly />
             <CopyButton :value="bot.callbackUrl" />
           </div>
+        </div>
+
+        <div
+          v-else-if="bot.platform === 'wecom'"
+          class="banner"
+          :class="bot.connection?.state === 'error' ? 'banner-error' : 'banner-info'"
+        >
+          长连接模式：无需公网回调地址，服务启动后主动连接企业微信。{{ bot.connection?.message ?? '' }}
+        </div>
+
+        <div v-if="bot.platform === 'wecom' && !bot.config.botId" class="banner banner-warning">
+          尚未配置 Bot ID / Secret，长连接不会建立。请编辑机器人并填写企业微信智能机器人凭据。
         </div>
 
         <div v-if="bot.configError" class="banner banner-error">
@@ -359,13 +410,11 @@ onMounted(() => {
           <span v-if="typeof bot.config.robotCode === 'string' && bot.config.robotCode" class="badge badge-neutral">
             Robot Code：{{ bot.config.robotCode }}
           </span>
-          <span v-if="typeof bot.config.corpId === 'string' && bot.config.corpId" class="badge badge-neutral">
-            Corp ID：{{ bot.config.corpId }}
+          <span v-if="typeof bot.config.botId === 'string' && bot.config.botId" class="badge badge-neutral">
+            Bot ID：{{ bot.config.botId }}
           </span>
-          <span v-if="typeof bot.config.agentId === 'string' || typeof bot.config.agentId === 'number'" class="badge badge-neutral">
-            Agent ID：{{ bot.config.agentId }}
-          </span>
-          <span v-if="bot.apiBaseUrl" class="badge badge-warning">API：{{ bot.apiBaseUrl }}</span>
+          <span v-if="bot.config.secretSet === true" class="badge badge-green">Secret 已配置</span>
+          <span v-if="bot.apiBaseUrl && bot.platform !== 'wecom'" class="badge badge-warning">API：{{ bot.apiBaseUrl }}</span>
         </div>
 
         <div class="grid-2">
@@ -436,7 +485,7 @@ onMounted(() => {
           <div>
             <h3>模拟指令</h3>
             <p class="faint small">
-              以机器人所有者身份在本地执行一条指令，不经过平台回调，用于验证配置与权限。
+              以机器人所有者身份在本地执行一条指令，不经过平台，用于验证配置与权限。
             </p>
             <div class="inline" style="margin-bottom: 8px">
               <input
@@ -531,31 +580,34 @@ onMounted(() => {
         <template v-else>
           <div class="grid-2">
             <div class="field">
-              <label for="bot-corp">Corp ID</label>
-              <input id="bot-corp" v-model="form.corpId" class="input mono" />
+              <label for="bot-id">Bot ID</label>
+              <input
+                id="bot-id"
+                v-model="form.botId"
+                class="input mono"
+                required
+                placeholder="企业微信智能机器人 BotID"
+              />
             </div>
             <div class="field">
-              <label for="bot-agent">Agent ID</label>
-              <input id="bot-agent" v-model="form.agentId" class="input mono" />
+              <label for="bot-secret">Secret</label>
+              <input
+                id="bot-secret"
+                v-model="form.secret"
+                class="input"
+                type="password"
+                autocomplete="new-password"
+                :required="!isEditing"
+                :placeholder="isEditing ? '留空保留已保存值' : '长连接专用 Secret'"
+              />
             </div>
           </div>
-          <div class="grid-3">
-            <div class="field">
-              <label for="bot-corpsecret">Corp Secret</label>
-              <input id="bot-corpsecret" v-model="form.corpSecret" class="input" type="password" autocomplete="new-password" :placeholder="isEditing ? '留空保留' : ''" />
-            </div>
-            <div class="field">
-              <label for="bot-token">Token</label>
-              <input id="bot-token" v-model="form.token" class="input" type="password" autocomplete="new-password" :placeholder="isEditing ? '留空保留' : ''" />
-            </div>
-            <div class="field">
-              <label for="bot-aes">EncodingAESKey</label>
-              <input id="bot-aes" v-model="form.encodingAesKey" class="input" type="password" autocomplete="new-password" :placeholder="isEditing ? '留空保留' : ''" />
-            </div>
-          </div>
+          <p class="field-hint" style="margin-top: -6px">
+            在企业微信管理后台进入「智能机器人」→ API 模式 → 长连接，获取 Bot ID 和 Secret。保存后服务会自动建立长连接，无需公网回调地址。
+          </p>
         </template>
 
-        <div class="field">
+        <div v-if="form.platform !== 'wecom'" class="field">
           <label for="bot-api">API Base URL（仅测试 / 代理）</label>
           <input id="bot-api" v-model="form.apiBaseUrl" class="input mono" placeholder="可选，例如 http://127.0.0.1:9999" />
           <span class="field-hint">留空使用平台默认地址。生产环境建议保持为空。</span>

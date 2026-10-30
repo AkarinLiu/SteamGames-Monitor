@@ -20,12 +20,8 @@ export interface DingtalkBotConfig {
 }
 
 export interface WecomBotConfig {
-  corpId?: string
-  agentId?: string | number
-  corpSecret?: string
-  token?: string
-  encodingAesKey?: string
-  webhookUrl?: string
+  botId: string
+  secret: string
   ownerPlatformUserId?: string
 }
 
@@ -47,7 +43,9 @@ export interface DingtalkReplyTarget {
 
 export interface WecomReplyTarget {
   type: 'wecom'
-  toUser: string
+  reqId: string
+  chatId: string
+  chatType: 'single' | 'group'
 }
 
 export type ReplyTarget = FeishuReplyTarget | DingtalkReplyTarget | WecomReplyTarget

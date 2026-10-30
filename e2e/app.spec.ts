@@ -25,7 +25,13 @@ interface MockSnapshot {
 }
 
 interface BotListResponse {
-  items: Array<{ id: number; platform: string; name: string; callbackUrl: string }>
+  items: Array<{
+    id: number
+    platform: string
+    name: string
+    callbackUrl: string | null
+    connection?: { state: string } | null
+  }>
 }
 
 async function mockRequests(request: APIRequestContext): Promise<MockSnapshot> {
@@ -234,11 +240,8 @@ test.describe.serial('Steam 销售监控端到端', () => {
           platform: 'wecom',
           name: '企微测试机器人',
           config: {
-            corpId: 'corp-e2e',
-            agentId: '100001',
-            corpSecret: 'wecom-secret',
-            token: 'wecom-token',
-            encodingAesKey: 'a'.repeat(43),
+            botId: 'bot-e2e',
+            secret: 'wecom-long-secret',
             ownerPlatformUserId: 'zhangsan',
           },
           sender: 'zhangsan',
@@ -250,15 +253,23 @@ test.describe.serial('Steam 销售监控端到端', () => {
           data: {
             platform: item.platform,
             name: item.name,
-            enabled: true,
+            // E2E 不连接真实企业微信；长连接逻辑由单元测试覆盖。
+            enabled: item.platform !== 'wecom',
             config: item.config,
           },
         })
         expect(bot.status(), item.platform).toBe(201)
         const body = (await bot.json()) as {
-          bot: { id: number; callbackUrl: string }
+          bot: { id: number; callbackUrl: string | null; connection?: { state: string } | null }
         }
-        expect(body.bot.callbackUrl).toContain(`/webhooks/${item.platform}/`)
+        expect(body.bot.callbackUrl).toEqual(
+          item.platform === 'wecom'
+            ? null
+            : expect.stringContaining(`/webhooks/${item.platform}/`),
+        )
+        expect(body.bot.connection?.state ?? null).toBe(
+          item.platform === 'wecom' ? 'disabled' : null,
+        )
 
         const simulated = await request.post(`/api/bots/${body.bot.id}/test-inbound`, {
           data: { text: '/help' },

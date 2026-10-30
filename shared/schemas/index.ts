@@ -317,12 +317,8 @@ export const DingtalkBotConfigSchema = z.object({
 })
 
 export const WecomBotConfigSchema = z.object({
-  webhookUrl: HttpUrlSchema.optional(),
-  corpId: trimmed(1, 100).optional(),
-  agentId: z.union([z.string().trim().max(20), z.number().int().positive()]).optional(),
-  corpSecret: z.string().trim().max(200).optional(),
-  token: z.string().trim().max(200).optional(),
-  encodingAesKey: z.string().trim().max(200).optional(),
+  botId: trimmed(1, 100),
+  secret: trimmed(1, 200),
   ownerPlatformUserId: z.string().trim().max(100).optional(),
 })
 

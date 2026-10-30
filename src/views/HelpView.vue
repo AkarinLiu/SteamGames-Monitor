@@ -56,7 +56,7 @@ const commands = [
             名称搜索返回多个结果时会给出序号，直接回复序号即可选择，10 分钟内有效。
           </p>
           <p class="small faint" style="margin-top: 10px">
-            在“指令机器人”页面创建机器人后，把回调地址填入对应平台；不同平台可以分别配置允许名单。
+            在“指令机器人”页面创建机器人：飞书、钉钉填写回调地址；企业微信填写 Bot ID / Secret 后自动建立长连接。不同平台可以分别配置允许名单。
           </p>
         </section>
 
@@ -86,13 +86,13 @@ const commands = [
 
         <section class="card">
           <div class="card-title">
-            <h2>接入企业微信自建应用</h2>
+            <h2>接入企业微信智能机器人（长连接）</h2>
           </div>
           <ol class="small muted" style="padding-left: 1.2rem">
-            <li>在企微管理后台创建自建应用，记录 Corp ID、Agent ID、Secret。</li>
-            <li>接收消息服务器配置填写 <code>/webhooks/wecom/&lt;slug&gt;</code>，Token 与 EncodingAESKey 需与页面一致。</li>
-            <li>配置可信 IP 与可见范围，保存时企微会发起 URL 验证。</li>
-            <li>群聊 @ 能力受企微管理端限制；群机器人 Webhook 只能发送、不能接收指令。</li>
+            <li>在企业微信管理后台进入「智能机器人」→ API 模式 → 长连接，创建机器人并获取 Bot ID 与 Secret。</li>
+            <li>在「指令机器人」选择企业微信，填写 Bot ID、Secret 与所有者 UserID。</li>
+            <li>保存后服务会主动连接 <code>wss://openws.work.weixin.qq.com</code>，无需公网回调地址、Token 或 EncodingAESKey。</li>
+            <li>将机器人加入群聊或单聊，@机器人 发送 <code>/help</code> 测试。事件通知仍需在「通知渠道」单独添加企业微信群机器人 Webhook。</li>
           </ol>
         </section>
 
@@ -164,7 +164,7 @@ const commands = [
             <li>无法获得精确促销结束时间，<code>sale_end</code> 依赖下一次检查发现折扣归零。</li>
             <li><code>success:false</code> 无法区分已下架、区域不可售与非法 appid。</li>
             <li>单实例部署，SQLite 单写者，无 HA。</li>
-            <li>企微群机器人无法接收指令，群内双向指令建议使用飞书或钉钉。</li>
+            <li>企业微信群机器人 Webhook 只能发送；群内指令需使用智能机器人长连接。</li>
           </ul>
         </section>
       </div>

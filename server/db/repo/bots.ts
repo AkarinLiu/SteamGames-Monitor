@@ -46,6 +46,12 @@ export function findBotBySlug(db: Db, slug: string): BotAppRow | undefined {
     | undefined
 }
 
+export function listEnabledBotsByPlatform(db: Db, platform: BotPlatform): BotAppRow[] {
+  return db
+    .prepare('SELECT * FROM bot_apps WHERE platform = ? AND enabled = 1 ORDER BY id ASC')
+    .all(platform) as unknown as BotAppRow[]
+}
+
 export function listNotifyingBots(db: Db, userId: number): BotAppRow[] {
   return db
     .prepare(

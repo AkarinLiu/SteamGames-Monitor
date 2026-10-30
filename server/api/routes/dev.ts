@@ -20,7 +20,7 @@ function replyTarget(platform: BotPlatform, chatId: string, platformUserId: stri
       robotCode: null,
     }
   }
-  return { type: 'wecom', toUser: platformUserId }
+  return { type: 'wecom', reqId: 'dev', chatId, chatType: 'single' }
 }
 
 export function devRoutes(runtime: Runtime): Hono<AppBindings> {
