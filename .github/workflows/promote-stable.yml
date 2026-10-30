@@ -1,0 +1,60 @@
+name: Promote stable image tags
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version tag to promote to latest (without v)
+        required: true
+        default: '1.0.0'
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  dockerhub:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Point Docker Hub latest at the stable version
+        env:
+          IMAGE: ${{ vars.DOCKERHUB_REPOSITORY || format('{0}/steamgames-monitor', secrets.DOCKERHUB_USERNAME) }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          docker buildx imagetools create -t "$IMAGE:latest" "$IMAGE:$VERSION"
+          docker buildx imagetools create -t "$IMAGE:latest-alpine" "$IMAGE:$VERSION-alpine"
+          docker buildx imagetools inspect "$IMAGE:latest"
+          docker buildx imagetools inspect "$IMAGE:latest-alpine"
+
+  ghcr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Point GHCR latest at the stable version
+        env:
+          IMAGE: ghcr.io/${{ github.repository }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          IMAGE="$(echo "$IMAGE" | tr '[:upper:]' '[:lower:]')"
+          docker buildx imagetools create -t "$IMAGE:latest" "$IMAGE:$VERSION"
+          docker buildx imagetools create -t "$IMAGE:latest-alpine" "$IMAGE:$VERSION-alpine"
+          docker buildx imagetools inspect "$IMAGE:latest"
+          docker buildx imagetools inspect "$IMAGE:latest-alpine"
