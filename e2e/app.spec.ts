@@ -301,6 +301,14 @@ test.describe.serial('Steam 销售监控端到端', () => {
       await page.getByRole('button', { name: '取消' }).click()
     })
 
+    await test.step('侧栏只高亮当前页面', async () => {
+      await page.goto('/events')
+      await expect(page.getByRole('heading', { name: '事件记录' })).toBeVisible()
+      const active = page.locator('.app-sidebar .nav-link.active')
+      await expect(active).toHaveCount(1)
+      await expect(active).toHaveText('事件记录')
+    })
+
     await test.step('SMTP 渠道发送测试邮件', async () => {
       const smtpChannel = await request.post('/api/channels', {
         data: {

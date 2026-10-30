@@ -18,6 +18,10 @@ watch(
   },
 )
 
+function navActive(...names: string[]): boolean {
+  return typeof route.name === 'string' && names.includes(route.name)
+}
+
 async function logout(): Promise<void> {
   try {
     await session.logout()
@@ -38,23 +42,23 @@ async function logout(): Promise<void> {
       </RouterLink>
 
       <div class="nav-section">监控</div>
-      <RouterLink :to="{ name: 'dashboard' }" class="nav-link">概览</RouterLink>
-      <RouterLink :to="{ name: 'monitors' }" class="nav-link">监控项</RouterLink>
-      <RouterLink :to="{ name: 'events' }" class="nav-link">事件记录</RouterLink>
+      <RouterLink :to="{ name: 'dashboard' }" class="nav-link" :class="{ active: navActive('dashboard') }" active-class="" exact-active-class="">概览</RouterLink>
+      <RouterLink :to="{ name: 'monitors' }" class="nav-link" :class="{ active: navActive('monitors', 'monitor-detail') }" active-class="" exact-active-class="">监控项</RouterLink>
+      <RouterLink :to="{ name: 'events' }" class="nav-link" :class="{ active: navActive('events') }" active-class="" exact-active-class="">事件记录</RouterLink>
 
       <div class="nav-section">通知与机器人</div>
-      <RouterLink :to="{ name: 'channels' }" class="nav-link">通知渠道</RouterLink>
-      <RouterLink :to="{ name: 'bots' }" class="nav-link">指令机器人</RouterLink>
+      <RouterLink :to="{ name: 'channels' }" class="nav-link" :class="{ active: navActive('channels') }" active-class="" exact-active-class="">通知渠道</RouterLink>
+      <RouterLink :to="{ name: 'bots' }" class="nav-link" :class="{ active: navActive('bots') }" active-class="" exact-active-class="">指令机器人</RouterLink>
 
       <template v-if="session.isAdmin">
         <div class="nav-section">管理</div>
-        <RouterLink :to="{ name: 'admin-users' }" class="nav-link">用户管理</RouterLink>
-        <RouterLink :to="{ name: 'admin-system' }" class="nav-link">系统状态</RouterLink>
+        <RouterLink :to="{ name: 'admin-users' }" class="nav-link" :class="{ active: navActive('admin-users') }" active-class="" exact-active-class="">用户管理</RouterLink>
+        <RouterLink :to="{ name: 'admin-system' }" class="nav-link" :class="{ active: navActive('admin-system') }" active-class="" exact-active-class="">系统状态</RouterLink>
       </template>
 
       <div class="nav-section">其他</div>
-      <RouterLink :to="{ name: 'settings' }" class="nav-link">个人设置</RouterLink>
-      <RouterLink :to="{ name: 'help' }" class="nav-link">帮助</RouterLink>
+      <RouterLink :to="{ name: 'settings' }" class="nav-link" :class="{ active: navActive('settings') }" active-class="" exact-active-class="">个人设置</RouterLink>
+      <RouterLink :to="{ name: 'help' }" class="nav-link" :class="{ active: navActive('help') }" active-class="" exact-active-class="">帮助</RouterLink>
 
       <div class="sidebar-spacer" />
       <div class="sidebar-footer">

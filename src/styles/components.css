@@ -63,7 +63,7 @@
   color: var(--color-text-strong);
 }
 
-.nav-link.router-link-active {
+.nav-link.active {
   background: var(--color-accent-soft);
   color: var(--color-accent);
   box-shadow: inset 2px 0 0 var(--color-accent);
