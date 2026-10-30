@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { ref, watch } from 'vue'
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import { APP_NAME } from '@shared/constants'
 import { useSessionStore } from '@/stores/session'
@@ -10,9 +10,6 @@ const router = useRouter()
 const session = useSessionStore()
 const toast = useToastStore()
 const menuOpen = ref(false)
-
-const pageTitle = computed(() => (route.meta.title as string | undefined) ?? '')
-const pageSubtitle = computed(() => (route.meta.subtitle as string | undefined) ?? '')
 
 watch(
   () => route.fullPath,
@@ -80,10 +77,10 @@ async function logout(): Promise<void> {
           >
             菜单
           </button>
-          <div>
-            <div style="color: var(--color-text-strong); font-weight: 600">{{ pageTitle }}</div>
-            <div v-if="pageSubtitle" class="faint small">{{ pageSubtitle }}</div>
-          </div>
+          <span class="mobile-only" style="color: var(--color-text-strong); font-weight: 600">{{ APP_NAME }}</span>
+          <span v-if="route.name === 'dashboard'" class="header-status">
+            <span class="status-dot" />自动刷新 30 秒
+          </span>
         </div>
         <div class="inline">
           <span v-if="session.user?.region" class="badge badge-neutral">

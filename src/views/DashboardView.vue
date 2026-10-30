@@ -133,10 +133,18 @@ onBeforeUnmount(() => {
             <h2>快捷入口</h2>
           </div>
           <div class="stack">
-            <RouterLink :to="{ name: 'monitors' }" class="nav-link">管理监控项</RouterLink>
-            <RouterLink :to="{ name: 'channels' }" class="nav-link">配置通知渠道</RouterLink>
-            <RouterLink :to="{ name: 'bots' }" class="nav-link">接入指令机器人</RouterLink>
-            <RouterLink :to="{ name: 'settings' }" class="nav-link">调整个人设置</RouterLink>
+            <RouterLink :to="{ name: 'monitors' }" class="quick-link">
+              <span>管理监控项</span><span class="quick-arrow">›</span>
+            </RouterLink>
+            <RouterLink :to="{ name: 'channels' }" class="quick-link">
+              <span>配置通知渠道</span><span class="quick-arrow">›</span>
+            </RouterLink>
+            <RouterLink :to="{ name: 'bots' }" class="quick-link">
+              <span>接入指令机器人</span><span class="quick-arrow">›</span>
+            </RouterLink>
+            <RouterLink :to="{ name: 'settings' }" class="quick-link">
+              <span>调整个人设置</span><span class="quick-arrow">›</span>
+            </RouterLink>
           </div>
         </section>
         <section class="card">

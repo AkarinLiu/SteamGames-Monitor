@@ -13,9 +13,8 @@ body,
 body {
   margin: 0;
   background:
-    radial-gradient(circle at 20% -10%, rgba(42, 71, 94, 0.55), transparent 45%),
-    radial-gradient(circle at 90% 0%, rgba(26, 159, 255, 0.12), transparent 35%),
-    var(--color-bg);
+    radial-gradient(1100px 520px at 72% -18%, rgba(124, 199, 245, 0.08), transparent 62%),
+    var(--color-bg-deep);
   color: var(--color-text);
   font-family: var(--font-sans);
   font-size: 14px;
