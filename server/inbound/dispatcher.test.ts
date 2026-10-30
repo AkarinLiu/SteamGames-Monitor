@@ -80,6 +80,7 @@ describe('InboundDispatcher', () => {
       configEnc: encryptConfig({ ownerPlatformUserId: 'ou_owner' }, botAad(user.id, 'feishu')),
       keyVersion: 1,
     })
+    upsertAllowlistEntry(db, bot.id, 'ou_owner', 'Owner', 'admin')
     upsertAllowlistEntry(db, bot.id, 'ou_viewer', '查看者', 'viewer')
     services = {
       db,
@@ -96,7 +97,7 @@ describe('InboundDispatcher', () => {
     await build()
   })
 
-  it('所有者隐式 admin，可执行指令并写入审计与回复投递', async () => {
+  it('允许名单管理员可执行指令并写入审计与回复投递', async () => {
     const accepted = await dispatcher.accept(event())
     expect(accepted.duplicate).toBe(false)
     await waitFor(() => {
@@ -153,9 +154,22 @@ describe('InboundDispatcher', () => {
     expect(row.last_chat_at).toBeGreaterThan(0)
   })
 
-  it('未授权用户收到允许名单提示', async () => {
-    const lines = await dispatcher.handleInline(event({ platformUserId: 'ou_stranger' }))
-    expect(lines.join(' ')).toContain('未授权，请联系机器人所有者')
+  it('未授权用户收到网页授权链接且不执行指令', async () => {
+    const lines = await dispatcher.handleInline(
+      event({ platformUserId: 'ou_stranger', text: '/add 1091500' }),
+    )
+    expect(lines.join('\n')).toContain('/authorize/')
+    expect(lines.join('\n')).toContain('机器人所有者')
+    expect(lines.join('\n')).not.toContain('已添加监控')
+  })
+
+  it('所有者平台 ID 未加入允许名单时也不能直接执行指令', async () => {
+    const { deleteAllowlistEntry } = await import('../db/repo/bots')
+    deleteAllowlistEntry(db, bot.id, 'ou_owner')
+
+    const lines = await dispatcher.handleInline(event({ text: '/help' }))
+    expect(lines.join('\n')).toContain('/authorize/')
+    expect(lines.join('\n')).not.toContain('Steam 销售监控指令')
   })
 
   it('企业微信未授权用户收到网页授权链接', async () => {

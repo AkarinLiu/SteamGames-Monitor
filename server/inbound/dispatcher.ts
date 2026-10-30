@@ -17,7 +17,7 @@ import { createBotAuthorizationRequest } from '../bots/authorization'
 import { logger } from '../lib/logger'
 import { normalizeCommandText } from './commands/parser'
 import { executeCommand, type CommandActor, type CommandServices } from './commands/executor'
-import type { BotConfig, InboundEvent } from './types'
+import type { InboundEvent } from './types'
 
 const log = logger.child('inbound')
 
@@ -204,9 +204,8 @@ export class InboundDispatcher {
       return { lines: [], status: 'ignored', deliver: false }
     }
 
-    let config: BotConfig
     try {
-      config = decryptConfig<BotConfig>(bot.config_enc, botAad(bot.user_id, bot.platform))
+      decryptConfig(bot.config_enc, botAad(bot.user_id, bot.platform))
     } catch (error) {
       if (error instanceof SecretDecryptError) {
         this.record(bot, event, 'help', {}, 'failed', error.message, started)
@@ -247,25 +246,23 @@ export class InboundDispatcher {
       }
     }
 
-    const role = this.resolveRole(bot, event.platformUserId, config)
+    const role = this.resolveRole(bot, event.platformUserId)
     if (!role) {
       this.record(bot, event, 'denied', {}, 'denied', 'not in allowlist', started)
       let lines = ['未授权，请联系机器人所有者将你的平台 ID 加入允许名单。']
-      if (event.platform === 'wecom') {
-        try {
-          const link = createBotAuthorizationRequest(this.options.db, {
-            bot,
-            platformUserId: event.platformUserId,
-            userName: event.userName,
-            chatId: event.chatId,
-          })
-          lines = [
-            `你还没有使用「${bot.name}」的权限。请将以下链接发送给机器人所有者；如果你是所有者，可直接在浏览器登录并批准（30 分钟内有效）：`,
-            link.url,
-          ]
-        } catch (error) {
-          log.warn('创建机器人授权链接失败', { botId: bot.id, error })
-        }
+      try {
+        const link = createBotAuthorizationRequest(this.options.db, {
+          bot,
+          platformUserId: event.platformUserId,
+          userName: event.userName,
+          chatId: event.chatId,
+        })
+        lines = [
+          `你还没有使用「${bot.name}」的权限。请将以下链接发送给机器人所有者；如果你是所有者，可直接在浏览器登录并批准（30 分钟内有效）：`,
+          link.url,
+        ]
+      } catch (error) {
+        log.warn('创建机器人授权链接失败', { botId: bot.id, error })
       }
       return {
         lines,
@@ -299,11 +296,7 @@ export class InboundDispatcher {
   private resolveRole(
     bot: BotAppRow,
     platformUserId: string,
-    config: BotConfig,
   ): BotAccessRole | null {
-    if (config.ownerPlatformUserId && config.ownerPlatformUserId === platformUserId) {
-      return 'admin'
-    }
     const entry = findAllowlistEntry(this.options.db, bot.id, platformUserId)
     return entry ? (entry.role as BotAccessRole) : null
   }

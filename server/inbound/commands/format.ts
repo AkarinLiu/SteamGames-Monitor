@@ -95,6 +95,16 @@ function splitByLimit(text: string, limit: number, measure: (value: string) => n
   return chunks.length > 0 ? chunks : ['']
 }
 
+export function formatDingtalkMarkdown(text: string): string {
+  // DingTalk collapses a bare newline into a space; markdown line breaks need
+  // two trailing spaces.
+  return text
+    .replace(/\r\n/g, '\n')
+    .split('\n')
+    .map((line) => (line.trim() ? `${line.replace(/[ \t]+$/, '')}  ` : ''))
+    .join('\n')
+}
+
 export function splitReply(
   text: string,
   platform: 'feishu' | 'dingtalk' | 'wecom',

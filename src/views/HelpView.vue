@@ -32,7 +32,7 @@ const commands = [
             <h2>斜杠指令</h2>
           </div>
           <p class="small muted">
-            指令作用于机器人所属账号的数据。机器人所有者隐式拥有管理员权限；允许名单中的
+            指令作用于机器人所属账号的数据。所有平台用户（包括扫码时识别的所有者）都需要先通过网页授权或加入允许名单，否则只会收到授权链接；允许名单中的
             <code>viewer</code> 只能执行 <code>/list</code>、<code>/price</code>、<code>/events</code>。
           </p>
           <div class="table-wrap">
@@ -56,7 +56,7 @@ const commands = [
             名称搜索返回多个结果时会给出序号，直接回复序号即可选择，10 分钟内有效。
           </p>
           <p class="small faint" style="margin-top: 10px">
-            在“指令机器人”页面创建机器人：飞书 / Lark 可扫码一键创建并自动启用长连接，也可填写回调地址或 App ID / App Secret；钉钉填写回调地址；企业微信填写 Bot ID / Secret。不同平台可以分别配置允许名单。
+            在“指令机器人”页面创建机器人：飞书 / Lark、钉钉可扫码一键创建并自动启用长连接，也可手动选择 HTTP 回调或长连接；企业微信填写 Bot ID / Secret。不同平台可以分别配置允许名单。
           </p>
           <p class="small faint" style="margin-top: 10px">
             在机器人编辑页可开启“接收事件通知”，事件会推送到最近一次被授权用户使用的会话；需要用户先发送过指令。钉钉事件通知还需要 App Key、App Secret 与 Robot Code。
@@ -81,10 +81,11 @@ const commands = [
             <h2>接入钉钉机器人</h2>
           </div>
           <ol class="small muted" style="padding-left: 1.2rem">
-            <li>在钉钉开放平台创建企业内部机器人，开启“Outgoing”回调。</li>
-            <li>回调地址填写 <code>/webhooks/dingtalk/&lt;slug&gt;</code>，填写 App Secret 用于验签。</li>
-            <li>在机器人配置中填写 App Secret、Robot Code 与所有者 staffId。</li>
-            <li>群内 @机器人 发送 <code>/help</code>，回复通过临时会话 Webhook 发送。</li>
+            <li>推荐在「指令机器人」点击「钉钉扫码添加」，用手机钉钉扫码并确认创建；系统会自动填写 Client ID / Secret，并以 Client ID 作为 Robot Code 启用 Stream 长连接。</li>
+            <li>手动配置时，在钉钉开放平台创建企业内部应用并添加机器人能力；消息接收模式选择 Stream 或 HTTP 回调。</li>
+            <li>Stream 模式无需回调地址；HTTP 回调模式填写 <code>/webhooks/dingtalk/&lt;slug&gt;</code>，并填写 App Secret 验签。</li>
+            <li>发布应用后，在钉钉中搜索机器人单聊，或加入群聊 @机器人 发送 <code>/help</code>；回复通过临时会话 Webhook 发送。</li>
+            <li>使用成员首次发送指令后会收到网页授权链接，由机器人所属账号登录网页批准；所有者 staffId 仅用于标识，不会自动授予权限。</li>
           </ol>
         </section>
 
@@ -96,7 +97,7 @@ const commands = [
             <li>在「指令机器人」点击「企微扫码添加」，用有创建权限的企业微信扫码，系统会自动创建机器人并填写 Bot ID / Secret；二维码 5 分钟内有效。</li>
             <li>也可以手动在企业微信管理后台进入「智能机器人」→ API 模式 → 长连接，创建机器人并填写 Bot ID、Secret 与所有者 UserID。</li>
             <li>保存后服务会主动连接 <code>wss://openws.work.weixin.qq.com</code>，无需公网回调地址、Token 或 EncodingAESKey。</li>
-            <li>将机器人加入群聊或单聊，@机器人 发送 <code>/help</code> 测试；建议在机器人编辑页补充所有者 UserID。事件通知仍需在「通知渠道」单独添加企业微信群机器人 Webhook。</li>
+            <li>将机器人加入群聊或单聊，@机器人 发送 <code>/help</code> 测试；使用成员需网页授权或加入允许名单。事件通知仍需在「通知渠道」单独添加企业微信群机器人 Webhook。</li>
             <li>未授权成员会收到一次性网页授权链接；机器人所有者登录后可选择只读或管理员角色并批准，链接 30 分钟内有效。</li>
           </ol>
         </section>

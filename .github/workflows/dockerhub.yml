@@ -56,9 +56,11 @@ jobs:
         with:
           images: ${{ env.IMAGE_NAME }}
           tags: |
-            type=raw,value=latest${{ matrix.variant.suffix }}
-            type=sha,prefix=sha-,suffix=${{ matrix.variant.suffix }}
+            type=raw,value=latest${{ matrix.variant.suffix }},enable=${{ startsWith(github.ref, 'refs/tags/v') && !contains(github.ref_name, '-') }}
+            type=raw,value=dev${{ matrix.variant.suffix }},enable=${{ github.ref == 'refs/heads/main' }}
             type=semver,pattern={{version}},suffix=${{ matrix.variant.suffix }}
+            type=semver,pattern={{major}}.{{minor}},suffix=${{ matrix.variant.suffix }},enable=${{ !contains(github.ref_name, '-') }}
+            type=sha,prefix=sha-,suffix=${{ matrix.variant.suffix }},enable=${{ !startsWith(github.ref, 'refs/tags/') }}
 
       - name: Build and push
         uses: docker/build-push-action@v6

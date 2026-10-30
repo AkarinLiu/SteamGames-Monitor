@@ -20,6 +20,8 @@ import { WecomLongConnectionManager } from './inbound/wecom/manager'
 import { WecomQrService } from './inbound/wecom/qr'
 import { FeishuLongConnectionManager } from './inbound/feishu/manager'
 import { FeishuQrService } from './inbound/feishu/qr'
+import { DingtalkStreamManager } from './inbound/dingtalk/manager'
+import { DingtalkQrService } from './inbound/dingtalk/qr'
 import { sendCommandDelivery } from './inbound/reply'
 import { sendBotEvent } from './notify/botEvents'
 import type { CommandServices } from './inbound/commands/executor'
@@ -37,6 +39,8 @@ export interface Runtime {
   wecomQr: WecomQrService
   feishuBots: FeishuLongConnectionManager
   feishuQr: FeishuQrService
+  dingtalkBots: DingtalkStreamManager
+  dingtalkQr: DingtalkQrService
   cacheTtlMs: number
   cleanup: CleanupJob
   checkMonitor: (monitorId: number, options?: CheckOptions) => Promise<CheckOutcome>
@@ -75,6 +79,8 @@ export function createRuntime(): Runtime {
   const wecomQr = new WecomQrService(db)
   const feishuBots = new FeishuLongConnectionManager({ db, dispatcher })
   const feishuQr = new FeishuQrService(db)
+  const dingtalkBots = new DingtalkStreamManager({ db, dispatcher })
+  const dingtalkQr = new DingtalkQrService(db)
 
   deliveryWorker.setCommandSender((delivery) =>
     sendCommandDelivery(db, delivery, {
@@ -92,6 +98,7 @@ export function createRuntime(): Runtime {
   deliveryWorker.start()
   wecomBots.start()
   feishuBots.start()
+  dingtalkBots.start()
   cleanup.start()
 
   return {
@@ -107,6 +114,8 @@ export function createRuntime(): Runtime {
     wecomQr,
     feishuBots,
     feishuQr,
+    dingtalkBots,
+    dingtalkQr,
     cacheTtlMs,
     cleanup,
     checkMonitor,
@@ -117,6 +126,8 @@ export function createRuntime(): Runtime {
       wecomQr.stop()
       feishuBots.stop()
       feishuQr.stop()
+      dingtalkBots.stop()
+      dingtalkQr.stop()
       await deliveryWorker.stop()
       cleanup.stop()
       db.checkpoint('TRUNCATE')

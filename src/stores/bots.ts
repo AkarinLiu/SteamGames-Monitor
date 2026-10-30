@@ -5,6 +5,8 @@ import type {
   BotApp,
   BotConnectionStatus,
   BotPlatform,
+  DingtalkQrPollResult,
+  DingtalkQrSession,
   FeishuBrand,
   FeishuQrPollResult,
   FeishuQrSession,
@@ -109,6 +111,20 @@ export const useBotsStore = defineStore('bots', () => {
     await api.delete(`/bots/feishu/qr/${encodeURIComponent(sessionId)}`)
   }
 
+  async function startDingtalkQr(name?: string): Promise<DingtalkQrSession> {
+    return api.post<DingtalkQrSession>('/bots/dingtalk/qr', { name })
+  }
+
+  async function pollDingtalkQr(sessionId: string): Promise<DingtalkQrPollResult> {
+    return api.get<DingtalkQrPollResult>(
+      `/bots/dingtalk/qr/${encodeURIComponent(sessionId)}`,
+    )
+  }
+
+  async function cancelDingtalkQr(sessionId: string): Promise<void> {
+    await api.delete(`/bots/dingtalk/qr/${encodeURIComponent(sessionId)}`)
+  }
+
   return {
     items,
     quota,
@@ -126,5 +142,8 @@ export const useBotsStore = defineStore('bots', () => {
     startFeishuQr,
     pollFeishuQr,
     cancelFeishuQr,
+    startDingtalkQr,
+    pollDingtalkQr,
+    cancelDingtalkQr,
   }
 })

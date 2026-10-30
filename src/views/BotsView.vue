@@ -3,6 +3,9 @@ import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import type {
   BotAccessRole,
   BotPlatform,
+  DingtalkConnectionMode,
+  DingtalkQrPollResult,
+  DingtalkQrSession,
   FeishuBrand,
   FeishuConnectionMode,
   FeishuQrPollResult,
@@ -54,6 +57,7 @@ const form = reactive({
   secret: '',
   brand: 'feishu' as FeishuBrand,
   connectionMode: 'webhook' as FeishuConnectionMode,
+  dingtalkConnectionMode: 'webhook' as DingtalkConnectionMode,
 })
 
 const deleteTarget = ref<BotView | null>(null)
@@ -64,9 +68,9 @@ const inboundTexts = reactive<Record<number, string>>({})
 const inboundResults = reactive<Record<number, string>>({})
 const inboundBusy = ref<number | null>(null)
 
-type QrPlatform = 'feishu' | 'wecom'
-type QrSessionView = FeishuQrSession | WecomQrSession
-type QrStatusView = FeishuQrPollResult | WecomQrPollResult
+type QrPlatform = 'feishu' | 'wecom' | 'dingtalk'
+type QrSessionView = FeishuQrSession | WecomQrSession | DingtalkQrSession
+type QrStatusView = FeishuQrPollResult | WecomQrPollResult | DingtalkQrPollResult
 
 const qrOpen = ref(false)
 const qrStarting = ref(false)
@@ -119,6 +123,7 @@ const botDocsUrl = computed(() =>
 
 const qrLabel = computed(() => {
   if (qrPlatform.value === 'wecom') return '企业微信'
+  if (qrPlatform.value === 'dingtalk') return '钉钉'
   return qrBrand.value === 'lark' ? 'Lark' : '飞书'
 })
 
@@ -126,19 +131,21 @@ const qrTitle = computed(() => `扫码添加${qrLabel.value}机器人`)
 
 function defaultQrName(platform: QrPlatform, brand: FeishuBrand): string {
   if (platform === 'wecom') return '企业微信智能机器人'
+  if (platform === 'dingtalk') return '钉钉智能机器人'
   return brand === 'lark' ? 'Lark 智能机器人' : '飞书智能机器人'
 }
 
 function usesLongConnection(bot: BotView): boolean {
   return (
     bot.platform === 'wecom' ||
-    (bot.platform === 'feishu' && bot.config.connectionMode === 'websocket')
+    (bot.platform === 'feishu' && bot.config.connectionMode === 'websocket') ||
+    (bot.platform === 'dingtalk' && bot.config.connectionMode === 'stream')
   )
 }
 
 function usesCallback(bot: BotView): boolean {
   return (
-    bot.platform === 'dingtalk' ||
+    (bot.platform === 'dingtalk' && bot.config.connectionMode !== 'stream') ||
     (bot.platform === 'feishu' && bot.config.connectionMode !== 'websocket')
   )
 }
@@ -179,6 +186,7 @@ function resetForm(): void {
   form.secret = ''
   form.brand = 'feishu'
   form.connectionMode = 'webhook'
+  form.dingtalkConnectionMode = 'webhook'
   dialogError.value = ''
 }
 
@@ -209,7 +217,12 @@ function openQrDialog(platform: QrPlatform, brand: FeishuBrand = 'feishu'): void
 
 function openQrFromCreate(): void {
   dialogOpen.value = false
-  const platform: QrPlatform = form.platform === 'wecom' ? 'wecom' : 'feishu'
+  const platform: QrPlatform =
+    form.platform === 'wecom'
+      ? 'wecom'
+      : form.platform === 'dingtalk'
+        ? 'dingtalk'
+        : 'feishu'
   openQrDialog(platform, form.brand)
   if (form.name.trim()) qrName.value = form.name.trim()
 }
@@ -226,7 +239,9 @@ async function startQr(): Promise<void> {
     const session: QrSessionView =
       platform === 'wecom'
         ? await store.startWecomQr(qrName.value)
-        : await store.startFeishuQr({ name: qrName.value, brand: qrBrand.value })
+        : platform === 'dingtalk'
+          ? await store.startDingtalkQr(qrName.value)
+          : await store.startFeishuQr({ name: qrName.value, brand: qrBrand.value })
     if (requestId !== qrRequestId || !qrOpen.value) {
       void cancelQrSession(platform, session.sessionId)
       return
@@ -234,8 +249,8 @@ async function startQr(): Promise<void> {
     qrSession.value = session
     qrStatus.value = { status: 'pending', message: '等待扫码授权' }
     const intervalMs =
-      qrPlatform.value === 'feishu'
-        ? Math.max(2500, (session as FeishuQrSession).intervalMs)
+      'intervalMs' in session && typeof session.intervalMs === 'number'
+        ? Math.max(2500, session.intervalMs)
         : 2500
     qrTimer = window.setInterval(() => {
       void pollQr()
@@ -255,7 +270,9 @@ async function pollQr(): Promise<void> {
     const result: QrStatusView =
       qrPlatform.value === 'wecom'
         ? await store.pollWecomQr(session.sessionId)
-        : await store.pollFeishuQr(session.sessionId)
+        : qrPlatform.value === 'dingtalk'
+          ? await store.pollDingtalkQr(session.sessionId)
+          : await store.pollFeishuQr(session.sessionId)
     if (!qrOpen.value || qrSession.value?.sessionId !== session.sessionId) return
     qrStatus.value = result
     if (result.status === 'success') {
@@ -277,6 +294,7 @@ async function pollQr(): Promise<void> {
 async function cancelQrSession(platform: QrPlatform, sessionId: string): Promise<void> {
   try {
     if (platform === 'wecom') await store.cancelWecomQr(sessionId)
+    else if (platform === 'dingtalk') await store.cancelDingtalkQr(sessionId)
     else await store.cancelFeishuQr(sessionId)
   } catch {
     // Session cleanup is best-effort.
@@ -339,6 +357,7 @@ function openEdit(bot: BotView): void {
   } else if (bot.platform === 'dingtalk') {
     form.appKey = typeof config.appKey === 'string' ? config.appKey : ''
     form.robotCode = typeof config.robotCode === 'string' ? config.robotCode : ''
+    form.dingtalkConnectionMode = config.connectionMode === 'stream' ? 'stream' : 'webhook'
   } else {
     form.botId = typeof config.botId === 'string' ? config.botId : ''
   }
@@ -361,6 +380,7 @@ function buildConfig(): Record<string, unknown> {
     if (form.appKey.trim()) config.appKey = form.appKey.trim()
     if (form.appSecret.trim()) config.appSecret = form.appSecret.trim()
     if (form.robotCode.trim()) config.robotCode = form.robotCode.trim()
+    config.connectionMode = form.dingtalkConnectionMode
   } else {
     if (form.botId.trim()) config.botId = form.botId.trim()
     if (form.secret.trim()) config.secret = form.secret.trim()
@@ -391,6 +411,16 @@ async function save(): Promise<void> {
     }
     if (!isEditing.value && !form.appSecret.trim()) {
       dialogError.value = '长连接模式需要填写 App Secret'
+      return
+    }
+  }
+  if (form.platform === 'dingtalk' && form.dingtalkConnectionMode === 'stream') {
+    if (!form.appKey.trim()) {
+      dialogError.value = 'Stream 模式需要填写 App Key / Client ID'
+      return
+    }
+    if (!isEditing.value && !form.appSecret.trim()) {
+      dialogError.value = 'Stream 模式需要填写 App Secret / Client Secret'
       return
     }
   }
@@ -555,6 +585,7 @@ onBeforeUnmount(() => {
       </div>
       <div class="page-actions">
         <button class="btn" type="button" @click="openQrDialog('feishu')">飞书 / Lark 扫码</button>
+        <button class="btn" type="button" @click="openQrDialog('dingtalk')">钉钉扫码添加</button>
         <button class="btn" type="button" @click="openQrDialog('wecom')">企微扫码添加</button>
         <button class="btn btn-primary" type="button" @click="openCreate">添加机器人</button>
       </div>
@@ -571,7 +602,7 @@ onBeforeUnmount(() => {
     <EmptyState
       v-else-if="store.items.length === 0"
       title="还没有接入机器人"
-      description="飞书 / Lark、企业微信可扫码自动创建，也可手动填写凭据；钉钉填写回调地址。接入后即可在聊天中使用 /add、/list 等指令。"
+      description="飞书 / Lark、钉钉、企业微信都可扫码自动创建，也可手动填写凭据。接入后即可在聊天中使用 /add、/list 等指令。"
     >
       <button class="btn btn-primary" type="button" style="margin-top: 12px" @click="openCreate">
         添加第一个机器人
@@ -594,6 +625,9 @@ onBeforeUnmount(() => {
             >
               {{ bot.config.brand === 'lark' ? 'Lark 国际版' : '飞书' }} ·
               {{ bot.config.connectionMode === 'websocket' ? '长连接' : 'HTTP 回调' }}
+            </span>
+            <span v-if="bot.platform === 'dingtalk'" class="badge badge-neutral">
+              {{ bot.config.connectionMode === 'stream' ? 'Stream 长连接' : 'HTTP 回调' }}
             </span>
             <span
               v-if="bot.connection"
@@ -641,7 +675,11 @@ onBeforeUnmount(() => {
           class="banner"
           :class="bot.connection?.state === 'error' ? 'banner-error' : 'banner-info'"
         >
-          {{ bot.platform === 'wecom' ? '企业微信长连接' : '飞书 / Lark 长连接' }}模式：无需公网回调地址，服务启动后主动建立连接。{{ bot.connection?.message ?? '' }}
+          {{ bot.platform === 'wecom'
+            ? '企业微信长连接'
+            : bot.platform === 'dingtalk'
+              ? '钉钉 Stream'
+              : '飞书 / Lark 长连接' }}模式：无需公网回调地址，服务启动后主动建立连接。{{ bot.connection?.message ?? '' }}
         </div>
 
         <div v-if="bot.platform === 'wecom' && !bot.config.botId" class="banner banner-warning">
@@ -653,6 +691,13 @@ onBeforeUnmount(() => {
           class="banner banner-warning"
         >
           尚未配置 App ID / App Secret，飞书 / Lark 长连接不会建立。
+        </div>
+
+        <div
+          v-if="bot.platform === 'dingtalk' && bot.config.connectionMode === 'stream' && !bot.config.appKey"
+          class="banner banner-warning"
+        >
+          尚未配置 App Key / App Secret，钉钉 Stream 长连接不会建立。
         </div>
 
         <div v-if="bot.notifyEnabled && !bot.lastChatAt" class="banner banner-warning">
@@ -687,7 +732,7 @@ onBeforeUnmount(() => {
           <div>
             <h3>允许名单</h3>
             <p class="faint small">
-              机器人所有者隐式拥有管理员权限。其他平台用户需加入允许名单才能使用指令；viewer 只能查询。
+              所有平台用户（包括所有者 ID）都需要先通过网页授权或加入允许名单才能使用指令；viewer 只能查询。
             </p>
             <div class="table-wrap" style="margin-bottom: 10px">
               <table class="table">
@@ -796,14 +841,16 @@ onBeforeUnmount(() => {
         </p>
 
         <div class="field">
-          <label for="bot-owner">所有者平台用户 ID</label>
+          <label for="bot-owner">所有者平台用户 ID（仅标识）</label>
           <input
             id="bot-owner"
             v-model="form.ownerPlatformUserId"
             class="input mono"
             placeholder="例如飞书 open_id / 钉钉 staffId / 企微 UserID"
           />
-          <span class="field-hint">机器人的指令始终作用于你的账号数据；所有者无需加入允许名单。</span>
+          <span class="field-hint">
+            仅用于标识扫码者 / 所有者，不会自动授予指令权限。所有平台用户都需要网页授权或允许名单。
+          </span>
         </div>
 
         <template v-if="form.platform === 'feishu'">
@@ -862,16 +909,36 @@ onBeforeUnmount(() => {
               <input id="bot-ding-key" v-model="form.appKey" class="input mono" />
             </div>
             <div class="field">
-              <label for="bot-ding-secret">App Secret</label>
+              <label for="bot-ding-secret">App Secret（Client Secret）</label>
               <input id="bot-ding-secret" v-model="form.appSecret" class="input" type="password" autocomplete="new-password" :placeholder="isEditing ? '留空保留已保存值' : ''" />
             </div>
           </div>
-          <div class="field">
-            <label for="bot-robotcode">Robot Code</label>
-            <input id="bot-robotcode" v-model="form.robotCode" class="input mono" />
+          <div class="grid-2">
+            <div class="field">
+              <label for="bot-ding-mode">消息接收模式</label>
+              <select id="bot-ding-mode" v-model="form.dingtalkConnectionMode" class="select">
+                <option value="webhook">HTTP 回调（Outgoing）</option>
+                <option value="stream">Stream 长连接（推荐）</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="bot-robotcode">Robot Code</label>
+              <input id="bot-robotcode" v-model="form.robotCode" class="input mono" placeholder="通常与 Client ID 相同" />
+            </div>
           </div>
-          <p class="field-hint" style="margin-top: -6px">
-            App Secret 用于校验 Outgoing 回调签名；App Key、App Secret 与 Robot Code 同时填写后，机器人才可以推送事件通知。
+
+          <div class="banner banner-info">
+            使用钉钉扫码一键创建机器人应用，系统会自动填写 Client ID / Secret 并启用 Stream 长连接。
+            <button class="btn-link" type="button" @click="openQrFromCreate">扫码自动创建</button>
+          </div>
+
+          <p v-if="form.dingtalkConnectionMode === 'stream'" class="field-hint" style="margin-top: -6px">
+            Stream 模式由服务端主动连接钉钉，无需公网回调地址；钉钉后台需将机器人消息接收模式设为 Stream 并发布应用。
+            App Key、App Secret 与 Robot Code 同时填写后，机器人还可以推送事件通知。
+          </p>
+          <p v-else class="field-hint" style="margin-top: -6px">
+            HTTP 回调模式需把卡片上的回调地址填入钉钉机器人 Outgoing 配置；App Secret 用于校验签名。
+            开启事件通知还需要 App Key、App Secret 与 Robot Code。
           </p>
         </template>
 
@@ -995,7 +1062,9 @@ onBeforeUnmount(() => {
           <p class="small faint">
             {{ qrPlatform === 'wecom'
               ? '二维码 5 分钟内有效；授权成功后系统会自动添加机器人并建立长连接。'
-              : '二维码 10 分钟内有效；授权成功后系统会自动填写 App ID / App Secret，并以长连接接收指令。' }}
+              : qrPlatform === 'dingtalk'
+                ? '二维码 10 分钟内有效；授权成功后系统会自动填写 Client ID / Client Secret，并以 Stream 长连接接收指令。'
+                : '二维码 10 分钟内有效；授权成功后系统会自动填写 App ID / App Secret，并以长连接接收指令。' }}
           </p>
           <p class="small faint">{{ qrStatus.message ?? '等待扫码授权…' }}</p>
           <p v-if="qrPolling" class="small faint">正在检查扫码状态…</p>
@@ -1009,8 +1078,10 @@ onBeforeUnmount(() => {
           </p>
           <p class="small faint">
             {{ qrPlatform === 'wecom'
-              ? '建议点击「编辑机器人」填写所有者企业微信 UserID，或将使用成员加入允许名单；否则指令会被拒绝。'
-              : '所有者已自动写入；如需让其他成员使用，请将他们加入允许名单。' }}
+              ? '请让使用成员先发送指令，再由机器人所属账号登录网页批准；也可直接在允许名单中添加。'
+              : qrPlatform === 'dingtalk'
+                ? '所有者 ID 仅用于标识；请在网页授权页面批准自己的钉钉账号，其他成员也需授权或加入允许名单。'
+                : '已识别所有者 open_id，但它仅用于标识；首次使用仍需在网页授权页面批准自己的平台账号。' }}
           </p>
           <p v-if="qrStatus.enabled === false" class="small faint">
             机器人已创建但未启用：当前平台已有启用中的机器人。
@@ -1019,6 +1090,9 @@ onBeforeUnmount(() => {
 
         <template v-else>
           <div class="banner banner-warning">{{ qrStatus?.message ?? '二维码已失效' }}</div>
+          <p v-if="qrPlatform === 'dingtalk'" class="small faint">
+            请确认扫码账号在目标企业拥有开发者权限，且已选择允许创建应用的组织；也可以关闭弹窗，使用手动配置填写 Client ID / Secret。
+          </p>
         </template>
       </div>
 

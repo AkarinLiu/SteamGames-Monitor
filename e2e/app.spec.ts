@@ -384,6 +384,41 @@ test.describe.serial('Steam 销售监控端到端', () => {
       await page.locator('.modal-footer').getByRole('button', { name: '关闭', exact: true }).click()
       await expect(page.getByRole('heading', { name: '扫码添加Lark机器人' })).toBeHidden()
       await page.unroute('**/api/bots/feishu/qr**')
+
+      await page.route('**/api/bots/dingtalk/qr**', async (route) => {
+        if (route.request().method() === 'POST') {
+          await route.fulfill({
+            status: 201,
+            contentType: 'application/json',
+            body: JSON.stringify({
+              sessionId: 'dingtalk-qr-e2e',
+              qrDataUrl: qrPng,
+              expiresAt: Date.now() + 600_000,
+              intervalMs: 3000,
+            }),
+          })
+          return
+        }
+        if (route.request().method() === 'GET') {
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({ status: 'pending', message: '等待扫码授权' }),
+          })
+          return
+        }
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ ok: true }),
+        })
+      })
+      await page.getByRole('button', { name: '钉钉扫码添加' }).click()
+      await expect(page.getByRole('heading', { name: '扫码添加钉钉机器人' })).toBeVisible()
+      await expect(page.getByAltText('钉钉扫码添加机器人二维码')).toBeVisible()
+      await page.locator('.modal-footer').getByRole('button', { name: '关闭', exact: true }).click()
+      await expect(page.getByRole('heading', { name: '扫码添加钉钉机器人' })).toBeHidden()
+      await page.unroute('**/api/bots/dingtalk/qr**')
     })
 
     await test.step('网页端授权页面', async () => {

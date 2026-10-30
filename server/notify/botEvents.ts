@@ -3,7 +3,7 @@ import type { Db } from '../db/database'
 import type { BotAppRow, DeliveryRow } from '../db/rows'
 import type { BotConfig, DingtalkBotConfig, FeishuBotConfig } from '../inbound/types'
 import { sendFeishuChatText } from '../inbound/reply'
-import { splitReply } from '../inbound/commands/format'
+import { formatDingtalkMarkdown, splitReply } from '../inbound/commands/format'
 import { botAad, decryptConfig, SecretDecryptError } from './secrets'
 import { assertSafeOutboundUrl } from './urlGuard'
 import { resolveFeishuApiBase } from '../inbound/feishu/domains'
@@ -166,7 +166,7 @@ async function sendDingtalkEvent(
       ? guard(`${base}/v1.0/robot/groupMessages/send`)
       : guard(`${base}/v1.0/robot/oToMessages/batchSend`)
 
-  for (const chunk of splitReply(message.markdown, 'dingtalk')) {
+  for (const chunk of splitReply(formatDingtalkMarkdown(message.markdown), 'dingtalk')) {
     const body =
       chatType === 'group'
         ? {

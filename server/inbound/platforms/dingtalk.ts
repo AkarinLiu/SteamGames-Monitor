@@ -40,31 +40,14 @@ export function verifyDingtalkSignature(input: {
   return safeEqual(expected, sign)
 }
 
-export function handleDingtalkUpdate(input: {
+export function handleDingtalkPayload(input: {
   bot: BotAppRow
   config: DingtalkBotConfig
-  headers: Record<string, string>
-  rawBody: string
+  payload: DingtalkEnvelope | null
   now?: number
 }): PlatformHandleResult {
-  const { bot, config, headers, rawBody } = input
+  const { bot, config, payload } = input
   const now = input.now ?? Date.now()
-
-  if (!config.appSecret) {
-    return { kind: 'error', status: 400, message: '钉钉机器人尚未配置 AppSecret' }
-  }
-  if (
-    !verifyDingtalkSignature({
-      appSecret: config.appSecret,
-      timestamp: headers.timestamp,
-      sign: headers.sign,
-      now,
-    })
-  ) {
-    return { kind: 'error', status: 401, message: '钉钉签名校验失败' }
-  }
-
-  const payload = safeJsonParse<DingtalkEnvelope | null>(rawBody, null)
   if (!payload) return { kind: 'error', status: 400, message: '钉钉回调不是合法 JSON' }
   if (payload.msgtype !== 'text') return { kind: 'ignored', body: {} }
 
@@ -100,4 +83,50 @@ export function handleDingtalkUpdate(input: {
       receivedAt: now,
     },
   }
+}
+
+export function handleDingtalkStreamEvent(input: {
+  bot: BotAppRow
+  config: DingtalkBotConfig
+  payload: unknown
+  now?: number
+}): PlatformHandleResult {
+  const payload =
+    typeof input.payload === 'string'
+      ? safeJsonParse<DingtalkEnvelope | null>(input.payload, null)
+      : (input.payload as DingtalkEnvelope | null)
+  return handleDingtalkPayload({
+    bot: input.bot,
+    config: input.config,
+    payload,
+    now: input.now,
+  })
+}
+
+export function handleDingtalkUpdate(input: {
+  bot: BotAppRow
+  config: DingtalkBotConfig
+  headers: Record<string, string>
+  rawBody: string
+  now?: number
+}): PlatformHandleResult {
+  const { bot, config, headers, rawBody } = input
+  const now = input.now ?? Date.now()
+
+  if (!config.appSecret) {
+    return { kind: 'error', status: 400, message: '钉钉机器人尚未配置 AppSecret' }
+  }
+  if (
+    !verifyDingtalkSignature({
+      appSecret: config.appSecret,
+      timestamp: headers.timestamp,
+      sign: headers.sign,
+      now,
+    })
+  ) {
+    return { kind: 'error', status: 401, message: '钉钉签名校验失败' }
+  }
+
+  const payload = safeJsonParse<DingtalkEnvelope | null>(rawBody, null)
+  return handleDingtalkPayload({ bot, config, payload, now })
 }

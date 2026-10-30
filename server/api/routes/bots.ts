@@ -6,6 +6,7 @@ import {
   UpdateBotSchema,
   WecomQrStartSchema,
   FeishuQrStartSchema,
+  DingtalkQrStartSchema,
 } from '../../../shared/schemas'
 import type { BotPlatform } from '../../../shared/types'
 import { LIMITS } from '../../../shared/constants'
@@ -31,8 +32,9 @@ import {
 import { botAad, currentKeyVersion, decryptConfig, encryptConfig, SecretDecryptError } from '../../notify/secrets'
 import { generateBotSlug } from '../../lib/botSlug'
 import { env } from '../../env'
-import type { BotConfig, FeishuBotConfig } from '../../inbound/types'
+import type { BotConfig, DingtalkBotConfig, FeishuBotConfig } from '../../inbound/types'
 import { resolveFeishuConnectionMode } from '../../inbound/feishu/domains'
+import { resolveDingtalkConnectionMode } from '../../inbound/dingtalk/connection'
 
 function configSummary(platform: BotPlatform, config: BotConfig): Record<string, unknown> {
   if (platform === 'feishu') {
@@ -53,6 +55,7 @@ function configSummary(platform: BotPlatform, config: BotConfig): Record<string,
       appKey: dingtalk.appKey ?? '',
       appSecretSet: Boolean(dingtalk.appSecret),
       robotCode: dingtalk.robotCode ?? '',
+      connectionMode: dingtalk.connectionMode ?? 'webhook',
       ownerPlatformUserId: dingtalk.ownerPlatformUserId ?? '',
     }
   }
@@ -91,8 +94,13 @@ function toBotView(
   const feishuWs =
     row.platform === 'feishu' &&
     resolveFeishuConnectionMode(config as FeishuBotConfig) === 'websocket'
-  const usesWebhook = row.platform === 'dingtalk' || (row.platform === 'feishu' && !feishuWs)
-  const usesLongConnection = row.platform === 'wecom' || feishuWs
+  const dingtalkStream =
+    row.platform === 'dingtalk' &&
+    resolveDingtalkConnectionMode(config as DingtalkBotConfig) === 'stream'
+  const usesWebhook =
+    (row.platform === 'dingtalk' && !dingtalkStream) ||
+    (row.platform === 'feishu' && !feishuWs)
+  const usesLongConnection = row.platform === 'wecom' || feishuWs || dingtalkStream
   return {
     ...bot,
     config,
@@ -105,7 +113,9 @@ function toBotView(
       ? row.enabled === 1
         ? row.platform === 'wecom'
           ? runtime.wecomBots.statusFor(row.id)
-          : runtime.feishuBots.statusFor(row.id)
+          : row.platform === 'feishu'
+            ? runtime.feishuBots.statusFor(row.id)
+            : runtime.dingtalkBots.statusFor(row.id)
         : { state: 'disabled', since: row.updated_at }
       : null,
   }
@@ -213,6 +223,28 @@ export function botRoutes(runtime: Runtime): Hono<AppBindings> {
     return c.json({ ok: true })
   })
 
+  router.post('/dingtalk/qr', async (c) => {
+    const user = c.get('user') as UserRow
+    const input = await parseJson(c, DingtalkQrStartSchema)
+    const session = await runtime.dingtalkQr.start(user.id, input.name)
+    c.header('cache-control', 'no-store')
+    return c.json(session, 201)
+  })
+
+  router.get('/dingtalk/qr/:sessionId', async (c) => {
+    const user = c.get('user') as UserRow
+    const result = await runtime.dingtalkQr.poll(user.id, c.req.param('sessionId'))
+    if (result.status === 'success' && result.botId) runtime.dingtalkBots.sync()
+    c.header('cache-control', 'no-store')
+    return c.json(result)
+  })
+
+  router.delete('/dingtalk/qr/:sessionId', (c) => {
+    const user = c.get('user') as UserRow
+    runtime.dingtalkQr.cancel(user.id, c.req.param('sessionId'))
+    return c.json({ ok: true })
+  })
+
   router.post('/', async (c) => {
     const user = c.get('user') as UserRow
     const input = await parseJson(c, CreateBotSchema)
@@ -242,6 +274,7 @@ export function botRoutes(runtime: Runtime): Hono<AppBindings> {
       })
       if (input.platform === 'wecom') runtime.wecomBots.sync()
       if (input.platform === 'feishu') runtime.feishuBots.sync()
+      if (input.platform === 'dingtalk') runtime.dingtalkBots.sync()
       return c.json({ bot: toBotView(runtime, row, []) }, 201)
     } catch (error) {
       if (isSlugConflict(error)) throw conflict('回调地址冲突，请重试')
@@ -286,6 +319,7 @@ export function botRoutes(runtime: Runtime): Hono<AppBindings> {
     })
     if (row.platform === 'wecom') runtime.wecomBots.sync()
     if (row.platform === 'feishu') runtime.feishuBots.sync()
+    if (row.platform === 'dingtalk') runtime.dingtalkBots.sync()
     return c.json({ bot: toBotView(runtime, updated!, listAllowlist(db, id)) })
   })
 
@@ -295,6 +329,7 @@ export function botRoutes(runtime: Runtime): Hono<AppBindings> {
     if (!deleteBot(db, user.id, id)) throw notFound('机器人不存在')
     runtime.wecomBots.sync()
     runtime.feishuBots.sync()
+    runtime.dingtalkBots.sync()
     return c.json({ ok: true })
   })
 

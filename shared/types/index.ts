@@ -23,6 +23,7 @@ export type BotPlatform = 'feishu' | 'dingtalk' | 'wecom'
 export type BotAccessRole = 'admin' | 'viewer'
 export type FeishuBrand = 'feishu' | 'lark'
 export type FeishuConnectionMode = 'webhook' | 'websocket'
+export type DingtalkConnectionMode = 'webhook' | 'stream'
 
 export type DeliveryKind = 'event' | 'command' | 'test'
 export type DeliveryStatus = 'pending' | 'sending' | 'sent' | 'failed' | 'canceled'
@@ -234,6 +235,23 @@ export interface FeishuQrPollResult {
   botId?: number
   enabled?: boolean
   brand?: FeishuBrand
+  ownerPlatformUserId?: string
+  message?: string
+}
+
+export type DingtalkQrStatus = 'pending' | 'success' | 'expired' | 'failed'
+
+export interface DingtalkQrSession {
+  sessionId: string
+  qrDataUrl: string
+  expiresAt: number
+  intervalMs: number
+}
+
+export interface DingtalkQrPollResult {
+  status: DingtalkQrStatus
+  botId?: number
+  enabled?: boolean
   ownerPlatformUserId?: string
   message?: string
 }

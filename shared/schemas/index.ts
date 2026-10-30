@@ -334,6 +334,7 @@ export const DingtalkBotConfigSchema = z.object({
   appKey: trimmed(1, 100).optional(),
   appSecret: z.string().trim().max(200).optional(),
   robotCode: trimmed(1, 100).optional(),
+  connectionMode: z.enum(['webhook', 'stream']).optional(),
   ownerPlatformUserId: z.string().trim().max(100).optional(),
 })
 
@@ -365,6 +366,10 @@ export const WecomQrStartSchema = z.object({
 export const FeishuQrStartSchema = z.object({
   name: trimmed(1, LIMITS.botNameMaxLength).optional(),
   brand: z.enum(['feishu', 'lark']).default('feishu'),
+})
+
+export const DingtalkQrStartSchema = z.object({
+  name: trimmed(1, LIMITS.botNameMaxLength).optional(),
 })
 
 export const BotAuthApproveSchema = z.object({

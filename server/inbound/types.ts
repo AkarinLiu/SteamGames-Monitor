@@ -1,5 +1,6 @@
 import type {
   BotPlatform,
+  DingtalkConnectionMode,
   FeishuBrand,
   FeishuConnectionMode,
 } from '../../shared/types'
@@ -23,6 +24,7 @@ export interface DingtalkBotConfig {
   robotCode?: string
   webhookUrl?: string
   secret?: string
+  connectionMode?: DingtalkConnectionMode
   ownerPlatformUserId?: string
 }
 

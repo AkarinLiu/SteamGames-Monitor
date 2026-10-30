@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { splitReply } from './commands/format'
+import { formatDingtalkMarkdown, splitReply } from './commands/format'
 import type { DeliveryRow } from '../db/rows'
 import type { Db } from '../db/database'
 import { findBotByIdInternal } from '../db/repo/bots'
@@ -166,7 +166,7 @@ async function sendDingtalkReply(
   if (target.expiresAt && target.expiresAt < Date.now() + 5_000) {
     return failure('钉钉会话 Webhook 已过期', true)
   }
-  const chunks = splitReply(text, 'dingtalk')
+  const chunks = splitReply(formatDingtalkMarkdown(text), 'dingtalk')
   for (const chunk of chunks) {
     const response = await fetch(guard(target.sessionWebhook), {
       method: 'POST',
