@@ -16,6 +16,9 @@ coverage
 *.local
 data/*
 !data/.gitkeep
+!data/logs/
+data/logs/*
+!data/logs/.gitkeep
 *.db
 *.db-wal
 *.db-shm

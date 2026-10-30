@@ -1,3 +1,7 @@
+import { createWriteStream, mkdirSync, type WriteStream } from 'node:fs'
+import path from 'node:path'
+import { env } from '../env'
+
 type LogLevel = 'debug' | 'info' | 'warn' | 'error'
 
 const LEVEL_WEIGHT: Record<LogLevel, number> = {
@@ -38,6 +42,38 @@ function redact(value: unknown, depth = 0): unknown {
 
 function formatTime(date: Date): string {
   return date.toISOString().slice(11, 23)
+}
+
+const LOG_DIR = path.join(env.DATA_DIR, 'logs')
+let fileStream: WriteStream | null = null
+let fileDate = ''
+let fileLoggingDisabled = false
+
+function writeFileLine(line: string): void {
+  if (process.env.NODE_ENV === 'test' || fileLoggingDisabled) return
+  try {
+    const date = new Date().toISOString().slice(0, 10)
+    if (!fileStream || fileDate !== date) {
+      fileStream?.end()
+      fileStream = null
+      mkdirSync(LOG_DIR, { recursive: true, mode: 0o750 })
+      const stream = createWriteStream(path.join(LOG_DIR, `app-${date}.log`), {
+        flags: 'a',
+        mode: 0o600,
+      })
+      stream.on('error', (error) => {
+        fileLoggingDisabled = true
+        if (fileStream === stream) fileStream = null
+        console.error(`[logger] 写入日志文件失败：${error.message}`)
+      })
+      fileStream = stream
+      fileDate = date
+    }
+    fileStream?.write(`${line}\n`)
+  } catch (error) {
+    fileLoggingDisabled = true
+    console.error(`[logger] 无法初始化日志目录：${(error as Error).message}`)
+  }
 }
 
 class Logger {
@@ -83,6 +119,7 @@ class Logger {
         ...payload,
       }
       const line = JSON.stringify(entry)
+      writeFileLine(line)
       if (level === 'error') console.error(line)
       else if (level === 'warn') console.warn(line)
       else console.log(line)
@@ -93,6 +130,7 @@ class Logger {
     }`
     const suffix = payload && Object.keys(payload).length > 0 ? ` ${JSON.stringify(payload)}` : ''
     const line = `${prefix}${message}${suffix}`
+    writeFileLine(line)
     if (level === 'error') console.error(line)
     else if (level === 'warn') console.warn(line)
     else console.log(line)

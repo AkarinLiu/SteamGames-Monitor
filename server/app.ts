@@ -18,6 +18,13 @@ import { env } from './env'
 
 const startedAt = Date.now()
 
+function safeLogPath(pathname: string): string {
+  return pathname
+    .replace(/^\/authorize\/[^/]+/, '/authorize/[redacted]')
+    .replace(/^\/api\/bot-auth\/[^/]+/, '/api/bot-auth/[redacted]')
+    .replace(/^\/api\/bots\/wecom\/qr\/[^/]+/, '/api/bots/wecom/qr/[redacted]')
+}
+
 export function createApp(runtime: Runtime): Hono<AppBindings> {
   const app = new Hono<AppBindings>()
 
@@ -56,7 +63,7 @@ export function createApp(runtime: Runtime): Hono<AppBindings> {
     if (c.req.path === '/api/health' || c.req.path === '/health') return
     logger.debug('request', {
       method: c.req.method,
-      path: c.req.path,
+      path: safeLogPath(c.req.path),
       status: c.res.status,
       ms: Date.now() - began,
       requestId: c.get('requestId'),

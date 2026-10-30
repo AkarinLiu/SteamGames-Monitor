@@ -59,7 +59,7 @@ pnpm start   # 需要先构建；由 Node 同时提供 API 与静态前端
 | `MAX_TOTAL_MONITORS` | 全局监控项上限，默认 2000 |
 | `ALLOW_INSECURE_WEBHOOKS` | 仅测试时设为 `1`，允许 http / 内网 Webhook |
 | `ENABLE_DEV_COMMANDS` / `DEV_COMMAND_TOKEN` | 开发用 `/api/dev/command` 模拟指令 |
-| `LOG_LEVEL` | `debug` / `info` / `warn` / `error` |
+| `LOG_LEVEL` | `debug` / `info` / `warn` / `error`；文件日志写入 `${DATA_DIR}/logs/app-YYYY-MM-DD.log` |
 | `STEAM_STORE_BASE_URL` / `STEAM_API_BASE_URL` | 可选，覆盖 Steam 端点（测试 / 代理用） |
 
 代理环境可使用 `HTTPS_PROXY`、`NODE_USE_ENV_PROXY=1` 与 `NO_PROXY`。若系统证书链不被 Node 识别，服务启动时会合并系统 CA（`lib/tls.ts`）。
@@ -98,6 +98,20 @@ docker run -d --name steam-monitor \
   ghcr.io/akarinliu/steamgames-monitor:latest
 ```
 
+查看容器日志：
+
+```bash
+# docker run 方式
+docker logs -f steam-monitor
+
+# docker compose 方式
+docker compose logs -f steam-monitor
+```
+
+如果 `docker ps` 显示的容器名是随机名称（例如 `nervous_roentgen`），说明启动时没有加 `--name steam-monitor`；此时 `docker compose logs` 不会显示该容器，需使用 `docker logs -f <实际容器名>`。单独 `docker run` 时只有传入 `--env-file .env` 才会加载 `LOG_LEVEL`、`PUBLIC_BASE_URL` 等配置；未传入时日志级别默认为 `info`，`PUBLIC_BASE_URL` 默认为 `http://localhost:8787`。
+
+应用日志还会按 UTC 日期写入 `${DATA_DIR}/logs/app-YYYY-MM-DD.log`；Docker 默认映射到宿主机 `./data/logs/`。容器 stdout 仍然保留，可用 `docker logs` 查看。日志文件不会自动删除，请按需归档或清理。
+
 本地构建 Compose：
 
 ```bash
@@ -124,7 +138,7 @@ gh secret set DOCKERHUB_USERNAME --repo AkarinLiu/SteamGames-Monitor
 gh secret set DOCKERHUB_TOKEN --repo AkarinLiu/SteamGames-Monitor
 ```
 
-- 数据持久化在宿主机 `./data`（挂载到容器 `/data`），数据库、备份都会写到这里。
+- 数据持久化在宿主机 `./data`（挂载到容器 `/data`），数据库、备份和 `logs/` 日志都会写到这里。
 - 镜像入口会修正 `./data` 的权限，然后降权到容器内 `node` 用户运行应用；Linux 下也可手动 `sudo chown -R 1000:1000 data`。
 - 入口脚本会把 `.env` 中的相对 `DATA_DIR` / `DATABASE_PATH` 自动映射到 `/data`，单独 `docker run --env-file .env` 也能正常进入初始化向导。
 - 容器内始终使用 `/data` 作为数据目录，Compose 会覆盖 `.env` 中的 `DATA_DIR` / `DATABASE_PATH`，不要改成容器内相对路径。
@@ -278,4 +292,5 @@ scripts/           mock 服务、备份、E2E 启动脚本
 e2e/               Playwright 端到端测试
 Dockerfile         多阶段构建（构建前端与服务端 → 运行时仅生产依赖）
 docker-compose.yml 单服务部署，宿主机 ./data 绑定挂载
+data/              宿主机数据目录（SQLite、备份、logs/ 应用日志）
 ```
