@@ -10,7 +10,7 @@
 - **状态变化**：发售（coming soon 翻转）、促销开始 / 变化 / 结束、原价变化、不可用（下架）与恢复。
 - **下架判定**：商店可购状态连续两次翻转才确认下架；配合 Steam 新闻关键词做提前预警（启发式，仅作参考）。
 - **通知渠道**：企业微信群机器人、飞书自定义机器人、钉钉自定义机器人、SMTP 邮件；失败自动重试。
-- **指令机器人**：飞书 / 钉钉原生回调、企业微信智能机器人 WebSocket 长连接（支持扫码创建），支持 `/add`、`/list`、`/price`、`/check`、`/pause`、`/resume`、`/remove`、`/adddlc`、`/events`、`/cancel`；微信 ClawBot 与 QQ Bot 正在按平台官方协议接入。
+- **指令机器人**：飞书 / 钉钉原生回调、企业微信智能机器人 WebSocket 长连接（支持扫码创建与未授权网页授权），支持 `/add`、`/list`、`/price`、`/check`、`/pause`、`/resume`、`/remove`、`/adddlc`、`/events`、`/cancel`；微信 ClawBot 与 QQ Bot 正在按平台官方协议接入。
 - **运维友好**：健康检查、Docker 镜像、数据库在线备份、可配置的数据保留策略。
 
 ## 技术栈
@@ -52,7 +52,7 @@ pnpm start   # 需要先构建；由 Node 同时提供 API 与静态前端
 | `DATA_DIR` | 数据目录，默认 `./data`（Docker 中为 `/data`） |
 | `DATABASE_PATH` | SQLite 文件路径，默认 `${DATA_DIR}/steam-monitor.db` |
 | `APP_SECRET` | 必填，≥32 字符。用于派生密钥加密渠道 / 机器人凭据；**丢失后已保存的密钥无法解密** |
-| `PUBLIC_BASE_URL` | 对外访问地址，用于生成飞书 / 钉钉回调地址与 CSRF 校验；企业微信长连接不需要公网回调 |
+| `PUBLIC_BASE_URL` | 对外访问地址，用于生成飞书 / 钉钉回调地址、企业微信网页授权链接与 CSRF 校验；长连接本身不需要公网回调 |
 | `TRUSTED_ORIGINS` | 额外允许的 Origin，逗号分隔（开发时含 `http://localhost:5173`） |
 | `COOKIE_SECURE` | HTTPS 部署时设为 `1` |
 | `TRUST_PROXY` | 反向代理层数 |
@@ -162,6 +162,8 @@ gh secret set DOCKERHUB_TOKEN --repo AkarinLiu/SteamGames-Monitor
 企业微信长连接由服务端主动建立，不需要公网 IP、Token 或 EncodingAESKey。同一机器人在同一时间只允许一条有效连接，多实例部署时会互相踢下线。旧版企业微信自建应用回调配置已废弃，请改为填写智能机器人的 Bot ID / Secret。
 
 也可以在「指令机器人」页点击 **企微扫码添加**，使用有创建权限的企业微信扫码；系统会自动获取 Bot ID / Secret，创建机器人并建立长连接。二维码 5 分钟内有效，成功后建议补充所有者 UserID。
+
+企业微信未授权用户发送指令时，机器人会回复一次性网页授权链接。机器人所有者登录网页后，可为该平台用户选择只读或管理员角色并批准，链接 30 分钟内有效。`PUBLIC_BASE_URL` 必须可从浏览器访问，否则链接无法打开。
 
 机器人的指令始终作用于**机器人所属账号**的数据。所有者平台 ID（`ownerPlatformUserId`）隐式拥有管理员权限；其他平台用户需加入允许名单，可选择 `viewer`（只读）或 `admin`。详细步骤见 [docs/BOT_INTEGRATION.md](docs/BOT_INTEGRATION.md)。
 

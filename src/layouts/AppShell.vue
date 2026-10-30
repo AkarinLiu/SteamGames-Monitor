@@ -48,7 +48,7 @@ async function logout(): Promise<void> {
 
       <div class="nav-section">通知与机器人</div>
       <RouterLink :to="{ name: 'channels' }" class="nav-link" :class="{ active: navActive('channels') }" active-class="" exact-active-class="">通知渠道</RouterLink>
-      <RouterLink :to="{ name: 'bots' }" class="nav-link" :class="{ active: navActive('bots') }" active-class="" exact-active-class="">指令机器人</RouterLink>
+      <RouterLink :to="{ name: 'bots' }" class="nav-link" :class="{ active: navActive('bots', 'bot-authorize') }" active-class="" exact-active-class="">指令机器人</RouterLink>
 
       <template v-if="session.isAdmin">
         <div class="nav-section">管理</div>

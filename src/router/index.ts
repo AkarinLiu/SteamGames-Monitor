@@ -71,6 +71,12 @@ const router = createRouter({
           meta: { title: '指令机器人', subtitle: '飞书 / 钉钉 / 企业微信' },
         },
         {
+          path: 'authorize/:token',
+          name: 'bot-authorize',
+          component: () => import('../views/BotAuthorizeView.vue'),
+          meta: { title: '机器人授权', subtitle: '批准平台用户的指令权限' },
+        },
+        {
           path: 'settings',
           name: 'settings',
           component: () => import('../views/UserSettingsView.vue'),

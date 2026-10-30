@@ -409,4 +409,33 @@ export const migrations: Migration[] = [
       `)
     },
   },
+  {
+    version: 5,
+    name: 'bot web authorization requests',
+    up(db) {
+      db.exec(`
+        CREATE TABLE bot_auth_requests (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          token_hash TEXT NOT NULL UNIQUE,
+          bot_app_id INTEGER NOT NULL REFERENCES bot_apps(id) ON DELETE CASCADE,
+          owner_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          platform TEXT NOT NULL CHECK (platform IN ('feishu', 'dingtalk', 'wecom')),
+          platform_user_id TEXT NOT NULL,
+          platform_user_name TEXT,
+          chat_id TEXT,
+          role TEXT NOT NULL DEFAULT 'viewer' CHECK (role IN ('viewer', 'admin')),
+          status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'denied')),
+          created_at INTEGER NOT NULL,
+          expires_at INTEGER NOT NULL,
+          resolved_at INTEGER,
+          resolved_by_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL
+        );
+
+        CREATE INDEX idx_bot_auth_requests_lookup
+          ON bot_auth_requests(bot_app_id, platform_user_id, status);
+        CREATE INDEX idx_bot_auth_requests_expires
+          ON bot_auth_requests(expires_at);
+      `)
+    },
+  },
 ]

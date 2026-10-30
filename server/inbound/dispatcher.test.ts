@@ -144,6 +144,33 @@ describe('InboundDispatcher', () => {
     expect(lines.join(' ')).toContain('未授权，请联系机器人所有者')
   })
 
+  it('企业微信未授权用户收到网页授权链接', async () => {
+    const { createBot } = await import('../db/repo/bots')
+    const { encryptConfig, botAad } = await import('../notify/secrets')
+    const wecomBot = createBot(db, {
+      userId: user.id,
+      platform: 'wecom',
+      name: '企微机器人',
+      webhookSlug: 'wecom-deny-test',
+      enabled: true,
+      configEnc: encryptConfig(
+        { botId: 'bot-deny', secret: 'secret-deny' },
+        botAad(user.id, 'wecom'),
+      ),
+      keyVersion: 1,
+    })
+    const lines = await dispatcher.handleInline(
+      event({
+        platform: 'wecom',
+        botApp: wecomBot,
+        platformMessageId: 'wecom-denied-1',
+        platformUserId: 'zhangsan',
+      }),
+    )
+    expect(lines.join('\n')).toContain('/authorize/')
+    expect(lines.join('\n')).toContain('机器人所有者')
+  })
+
   it('忽略非指令文本与停用的机器人', async () => {
     expect(await dispatcher.handleInline(event({ text: 'hello' }))).toEqual([])
 

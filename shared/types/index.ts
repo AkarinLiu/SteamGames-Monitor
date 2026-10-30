@@ -217,6 +217,22 @@ export interface WecomQrPollResult {
   message?: string
 }
 
+export type BotAuthRequestStatus = 'pending' | 'approved' | 'denied' | 'expired'
+
+export interface BotAuthRequestInfo {
+  status: BotAuthRequestStatus
+  canApprove: boolean
+  botId: number
+  botName: string
+  platform: BotPlatform
+  platformUserId: string
+  platformUserName: string | null
+  chatId: string | null
+  role: BotAccessRole | null
+  createdAt: number
+  expiresAt: number
+}
+
 export interface BotApp {
   id: number
   userId: number

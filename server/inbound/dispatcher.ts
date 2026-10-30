@@ -13,6 +13,7 @@ import {
 } from '../db/repo/inbound'
 import { createDelivery } from '../db/repo/deliveries'
 import { decryptConfig, botAad, SecretDecryptError } from '../notify/secrets'
+import { createBotAuthorizationRequest } from '../bots/authorization'
 import { logger } from '../lib/logger'
 import { normalizeCommandText } from './commands/parser'
 import { executeCommand, type CommandActor, type CommandServices } from './commands/executor'
@@ -197,16 +198,6 @@ export class InboundDispatcher {
       throw error
     }
 
-    const role = this.resolveRole(bot, event.platformUserId, config)
-    if (!role) {
-      this.record(bot, event, 'denied', {}, 'denied', 'not in allowlist', started)
-      return {
-        lines: ['未授权，请联系机器人所有者将你的平台 ID 加入允许名单。'],
-        status: 'denied',
-        deliver: true,
-      }
-    }
-
     const limits = this.options.maxPerMinute ?? {
       user: LIMITS.commandRatePerMinute,
       chat: LIMITS.chatRatePerMinute,
@@ -231,6 +222,33 @@ export class InboundDispatcher {
         lines: notify ? ['操作过于频繁，请稍后再试（每分钟最多 10 条指令）。'] : [],
         status: 'throttled',
         deliver: notify,
+      }
+    }
+
+    const role = this.resolveRole(bot, event.platformUserId, config)
+    if (!role) {
+      this.record(bot, event, 'denied', {}, 'denied', 'not in allowlist', started)
+      let lines = ['未授权，请联系机器人所有者将你的平台 ID 加入允许名单。']
+      if (event.platform === 'wecom') {
+        try {
+          const link = createBotAuthorizationRequest(this.options.db, {
+            bot,
+            platformUserId: event.platformUserId,
+            userName: event.userName,
+            chatId: event.chatId,
+          })
+          lines = [
+            `你还没有使用「${bot.name}」的权限。请将以下链接发送给机器人所有者；如果你是所有者，可直接在浏览器登录并批准（30 分钟内有效）：`,
+            link.url,
+          ]
+        } catch (error) {
+          log.warn('创建机器人授权链接失败', { botId: bot.id, error })
+        }
+      }
+      return {
+        lines,
+        status: 'denied',
+        deliver: true,
       }
     }
 

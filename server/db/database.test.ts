@@ -42,6 +42,7 @@ describe('database schema', () => {
       'notification_channels',
       'bot_apps',
       'bot_allowlist',
+      'bot_auth_requests',
       'command_contexts',
       'inbound_messages',
       'command_logs',

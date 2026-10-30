@@ -340,6 +340,10 @@ export const WecomQrStartSchema = z.object({
   name: trimmed(1, LIMITS.botNameMaxLength).optional(),
 })
 
+export const BotAuthApproveSchema = z.object({
+  role: z.enum(['viewer', 'admin']).default('viewer'),
+})
+
 export const UpdateBotSchema = z.object({
   name: trimmed(1, LIMITS.botNameMaxLength).optional(),
   enabled: z.boolean().optional(),

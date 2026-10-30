@@ -5,6 +5,7 @@ import { purgeEvents } from '../db/repo/events'
 import { purgeTerminalDeliveries } from '../db/repo/deliveries'
 import { purgeInboundMessages, purgeCommandLogs, purgeCommandContexts } from '../db/repo/inbound'
 import { purgeAuditLogs } from '../db/repo/audit'
+import { purgeBotAuthRequests } from '../db/repo/botAuthRequests'
 import { purgeNewsSeen } from '../db/repo/news'
 import { purgeExpiredSessions } from '../db/repo/sessions'
 import { purgeSteamCache, purgeNewsCache } from '../db/repo/caches'
@@ -22,6 +23,7 @@ export interface CleanupReport {
   inbound: number
   commandLogs: number
   auditLogs: number
+  botAuthRequests: number
   newsSeen: number
   sessions: number
   steamCache: number
@@ -65,6 +67,7 @@ export class CleanupJob {
       inbound: purgeInboundMessages(this.db, now - retention.inboundDays * DAY_MS),
       commandLogs: purgeCommandLogs(this.db, now - retention.logsDays * DAY_MS),
       auditLogs: purgeAuditLogs(this.db, now - retention.logsDays * DAY_MS),
+      botAuthRequests: purgeBotAuthRequests(this.db, now - 30 * DAY_MS),
       newsSeen: purgeNewsSeen(this.db, now - retention.newsSeenDays * DAY_MS),
       sessions: purgeExpiredSessions(this.db, now),
       steamCache: purgeSteamCache(this.db, now - CACHE_RETENTION_MS),

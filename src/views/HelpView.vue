@@ -93,6 +93,7 @@ const commands = [
             <li>也可以手动在企业微信管理后台进入「智能机器人」→ API 模式 → 长连接，创建机器人并填写 Bot ID、Secret 与所有者 UserID。</li>
             <li>保存后服务会主动连接 <code>wss://openws.work.weixin.qq.com</code>，无需公网回调地址、Token 或 EncodingAESKey。</li>
             <li>将机器人加入群聊或单聊，@机器人 发送 <code>/help</code> 测试；建议在机器人编辑页补充所有者 UserID。事件通知仍需在「通知渠道」单独添加企业微信群机器人 Webhook。</li>
+            <li>未授权成员会收到一次性网页授权链接；机器人所有者登录后可选择只读或管理员角色并批准，链接 30 分钟内有效。</li>
           </ol>
         </section>
 

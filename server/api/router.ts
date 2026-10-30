@@ -11,6 +11,7 @@ import { dashboardRoutes } from './routes/dashboard'
 import { steamRoutes } from './routes/steam'
 import { channelRoutes } from './routes/channels'
 import { botRoutes } from './routes/bots'
+import { botAuthRoutes } from './routes/botAuth'
 import { devRoutes } from './routes/dev'
 
 export function createApiRouter(runtime: Runtime): Hono<AppBindings> {
@@ -23,6 +24,7 @@ export function createApiRouter(runtime: Runtime): Hono<AppBindings> {
   api.route('/events', eventRoutes(runtime))
   api.route('/channels', channelRoutes(runtime))
   api.route('/bots', botRoutes(runtime))
+  api.route('/bot-auth', botAuthRoutes(runtime))
   api.route('/dev', devRoutes(runtime))
   api.route('/dashboard', dashboardRoutes(runtime))
   api.route('/steam', steamRoutes(runtime))

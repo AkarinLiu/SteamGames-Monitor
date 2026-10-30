@@ -338,6 +338,50 @@ test.describe.serial('Steam 销售监控端到端', () => {
       await page.unroute('**/api/bots/wecom/qr**')
     })
 
+    await test.step('网页端授权页面', async () => {
+      const pending = {
+        status: 'pending',
+        canApprove: true,
+        botId: 1,
+        botName: '企微测试机器人',
+        platform: 'wecom',
+        platformUserId: 'zhangsan',
+        platformUserName: '张三',
+        chatId: 'chat-1',
+        role: null,
+        createdAt: Date.now(),
+        expiresAt: Date.now() + 1_800_000,
+      }
+      await page.route('**/api/bot-auth/**', async (route) => {
+        const method = route.request().method()
+        if (method === 'GET') {
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify(pending),
+          })
+          return
+        }
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            ...pending,
+            status: 'approved',
+            canApprove: false,
+            role: 'admin',
+          }),
+        })
+      })
+      await page.goto('/authorize/test-token')
+      await expect(page.getByRole('heading', { name: '机器人授权' })).toBeVisible()
+      await expect(page.getByText('zhangsan')).toBeVisible()
+      await page.getByLabel('角色').selectOption('admin')
+      await page.getByRole('button', { name: '批准授权' }).click()
+      await expect(page.getByText('已批准该用户使用机器人（管理员）')).toBeVisible()
+      await page.unroute('**/api/bot-auth/**')
+    })
+
     await test.step('通知渠道官方文档链接', async () => {
       await page.goto('/channels')
       await page.getByRole('button', { name: '添加渠道' }).click()
