@@ -300,6 +300,42 @@ test.describe.serial('Steam 销售监控端到端', () => {
         /open\.feishu\.cn/,
       )
       await page.getByRole('button', { name: '取消' }).click()
+
+      const qrPng =
+        'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9Z7X8AAAAASUVORK5CYII='
+      await page.route('**/api/bots/wecom/qr**', async (route) => {
+        if (route.request().method() === 'POST') {
+          await route.fulfill({
+            status: 201,
+            contentType: 'application/json',
+            body: JSON.stringify({
+              sessionId: 'qr-e2e',
+              qrDataUrl: qrPng,
+              expiresAt: Date.now() + 300_000,
+            }),
+          })
+          return
+        }
+        if (route.request().method() === 'GET') {
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({ status: 'pending', message: '等待扫码授权' }),
+          })
+          return
+        }
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ ok: true }),
+        })
+      })
+      await page.getByRole('button', { name: '企微扫码添加' }).click()
+      await expect(page.getByRole('heading', { name: '扫码添加企业微信机器人' })).toBeVisible()
+      await expect(page.getByAltText('企业微信扫码添加机器人二维码')).toBeVisible()
+      await page.locator('.modal-footer').getByRole('button', { name: '关闭', exact: true }).click()
+      await expect(page.getByRole('heading', { name: '扫码添加企业微信机器人' })).toBeHidden()
+      await page.unroute('**/api/bots/wecom/qr**')
     })
 
     await test.step('通知渠道官方文档链接', async () => {

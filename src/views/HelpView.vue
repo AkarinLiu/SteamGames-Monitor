@@ -89,10 +89,10 @@ const commands = [
             <h2>接入企业微信智能机器人（长连接）</h2>
           </div>
           <ol class="small muted" style="padding-left: 1.2rem">
-            <li>在企业微信管理后台进入「智能机器人」→ API 模式 → 长连接，创建机器人并获取 Bot ID 与 Secret。</li>
-            <li>在「指令机器人」选择企业微信，填写 Bot ID、Secret 与所有者 UserID。</li>
+            <li>在「指令机器人」点击「企微扫码添加」，用有创建权限的企业微信扫码，系统会自动创建机器人并填写 Bot ID / Secret；二维码 5 分钟内有效。</li>
+            <li>也可以手动在企业微信管理后台进入「智能机器人」→ API 模式 → 长连接，创建机器人并填写 Bot ID、Secret 与所有者 UserID。</li>
             <li>保存后服务会主动连接 <code>wss://openws.work.weixin.qq.com</code>，无需公网回调地址、Token 或 EncodingAESKey。</li>
-            <li>将机器人加入群聊或单聊，@机器人 发送 <code>/help</code> 测试。事件通知仍需在「通知渠道」单独添加企业微信群机器人 Webhook。</li>
+            <li>将机器人加入群聊或单聊，@机器人 发送 <code>/help</code> 测试；建议在机器人编辑页补充所有者 UserID。事件通知仍需在「通知渠道」单独添加企业微信群机器人 Webhook。</li>
           </ol>
         </section>
 

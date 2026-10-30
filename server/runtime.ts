@@ -17,6 +17,7 @@ import {
 } from './monitor/checkMonitor'
 import { InboundDispatcher } from './inbound/dispatcher'
 import { WecomLongConnectionManager } from './inbound/wecom/manager'
+import { WecomQrService } from './inbound/wecom/qr'
 import { sendCommandDelivery } from './inbound/reply'
 import type { CommandServices } from './inbound/commands/executor'
 
@@ -30,6 +31,7 @@ export interface Runtime {
   deliveryWorker: DeliveryWorker
   dispatcher: InboundDispatcher
   wecomBots: WecomLongConnectionManager
+  wecomQr: WecomQrService
   cacheTtlMs: number
   cleanup: CleanupJob
   checkMonitor: (monitorId: number, options?: CheckOptions) => Promise<CheckOutcome>
@@ -65,6 +67,7 @@ export function createRuntime(): Runtime {
   }
   const dispatcher = new InboundDispatcher({ db, services })
   const wecomBots = new WecomLongConnectionManager({ db, dispatcher })
+  const wecomQr = new WecomQrService(db)
 
   deliveryWorker.setCommandSender((delivery) =>
     sendCommandDelivery(db, delivery, {
@@ -88,6 +91,7 @@ export function createRuntime(): Runtime {
     deliveryWorker,
     dispatcher,
     wecomBots,
+    wecomQr,
     cacheTtlMs,
     cleanup,
     checkMonitor,
@@ -95,6 +99,7 @@ export function createRuntime(): Runtime {
       await scheduler.stop()
       newsScanner.stop()
       wecomBots.stop()
+      wecomQr.stop()
       await deliveryWorker.stop()
       cleanup.stop()
       db.checkpoint('TRUNCATE')

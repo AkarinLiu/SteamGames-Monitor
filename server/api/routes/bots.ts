@@ -1,5 +1,11 @@
 import { Hono } from 'hono'
-import { BOT_CONFIG_SCHEMAS, CreateBotSchema, AllowlistEntrySchema, UpdateBotSchema } from '../../../shared/schemas'
+import {
+  BOT_CONFIG_SCHEMAS,
+  CreateBotSchema,
+  AllowlistEntrySchema,
+  UpdateBotSchema,
+  WecomQrStartSchema,
+} from '../../../shared/schemas'
 import type { BotPlatform } from '../../../shared/types'
 import { LIMITS } from '../../../shared/constants'
 import type { AppBindings } from '../context'
@@ -18,23 +24,13 @@ import {
   isSlugConflict,
   listAllowlist,
   listBots,
-  slugExists,
   updateBot,
   upsertAllowlistEntry,
 } from '../../db/repo/bots'
 import { botAad, currentKeyVersion, decryptConfig, encryptConfig, SecretDecryptError } from '../../notify/secrets'
-import { randomId, slugify } from '../../lib/ids'
+import { generateBotSlug } from '../../lib/botSlug'
 import { env } from '../../env'
 import type { BotConfig } from '../../inbound/types'
-
-function generateSlug(db: Runtime['db'], name: string): string {
-  const base = slugify(name) || 'bot'
-  for (let attempt = 0; attempt < 5; attempt += 1) {
-    const slug = `${base}-${randomId(6)}`
-    if (!slugExists(db, slug)) return slug
-  }
-  return `${base}-${randomId(12)}`
-}
 
 function configSummary(platform: BotPlatform, config: BotConfig): Record<string, unknown> {
   if (platform === 'feishu') {
@@ -160,6 +156,28 @@ export function botRoutes(runtime: Runtime): Hono<AppBindings> {
     })
   })
 
+  router.post('/wecom/qr', async (c) => {
+    const user = c.get('user') as UserRow
+    const input = await parseJson(c, WecomQrStartSchema)
+    const session = await runtime.wecomQr.start(user.id, input.name)
+    c.header('cache-control', 'no-store')
+    return c.json(session, 201)
+  })
+
+  router.get('/wecom/qr/:sessionId', async (c) => {
+    const user = c.get('user') as UserRow
+    const result = await runtime.wecomQr.poll(user.id, c.req.param('sessionId'))
+    if (result.status === 'success' && result.botId) runtime.wecomBots.sync()
+    c.header('cache-control', 'no-store')
+    return c.json(result)
+  })
+
+  router.delete('/wecom/qr/:sessionId', (c) => {
+    const user = c.get('user') as UserRow
+    runtime.wecomQr.cancel(user.id, c.req.param('sessionId'))
+    return c.json({ ok: true })
+  })
+
   router.post('/', async (c) => {
     const user = c.get('user') as UserRow
     const input = await parseJson(c, CreateBotSchema)
@@ -180,7 +198,7 @@ export function botRoutes(runtime: Runtime): Hono<AppBindings> {
         userId: user.id,
         platform: input.platform,
         name: input.name,
-        webhookSlug: generateSlug(db, input.name),
+        webhookSlug: generateBotSlug(db, input.name),
         enabled: input.enabled,
         configEnc: encryptConfig(config, botAad(user.id, input.platform)),
         keyVersion: currentKeyVersion(),

@@ -336,6 +336,10 @@ export const CreateBotSchema = z.object({
   config: z.record(z.string(), z.unknown()),
 })
 
+export const WecomQrStartSchema = z.object({
+  name: trimmed(1, LIMITS.botNameMaxLength).optional(),
+})
+
 export const UpdateBotSchema = z.object({
   name: trimmed(1, LIMITS.botNameMaxLength).optional(),
   enabled: z.boolean().optional(),

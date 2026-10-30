@@ -202,6 +202,21 @@ export interface BotConnectionStatus {
   since: number
 }
 
+export type WecomQrStatus = 'pending' | 'success' | 'expired' | 'failed'
+
+export interface WecomQrSession {
+  sessionId: string
+  qrDataUrl: string
+  expiresAt: number
+}
+
+export interface WecomQrPollResult {
+  status: WecomQrStatus
+  botId?: number
+  enabled?: boolean
+  message?: string
+}
+
 export interface BotApp {
   id: number
   userId: number

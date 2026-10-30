@@ -10,7 +10,7 @@
 - **状态变化**：发售（coming soon 翻转）、促销开始 / 变化 / 结束、原价变化、不可用（下架）与恢复。
 - **下架判定**：商店可购状态连续两次翻转才确认下架；配合 Steam 新闻关键词做提前预警（启发式，仅作参考）。
 - **通知渠道**：企业微信群机器人、飞书自定义机器人、钉钉自定义机器人、SMTP 邮件；失败自动重试。
-- **指令机器人**：飞书 / 钉钉原生回调、企业微信智能机器人 WebSocket 长连接，支持 `/add`、`/list`、`/price`、`/check`、`/pause`、`/resume`、`/remove`、`/adddlc`、`/events`、`/cancel`；微信 ClawBot 与 QQ Bot 正在按平台官方协议接入。
+- **指令机器人**：飞书 / 钉钉原生回调、企业微信智能机器人 WebSocket 长连接（支持扫码创建），支持 `/add`、`/list`、`/price`、`/check`、`/pause`、`/resume`、`/remove`、`/adddlc`、`/events`、`/cancel`；微信 ClawBot 与 QQ Bot 正在按平台官方协议接入。
 - **运维友好**：健康检查、Docker 镜像、数据库在线备份、可配置的数据保留策略。
 
 ## 技术栈
@@ -161,6 +161,8 @@ gh secret set DOCKERHUB_TOKEN --repo AkarinLiu/SteamGames-Monitor
 
 企业微信长连接由服务端主动建立，不需要公网 IP、Token 或 EncodingAESKey。同一机器人在同一时间只允许一条有效连接，多实例部署时会互相踢下线。旧版企业微信自建应用回调配置已废弃，请改为填写智能机器人的 Bot ID / Secret。
 
+也可以在「指令机器人」页点击 **企微扫码添加**，使用有创建权限的企业微信扫码；系统会自动获取 Bot ID / Secret，创建机器人并建立长连接。二维码 5 分钟内有效，成功后建议补充所有者 UserID。
+
 机器人的指令始终作用于**机器人所属账号**的数据。所有者平台 ID（`ownerPlatformUserId`）隐式拥有管理员权限；其他平台用户需加入允许名单，可选择 `viewer`（只读）或 `admin`。详细步骤见 [docs/BOT_INTEGRATION.md](docs/BOT_INTEGRATION.md)。
 
 微信 ClawBot（iLink）与 QQ Bot 接入正在按平台官方协议集成，完成后会出现在同一页面。
@@ -235,7 +237,7 @@ pnpm test:e2e   # 需要先安装 Playwright 浏览器：pnpm exec playwright in
 
 1. 在 `data/e2e` 创建全新数据库，启动后端（4180）、Vite（4181）和 mock 服务（9998）；
 2. 使用 mock Steam 接口驱动发售、促销、下架、恢复全流程；
-3. 校验企业微信通知、SMTP 邮件、飞书 / 钉钉回调、企业微信长连接配置与指令、多用户隔离。
+3. 校验企业微信通知、SMTP 邮件、飞书 / 钉钉回调、企业微信长连接 / 扫码配置与指令、多用户隔离。
 
 `scripts/mock-receiver.ts` 也可单独运行，用于本地联调：
 

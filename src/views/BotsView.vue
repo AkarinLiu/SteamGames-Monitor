@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
-import type { BotAccessRole, BotPlatform } from '@shared/types'
+import type {
+  BotAccessRole,
+  BotPlatform,
+  WecomQrPollResult,
+  WecomQrSession,
+} from '@shared/types'
 import { BOT_PLATFORM_OPTIONS, LIMITS } from '@shared/constants'
 import { describeError } from '@/api/client'
 import { useBotsStore, type BotView } from '@/stores/bots'
@@ -50,6 +55,16 @@ const drafts = reactive<Record<number, AllowDraft>>({})
 const inboundTexts = reactive<Record<number, string>>({})
 const inboundResults = reactive<Record<number, string>>({})
 const inboundBusy = ref<number | null>(null)
+
+const qrOpen = ref(false)
+const qrStarting = ref(false)
+const qrPolling = ref(false)
+const qrError = ref('')
+const qrSession = ref<WecomQrSession | null>(null)
+const qrStatus = ref<WecomQrPollResult | null>(null)
+const qrName = ref('企业微信智能机器人')
+let qrTimer: number | null = null
+let qrRequestId = 0
 
 const isEditing = computed(() => editing.value !== null)
 
@@ -120,6 +135,103 @@ function openCreate(): void {
   editing.value = null
   resetForm()
   dialogOpen.value = true
+}
+
+function stopQrPolling(): void {
+  if (qrTimer !== null) {
+    window.clearInterval(qrTimer)
+    qrTimer = null
+  }
+}
+
+function openQrDialog(): void {
+  qrOpen.value = true
+  qrError.value = ''
+  qrStatus.value = null
+  qrSession.value = null
+  qrName.value = '企业微信智能机器人'
+  qrRequestId += 1
+  void startQr()
+}
+
+function openQrFromCreate(): void {
+  dialogOpen.value = false
+  openQrDialog()
+}
+
+async function startQr(): Promise<void> {
+  stopQrPolling()
+  const requestId = ++qrRequestId
+  qrStarting.value = true
+  qrError.value = ''
+  qrStatus.value = null
+  qrSession.value = null
+  try {
+    const session = await store.startWecomQr(qrName.value)
+    if (requestId !== qrRequestId || !qrOpen.value) {
+      void store.cancelWecomQr(session.sessionId).catch(() => {})
+      return
+    }
+    qrSession.value = session
+    qrStatus.value = { status: 'pending', message: '等待扫码授权' }
+    qrTimer = window.setInterval(() => {
+      void pollQr()
+    }, 2500)
+  } catch (err) {
+    if (requestId === qrRequestId) qrError.value = describeError(err)
+  } finally {
+    if (requestId === qrRequestId) qrStarting.value = false
+  }
+}
+
+async function pollQr(): Promise<void> {
+  const session = qrSession.value
+  if (!session || qrPolling.value) return
+  qrPolling.value = true
+  try {
+    const result = await store.pollWecomQr(session.sessionId)
+    if (!qrOpen.value || qrSession.value?.sessionId !== session.sessionId) return
+    qrStatus.value = result
+    if (result.status === 'success') {
+      stopQrPolling()
+      await store.fetchAll()
+      toast.success('企业微信机器人已添加')
+    } else if (result.status === 'expired' || result.status === 'failed') {
+      stopQrPolling()
+    }
+  } catch (err) {
+    qrError.value = describeError(err)
+    stopQrPolling()
+  } finally {
+    qrPolling.value = false
+  }
+}
+
+function closeQrDialog(): void {
+  stopQrPolling()
+  qrRequestId += 1
+  const session = qrSession.value
+  qrSession.value = null
+  qrStatus.value = null
+  qrOpen.value = false
+  if (session) void store.cancelWecomQr(session.sessionId).catch(() => {})
+}
+
+function onQrOpenChange(open: boolean): void {
+  if (!open) closeQrDialog()
+}
+
+async function editQrBot(): Promise<void> {
+  const botId = qrStatus.value?.botId
+  if (!botId) return
+  closeQrDialog()
+  try {
+    await store.fetchAll()
+    const bot = store.items.find((item) => item.id === botId)
+    if (bot) openEdit(bot)
+  } catch (err) {
+    toast.error(describeError(err))
+  }
 }
 
 function openEdit(bot: BotView): void {
@@ -320,6 +432,7 @@ onBeforeUnmount(() => {
         <p>接入飞书、钉钉或企业微信智能机器人，在聊天中用斜杠指令管理监控项。</p>
       </div>
       <div class="page-actions">
+        <button class="btn" type="button" @click="openQrDialog">企微扫码添加</button>
         <button class="btn btn-primary" type="button" @click="openCreate">添加机器人</button>
       </div>
     </div>
@@ -335,7 +448,7 @@ onBeforeUnmount(() => {
     <EmptyState
       v-else-if="store.items.length === 0"
       title="还没有接入机器人"
-      description="飞书、钉钉填写回调地址，企业微信填写 Bot ID / Secret 后自动建立长连接，即可在聊天中使用 /add、/list 等指令。"
+      description="飞书、钉钉填写回调地址；企业微信可扫码自动创建，或手动填写 Bot ID / Secret。接入后即可在聊天中使用 /add、/list 等指令。"
     >
       <button class="btn btn-primary" type="button" style="margin-top: 12px" @click="openCreate">
         添加第一个机器人
@@ -605,6 +718,10 @@ onBeforeUnmount(() => {
           <p class="field-hint" style="margin-top: -6px">
             在企业微信管理后台进入「智能机器人」→ API 模式 → 长连接，获取 Bot ID 和 Secret。保存后服务会自动建立长连接，无需公网回调地址。
           </p>
+          <div class="banner banner-info">
+            也可以让系统生成二维码，用有权创建智能机器人的企业微信扫码，自动创建并填写凭据。
+            <button class="btn-link" type="button" @click="openQrFromCreate">扫码自动创建</button>
+          </div>
         </template>
 
         <div v-if="form.platform !== 'wecom'" class="field">
@@ -637,5 +754,62 @@ onBeforeUnmount(() => {
       @update:open="deleteTarget = null"
       @confirm="confirmDelete"
     />
+
+    <Modal
+      :open="qrOpen"
+      title="扫码添加企业微信机器人"
+      width="480px"
+      @update:open="onQrOpenChange"
+    >
+      <ErrorBanner :message="qrError" />
+
+      <div v-if="qrStarting" class="qr-panel">
+        <p class="small muted">正在向企业微信申请二维码…</p>
+      </div>
+
+      <div v-else-if="qrSession" class="qr-panel">
+        <template v-if="qrStatus?.status === 'pending'">
+          <img class="qr-image" :src="qrSession.qrDataUrl" alt="企业微信扫码添加机器人二维码" />
+          <p class="small">使用企业微信扫一扫，按页面提示创建并授权智能机器人。</p>
+          <p class="small faint">二维码 5 分钟内有效；授权成功后系统会自动添加机器人并建立长连接。</p>
+          <p class="small faint">{{ qrStatus.message ?? '等待扫码授权…' }}</p>
+          <p v-if="qrPolling" class="small faint">正在检查扫码状态…</p>
+        </template>
+
+        <template v-else-if="qrStatus?.status === 'success'">
+          <div class="banner banner-info">{{ qrStatus.message }}</div>
+          <p class="small">系统内名称：{{ qrName }}</p>
+          <p class="small faint">
+            建议点击「编辑机器人」填写所有者企业微信 UserID，或将使用成员加入允许名单；否则指令会被拒绝。
+          </p>
+          <p v-if="qrStatus.enabled === false" class="small faint">
+            机器人已创建但未启用：当前平台已有启用中的机器人。
+          </p>
+        </template>
+
+        <template v-else>
+          <div class="banner banner-warning">{{ qrStatus?.message ?? '二维码已失效' }}</div>
+        </template>
+      </div>
+
+      <template #footer>
+        <button class="btn" type="button" @click="closeQrDialog">关闭</button>
+        <div class="inline">
+          <template v-if="qrStatus?.status === 'success'">
+            <button class="btn btn-primary" type="button" @click="editQrBot">编辑机器人</button>
+            <button class="btn" type="button" @click="closeQrDialog">完成</button>
+          </template>
+          <button
+            v-else
+            class="btn"
+            type="button"
+            :disabled="qrStarting"
+            @click="startQr"
+          >
+            重新生成
+          </button>
+        </div>
+      </template>
+    </Modal>
   </div>
 </template>

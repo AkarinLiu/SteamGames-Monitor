@@ -1,6 +1,13 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import type { BotAccessRole, BotApp, BotConnectionStatus, BotPlatform } from '@shared/types'
+import type {
+  BotAccessRole,
+  BotApp,
+  BotConnectionStatus,
+  BotPlatform,
+  WecomQrPollResult,
+  WecomQrSession,
+} from '@shared/types'
 import { api } from '@/api/client'
 
 export interface BotView extends BotApp {
@@ -71,6 +78,18 @@ export const useBotsStore = defineStore('bots', () => {
     return api.post<{ result: string; lines: string[] }>(`/bots/${id}/test-inbound`, { text })
   }
 
+  async function startWecomQr(name?: string): Promise<WecomQrSession> {
+    return api.post<WecomQrSession>('/bots/wecom/qr', { name })
+  }
+
+  async function pollWecomQr(sessionId: string): Promise<WecomQrPollResult> {
+    return api.get<WecomQrPollResult>(`/bots/wecom/qr/${encodeURIComponent(sessionId)}`)
+  }
+
+  async function cancelWecomQr(sessionId: string): Promise<void> {
+    await api.delete(`/bots/wecom/qr/${encodeURIComponent(sessionId)}`)
+  }
+
   return {
     items,
     quota,
@@ -82,5 +101,8 @@ export const useBotsStore = defineStore('bots', () => {
     addAllowlist,
     removeAllowlist,
     testInbound,
+    startWecomQr,
+    pollWecomQr,
+    cancelWecomQr,
   }
 })
