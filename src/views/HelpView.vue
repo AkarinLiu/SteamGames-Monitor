@@ -58,6 +58,9 @@ const commands = [
           <p class="small faint" style="margin-top: 10px">
             在“指令机器人”页面创建机器人：飞书、钉钉填写回调地址；企业微信填写 Bot ID / Secret 后自动建立长连接。不同平台可以分别配置允许名单。
           </p>
+          <p class="small faint" style="margin-top: 10px">
+            在机器人编辑页可开启“接收事件通知”，事件会推送到最近一次被授权用户使用的会话；需要用户先发送过指令。钉钉事件通知还需要 App Key、App Secret 与 Robot Code。
+          </p>
         </section>
 
         <section class="card">

@@ -55,6 +55,7 @@ export function parseWecomMessageFrame(
     ownerUserId: bot.user_id,
     platformMessageId: body.msgid,
     chatId,
+    chatType,
     platformUserId,
     userName: null,
     text,

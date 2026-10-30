@@ -72,6 +72,7 @@ export function handleDingtalkUpdate(input: {
   const platformUserId = payload.senderStaffId ?? payload.senderId
   if (!payload.msgId || !text || !platformUserId) return { kind: 'ignored', body: {} }
 
+  const conversationType = String(payload.conversationType ?? '')
   return {
     kind: 'event',
     event: {
@@ -80,6 +81,12 @@ export function handleDingtalkUpdate(input: {
       ownerUserId: bot.user_id,
       platformMessageId: payload.msgId,
       chatId: payload.conversationId ?? platformUserId,
+      chatType:
+        conversationType === '1'
+          ? 'single'
+          : conversationType === '2'
+            ? 'group'
+            : undefined,
       platformUserId,
       userName: payload.senderNick ?? null,
       text,

@@ -46,6 +46,7 @@ function configSummary(platform: BotPlatform, config: BotConfig): Record<string,
   if (platform === 'dingtalk') {
     const dingtalk = config as Record<string, unknown>
     return {
+      appKey: dingtalk.appKey ?? '',
       appSecretSet: Boolean(dingtalk.appSecret),
       robotCode: dingtalk.robotCode ?? '',
       ownerPlatformUserId: dingtalk.ownerPlatformUserId ?? '',
@@ -117,6 +118,7 @@ function parseBotConfig(platform: BotPlatform, input: unknown): Record<string, u
 const BOT_STRING_KEYS = [
   'secret',
   'appId',
+  'appKey',
   'appSecret',
   'encryptKey',
   'verificationToken',
@@ -200,6 +202,7 @@ export function botRoutes(runtime: Runtime): Hono<AppBindings> {
         name: input.name,
         webhookSlug: generateBotSlug(db, input.name),
         enabled: input.enabled,
+        notifyEnabled: input.notifyEnabled,
         configEnc: encryptConfig(config, botAad(user.id, input.platform)),
         keyVersion: currentKeyVersion(),
         apiBaseUrl: input.apiBaseUrl ?? null,
@@ -242,6 +245,7 @@ export function botRoutes(runtime: Runtime): Hono<AppBindings> {
     const updated = updateBot(db, id, {
       name: input.name,
       enabled: input.enabled,
+      notifyEnabled: input.notifyEnabled,
       apiBaseUrl: input.apiBaseUrl,
       configEnc,
       keyVersion: configEnc ? currentKeyVersion() : undefined,

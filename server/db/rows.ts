@@ -394,6 +394,8 @@ export function toBotApp(row: BotAppRow, allowlist: BotAllowlistEntry[] = []): B
     name: row.name,
     webhookSlug: row.webhook_slug,
     enabled: row.enabled === 1,
+    notifyEnabled: row.notify_enabled === 1,
+    lastChatAt: row.last_chat_at,
     apiBaseUrl: row.api_base_url,
     createdAt: Number(row.created_at),
     updatedAt: Number(row.updated_at),

@@ -3,7 +3,7 @@ import type { BotAccessRole, BotPlatform } from '../../shared/types'
 import type { Db } from '../db/database'
 import type { BotAppRow, UserRow } from '../db/rows'
 import { findAllowlistEntry } from '../db/repo/bots'
-import { findBotByIdInternal } from '../db/repo/bots'
+import { findBotByIdInternal, touchBotChat } from '../db/repo/bots'
 import { findUserById } from '../db/repo/users'
 import {
   finishInboundMessage,
@@ -20,6 +20,28 @@ import { executeCommand, type CommandActor, type CommandServices } from './comma
 import type { BotConfig, InboundEvent } from './types'
 
 const log = logger.child('inbound')
+
+function notificationTarget(
+  event: InboundEvent,
+): { channel: string; chatId: string } | null {
+  if (!event.chatId) return null
+  if (event.platform === 'dingtalk') {
+    if (event.chatType === 'single') {
+      return { channel: 'single', chatId: event.platformUserId }
+    }
+    if (event.chatType === 'group') {
+      return { channel: 'group', chatId: event.chatId }
+    }
+    return null
+  }
+  if (event.platform === 'wecom') {
+    return {
+      channel: event.chatType ?? 'single',
+      chatId: event.chatId,
+    }
+  }
+  return { channel: 'chat', chatId: event.chatId }
+}
 
 export interface InboundDispatcherOptions {
   db: Db
@@ -250,6 +272,11 @@ export class InboundDispatcher {
         status: 'denied',
         deliver: true,
       }
+    }
+
+    const notifyTarget = notificationTarget(event)
+    if (notifyTarget) {
+      touchBotChat(this.options.db, bot.id, notifyTarget.channel, notifyTarget.chatId, now)
     }
 
     const actor: CommandActor = {

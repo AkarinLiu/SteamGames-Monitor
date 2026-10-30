@@ -1,6 +1,6 @@
 import type { ChannelType, MonitorEvent } from '../../shared/types'
 import type { Db } from '../db/database'
-import type { DeliveryRow } from '../db/rows'
+import type { BotAppRow, DeliveryRow } from '../db/rows'
 import { toEvent } from '../db/rows'
 import {
   cancelDelivery,
@@ -9,6 +9,7 @@ import {
   markDeliverySent,
 } from '../db/repo/deliveries'
 import { findChannelById } from '../db/repo/channels'
+import { findBotByIdInternal } from '../db/repo/bots'
 import { findMonitorByIdInternal } from '../db/repo/monitors'
 import { findUserById } from '../db/repo/users'
 import { decryptConfig, SecretDecryptError, channelAad } from './secrets'
@@ -34,12 +35,18 @@ const log = logger.child('delivery')
 const RETRY_DELAYS = [30_000, 2 * 60_000, 10 * 60_000, 3_600_000, 6 * 3_600_000, 24 * 3_600_000]
 
 export type CommandDeliverySender = (delivery: DeliveryRow) => Promise<SendResult>
+export type BotEventSender = (
+  delivery: DeliveryRow,
+  bot: BotAppRow,
+  message: RenderedMessage,
+) => Promise<SendResult>
 
 export interface DeliveryWorkerOptions {
   intervalMs?: number
   concurrency?: number
   now?: () => number
   sendCommand?: CommandDeliverySender
+  sendBotEvent?: BotEventSender
 }
 
 export class DeliveryWorker {
@@ -58,6 +65,10 @@ export class DeliveryWorker {
 
   setCommandSender(sender: CommandDeliverySender): void {
     this.options.sendCommand = sender
+  }
+
+  setBotEventSender(sender: BotEventSender): void {
+    this.options.sendBotEvent = sender
   }
 
   start(): void {
@@ -144,6 +155,40 @@ export class DeliveryWorker {
         return { ok: false, httpStatus: null, error: '指令回复投递器未配置', permanent: true }
       }
       return this.options.sendCommand(row)
+    }
+
+    if (row.bot_app_id) {
+      if (!this.options.sendBotEvent) {
+        return { ok: false, httpStatus: null, error: '机器人通知投递器未配置', permanent: true }
+      }
+      const bot = findBotByIdInternal(this.db, row.bot_app_id)
+      if (!bot) {
+        cancelDelivery(this.db, row.id, '机器人已删除')
+        return { ok: false, httpStatus: null, canceled: true }
+      }
+      if (bot.enabled !== 1 || bot.notify_enabled !== 1) {
+        cancelDelivery(this.db, row.id, '机器人事件通知已停用')
+        return { ok: false, httpStatus: null, canceled: true }
+      }
+
+      let message: RenderedMessage
+      if (row.kind === 'test') {
+        const user = findUserById(this.db, row.user_id)
+        message = renderTestMessage(bot.name, user?.timezone ?? null)
+      } else {
+        const event = this.loadEvent(row.event_id)
+        if (!event) {
+          return { ok: false, httpStatus: null, error: '事件不存在', permanent: true }
+        }
+        const monitor = findMonitorByIdInternal(this.db, event.monitorId)
+        if (!monitor) {
+          return { ok: false, httpStatus: null, error: '监控项不存在', permanent: true }
+        }
+        const user = findUserById(this.db, row.user_id)
+        message = renderEventMessage(event, monitor, user?.timezone ?? null)
+      }
+
+      return this.options.sendBotEvent(row, bot, message)
     }
 
     if (!row.channel_id) {

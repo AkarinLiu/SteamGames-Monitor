@@ -25,6 +25,11 @@ export interface WecomSocket {
   disconnect: () => void
   isConnected: () => boolean
   reply: (reqId: string, content: string) => Promise<void>
+  sendMessage: (
+    chatId: string,
+    chatType: 'single' | 'group',
+    content: string,
+  ) => Promise<void>
 }
 
 export type WecomSocketFactory = (input: {
@@ -92,6 +97,17 @@ function createOfficialSocket(input: {
       await client.reply(
         { headers: { req_id: reqId } },
         { msgtype: 'markdown', markdown: { content } },
+      )
+    },
+    sendMessage: async (chatId, chatType, content) => {
+      const body = {
+        msgtype: 'markdown',
+        markdown: { content },
+        chat_type: chatType === 'group' ? 2 : 1,
+      }
+      await client.sendMessage(
+        chatId,
+        body as unknown as Parameters<typeof client.sendMessage>[1],
       )
     },
   }
@@ -227,6 +243,28 @@ export class WecomLongConnectionManager {
         await entry.socket.reply(target.reqId, chunk)
       } catch (error) {
         return failure(`企业微信回复失败：${(error as Error).message}`, 30_000)
+      }
+    }
+    return { ok: true, httpStatus: null }
+  }
+
+  async sendEvent(
+    botId: number,
+    target: { chatId: string; chatType: 'single' | 'group' },
+    text: string,
+  ): Promise<SendResult> {
+    if (!target.chatId) return failure('企业微信通知目标缺失', undefined, true)
+    const entry = this.entries.get(botId)
+    if (!entry) return failure('企业微信长连接未建立', 30_000)
+    if (entry.status.state !== 'connected' || !entry.socket?.isConnected()) {
+      return failure('企业微信长连接未就绪', 30_000)
+    }
+
+    for (const chunk of splitReply(text, 'wecom')) {
+      try {
+        await entry.socket.sendMessage(target.chatId, target.chatType, chunk)
+      } catch (error) {
+        return failure(`企业微信主动消息发送失败：${(error as Error).message}`, 30_000)
       }
     }
     return { ok: true, httpStatus: null }

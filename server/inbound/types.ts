@@ -12,6 +12,7 @@ export interface FeishuBotConfig {
 }
 
 export interface DingtalkBotConfig {
+  appKey?: string
   appSecret?: string
   robotCode?: string
   webhookUrl?: string
@@ -56,6 +57,7 @@ export interface InboundEvent {
   ownerUserId: number
   platformMessageId: string
   chatId: string
+  chatType?: 'single' | 'group'
   platformUserId: string
   userName: string | null
   text: string

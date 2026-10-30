@@ -141,6 +141,26 @@ describe('notification delivery', () => {
     })
   }
 
+  async function addNotifyingBot(userId: number, notifyEnabled = true) {
+    const { createBot, touchBotChat } = await import('../db/repo/bots')
+    const { encryptConfig, botAad, currentKeyVersion } = await import('./secrets')
+    const bot = createBot(db!, {
+      userId,
+      platform: 'feishu',
+      name: '飞书事件机器人',
+      webhookSlug: `bot-notify-${Math.random().toString(36).slice(2, 8)}`,
+      enabled: true,
+      notifyEnabled,
+      configEnc: encryptConfig(
+        { appId: 'cli_test', appSecret: 'secret' },
+        botAad(userId, 'feishu'),
+      ),
+      keyVersion: currentKeyVersion(),
+    })
+    touchBotChat(db!, bot.id, 'chat', 'oc_chat_1', Date.now())
+    return bot
+  }
+
   it('sends a queued event and marks it sent', async () => {
     const { user, event } = await seed()
     await addChannel(user.id)
@@ -165,6 +185,45 @@ describe('notification delivery', () => {
     expect(row.status).toBe('sent')
     expect(row.attempts).toBe(1)
     expect(findDeliveryRow(db!, 1)).toBeTruthy()
+  })
+
+  it('queues and sends event notifications through an enabled bot', async () => {
+    const { user, event } = await seed()
+    const bot = await addNotifyingBot(user.id)
+    const { enqueueEventDeliveries } = await import('./dispatcher')
+    const { DeliveryWorker } = await import('./deliveryWorker')
+
+    expect(enqueueEventDeliveries(db!, event)).toBe(1)
+    const row = db!
+      .prepare('SELECT target_json, bot_app_id FROM deliveries')
+      .get() as { target_json: string; bot_app_id: number }
+    expect(JSON.parse(row.target_json)).toEqual({ chatId: 'oc_chat_1', chatType: 'chat' })
+    expect(row.bot_app_id).toBe(bot.id)
+
+    const calls: Array<{ botId: number; title: string }> = []
+    const worker = new DeliveryWorker(db!)
+    worker.setBotEventSender(async (_delivery, deliveredBot, message) => {
+      calls.push({ botId: deliveredBot.id, title: message.title })
+      return { ok: true, httpStatus: 200 }
+    })
+    expect(await worker.tick()).toBe(1)
+    expect(calls).toEqual([{ botId: bot.id, title: '【促销开始】赛博朋克 2077' }])
+    const status = db!.prepare('SELECT status FROM deliveries').get() as { status: string }
+    expect(status.status).toBe('sent')
+  })
+
+  it('skips bot notifications when the switch is off or no chat is known', async () => {
+    const { user, event } = await seed()
+    const bot = await addNotifyingBot(user.id, false)
+    const { enqueueEventDeliveries } = await import('./dispatcher')
+    expect(enqueueEventDeliveries(db!, event)).toBe(0)
+
+    const { updateBot } = await import('../db/repo/bots')
+    updateBot(db!, bot.id, { notifyEnabled: true })
+    db!
+      .prepare('UPDATE bot_apps SET last_chat_id = NULL, last_channel = NULL WHERE id = ?')
+      .run(bot.id)
+    expect(enqueueEventDeliveries(db!, event)).toBe(0)
   })
 
   it('sends a structured custom webhook payload with signature and auth header', async () => {

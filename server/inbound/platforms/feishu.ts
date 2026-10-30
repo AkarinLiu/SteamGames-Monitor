@@ -25,6 +25,7 @@ interface FeishuEnvelope {
     message?: {
       message_id?: string
       chat_id?: string
+      chat_type?: string
       message_type?: string
       content?: string
       mentions?: Array<{ key?: string; name?: string }>
@@ -137,6 +138,7 @@ export function handleFeishuUpdate(input: {
       ownerUserId: bot.user_id,
       platformMessageId: payload.header?.event_id ?? message.message_id,
       chatId: message.chat_id ?? '',
+      chatType: message.chat_type === 'group' ? 'group' : message.chat_type === 'p2p' ? 'single' : undefined,
       platformUserId,
       userName: null,
       text,

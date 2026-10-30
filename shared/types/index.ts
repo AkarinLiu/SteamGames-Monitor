@@ -240,6 +240,8 @@ export interface BotApp {
   name: string
   webhookSlug: string
   enabled: boolean
+  notifyEnabled: boolean
+  lastChatAt: number | null
   apiBaseUrl: string | null
   createdAt: number
   updatedAt: number

@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import { splitReply } from './commands/format'
 import type { DeliveryRow } from '../db/rows'
 import type { Db } from '../db/database'
@@ -118,6 +119,45 @@ async function sendFeishuReply(
     payload = (await response.json().catch(() => ({}))) as { code?: number; msg?: string }
     if (payload.code !== 0) {
       return failure(`飞书回复失败：${payload.msg ?? payload.code ?? '未知错误'}`)
+    }
+  }
+  return { ok: true, httpStatus: 200 }
+}
+
+export async function sendFeishuChatText(
+  base: string,
+  config: FeishuBotConfig,
+  chatId: string,
+  text: string,
+): Promise<SendResult> {
+  const token = await getFeishuToken(config, base)
+  if (!token) return failure('飞书 tenant_access_token 获取失败', true)
+
+  const headers = {
+    'content-type': 'application/json',
+    authorization: `Bearer ${token.token}`,
+  }
+  for (const chunk of splitReply(text, 'feishu')) {
+    const response = await fetch(
+      guard(`${base}/open-apis/im/v1/messages?receive_id_type=chat_id`),
+      {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          receive_id: chatId,
+          msg_type: 'text',
+          content: JSON.stringify({ text: chunk }),
+          uuid: `sgm-${randomUUID()}`,
+        }),
+        signal: AbortSignal.timeout(15_000),
+      },
+    )
+    const payload = (await response.json().catch(() => ({}))) as {
+      code?: number
+      msg?: string
+    }
+    if (payload.code !== 0) {
+      return failure(`飞书主动消息发送失败：${payload.msg ?? payload.code ?? '未知错误'}`)
     }
   }
   return { ok: true, httpStatus: 200 }

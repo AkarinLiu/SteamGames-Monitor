@@ -294,6 +294,13 @@ test.describe.serial('Steam 销售监控端到端', () => {
       await expect(page.getByText('钉钉测试机器人')).toBeVisible()
       await expect(page.getByText('企微测试机器人')).toBeVisible()
 
+      const feishuCard = page.locator('section.card').filter({ hasText: '飞书测试机器人' })
+      await feishuCard.getByRole('button', { name: '开启通知' }).click()
+      await expect(feishuCard.getByText('事件通知', { exact: true })).toBeVisible()
+      await expect(feishuCard.getByText(/还没有记录到最近会话/)).toBeVisible()
+      await feishuCard.getByRole('button', { name: '关闭通知' }).click()
+      await expect(feishuCard.getByText('事件通知', { exact: true })).toBeHidden()
+
       await page.getByRole('button', { name: '添加机器人' }).click()
       await expect(page.getByRole('link', { name: /官方接入文档/ })).toHaveAttribute(
         'href',

@@ -329,6 +329,7 @@ export const FeishuBotConfigSchema = z.object({
 export const DingtalkBotConfigSchema = z.object({
   webhookUrl: HttpUrlSchema.optional(),
   secret: z.string().trim().max(200).optional(),
+  appKey: trimmed(1, 100).optional(),
   appSecret: z.string().trim().max(200).optional(),
   robotCode: trimmed(1, 100).optional(),
   ownerPlatformUserId: z.string().trim().max(100).optional(),
@@ -350,6 +351,7 @@ export const CreateBotSchema = z.object({
   platform: z.enum(['feishu', 'dingtalk', 'wecom']),
   name: trimmed(1, LIMITS.botNameMaxLength),
   enabled: z.boolean().default(true),
+  notifyEnabled: z.boolean().default(false),
   apiBaseUrl: HttpUrlSchema.optional(),
   config: z.record(z.string(), z.unknown()),
 })
@@ -365,6 +367,7 @@ export const BotAuthApproveSchema = z.object({
 export const UpdateBotSchema = z.object({
   name: trimmed(1, LIMITS.botNameMaxLength).optional(),
   enabled: z.boolean().optional(),
+  notifyEnabled: z.boolean().optional(),
   apiBaseUrl: HttpUrlSchema.nullable().optional(),
   config: z.record(z.string(), z.unknown()).optional(),
   replaceSecret: z.boolean().optional(),

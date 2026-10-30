@@ -139,6 +139,20 @@ describe('InboundDispatcher', () => {
     expect(allowed.join(' ')).toContain('暂无监控项')
   })
 
+  it('记录授权用户最近使用的会话作为事件通知目标', async () => {
+    await dispatcher.handleInline(event({ text: '/help' }))
+    const row = db
+      .prepare('SELECT last_channel, last_chat_id, last_chat_at FROM bot_apps WHERE id = ?')
+      .get(bot.id) as {
+      last_channel: string | null
+      last_chat_id: string | null
+      last_chat_at: number | null
+    }
+    expect(row.last_channel).toBe('chat')
+    expect(row.last_chat_id).toBe('chat-1')
+    expect(row.last_chat_at).toBeGreaterThan(0)
+  })
+
   it('未授权用户收到允许名单提示', async () => {
     const lines = await dispatcher.handleInline(event({ platformUserId: 'ou_stranger' }))
     expect(lines.join(' ')).toContain('未授权，请联系机器人所有者')

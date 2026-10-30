@@ -22,6 +22,7 @@ export interface BotPayload {
   platform: BotPlatform
   name: string
   enabled: boolean
+  notifyEnabled?: boolean
   config: Record<string, unknown>
   apiBaseUrl?: string
 }

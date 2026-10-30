@@ -18,6 +18,7 @@ class FakeSocket implements WecomSocket {
   connected = false
   disconnected = false
   replies: Array<{ reqId: string; content: string }> = []
+  sent: Array<{ chatId: string; chatType: 'single' | 'group'; content: string }> = []
   readonly handlers: WecomSocketHandlers
 
   constructor(
@@ -42,6 +43,14 @@ class FakeSocket implements WecomSocket {
 
   async reply(reqId: string, content: string): Promise<void> {
     this.replies.push({ reqId, content })
+  }
+
+  async sendMessage(
+    chatId: string,
+    chatType: 'single' | 'group',
+    content: string,
+  ): Promise<void> {
+    this.sent.push({ chatId, chatType, content })
   }
 }
 
@@ -180,6 +189,20 @@ describe('WecomLongConnectionManager', () => {
       state: 'error',
       message: '请填写 Bot ID 和 Secret',
     })
+  })
+
+  it('通过长连接向最近会话主动推送事件', async () => {
+    manager.start()
+    sockets[0]!.handlers.onAuthenticated()
+    const result = await manager.sendEvent(
+      bot.id,
+      { chatId: 'chat-1', chatType: 'group' },
+      '促销开始',
+    )
+    expect(result.ok).toBe(true)
+    expect(sockets[0]!.sent).toEqual([
+      { chatId: 'chat-1', chatType: 'group', content: '促销开始' },
+    ])
   })
 
   it('认证失败后断开事件不会覆盖异常状态', () => {

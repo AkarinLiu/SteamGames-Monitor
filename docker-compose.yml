@@ -1,7 +1,7 @@
 services:
   steam-monitor:
     build: .
-    image: ghcr.io/akarinliu/steamgames-monitor:latest
+    image: akarinliu2000/steamgames-monitor:latest
     container_name: steam-monitor
     env_file: .env
     environment:

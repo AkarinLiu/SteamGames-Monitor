@@ -37,9 +37,11 @@ const form = reactive({
   platform: 'feishu' as BotPlatform,
   name: '',
   enabled: true,
+  notifyEnabled: false,
   apiBaseUrl: '',
   ownerPlatformUserId: '',
   appId: '',
+  appKey: '',
   appSecret: '',
   encryptKey: '',
   verificationToken: '',
@@ -119,9 +121,11 @@ function resetForm(): void {
   form.platform = 'feishu'
   form.name = ''
   form.enabled = true
+  form.notifyEnabled = false
   form.apiBaseUrl = ''
   form.ownerPlatformUserId = ''
   form.appId = ''
+  form.appKey = ''
   form.appSecret = ''
   form.encryptKey = ''
   form.verificationToken = ''
@@ -240,6 +244,7 @@ function openEdit(bot: BotView): void {
   form.platform = bot.platform
   form.name = bot.name
   form.enabled = bot.enabled
+  form.notifyEnabled = bot.notifyEnabled
   form.apiBaseUrl = bot.apiBaseUrl ?? ''
   const config = bot.config
   form.ownerPlatformUserId =
@@ -247,6 +252,7 @@ function openEdit(bot: BotView): void {
   if (bot.platform === 'feishu') {
     form.appId = typeof config.appId === 'string' ? config.appId : ''
   } else if (bot.platform === 'dingtalk') {
+    form.appKey = typeof config.appKey === 'string' ? config.appKey : ''
     form.robotCode = typeof config.robotCode === 'string' ? config.robotCode : ''
   } else {
     form.botId = typeof config.botId === 'string' ? config.botId : ''
@@ -265,6 +271,7 @@ function buildConfig(): Record<string, unknown> {
     if (form.encryptKey.trim()) config.encryptKey = form.encryptKey.trim()
     if (form.verificationToken.trim()) config.verificationToken = form.verificationToken.trim()
   } else if (form.platform === 'dingtalk') {
+    if (form.appKey.trim()) config.appKey = form.appKey.trim()
     if (form.appSecret.trim()) config.appSecret = form.appSecret.trim()
     if (form.robotCode.trim()) config.robotCode = form.robotCode.trim()
   } else {
@@ -298,6 +305,7 @@ async function save(): Promise<void> {
       const patch: Record<string, unknown> = {
         name: form.name.trim(),
         enabled: form.enabled,
+        notifyEnabled: form.notifyEnabled,
         apiBaseUrl,
         config: buildConfig(),
       }
@@ -308,6 +316,7 @@ async function save(): Promise<void> {
         platform: form.platform,
         name: form.name.trim(),
         enabled: form.enabled,
+        notifyEnabled: form.notifyEnabled,
         apiBaseUrl: apiBaseUrl ?? undefined,
         config: buildConfig(),
       })
@@ -326,6 +335,18 @@ async function toggleEnabled(bot: BotView): Promise<void> {
   try {
     await store.update(bot.id, { enabled: !bot.enabled })
     toast.success(bot.enabled ? '机器人已停用' : '机器人已启用')
+  } catch (err) {
+    toast.error(describeError(err))
+  } finally {
+    busyId.value = null
+  }
+}
+
+async function toggleNotify(bot: BotView): Promise<void> {
+  busyId.value = bot.id
+  try {
+    await store.update(bot.id, { notifyEnabled: !bot.notifyEnabled })
+    toast.success(bot.notifyEnabled ? '事件通知已关闭' : '事件通知已开启')
   } catch (err) {
     toast.error(describeError(err))
   } finally {
@@ -410,7 +431,11 @@ let statusTimer: number | null = null
 onMounted(() => {
   void load()
   statusTimer = window.setInterval(() => {
-    if (store.items.some((bot) => bot.platform === 'wecom' && bot.enabled)) {
+    if (
+      store.items.some(
+        (bot) => (bot.platform === 'wecom' && bot.enabled) || bot.notifyEnabled,
+      )
+    ) {
       void store.fetchAll().catch(() => {})
     }
   }, 5000)
@@ -464,6 +489,7 @@ onBeforeUnmount(() => {
             <span class="badge" :class="bot.enabled ? 'badge-green' : 'badge-neutral'">
               {{ bot.enabled ? '已启用' : '已停用' }}
             </span>
+            <span v-if="bot.notifyEnabled" class="badge badge-accent">事件通知</span>
             <span
               v-if="bot.platform === 'wecom' && bot.connection"
               class="badge"
@@ -475,6 +501,14 @@ onBeforeUnmount(() => {
           </div>
           <div class="inline">
             <button class="btn btn-sm" type="button" @click="openEdit(bot)">编辑</button>
+            <button
+              class="btn btn-sm"
+              type="button"
+              :disabled="busyId === bot.id"
+              @click="toggleNotify(bot)"
+            >
+              {{ bot.notifyEnabled ? '关闭通知' : '开启通知' }}
+            </button>
             <button
               class="btn btn-sm"
               type="button"
@@ -509,6 +543,10 @@ onBeforeUnmount(() => {
           尚未配置 Bot ID / Secret，长连接不会建立。请编辑机器人并填写企业微信智能机器人凭据。
         </div>
 
+        <div v-if="bot.notifyEnabled && !bot.lastChatAt" class="banner banner-warning">
+          已开启事件通知，但还没有记录到最近会话。请让授权用户在聊天中发送任意指令，事件才会推送到该会话。
+        </div>
+
         <div v-if="bot.configError" class="banner banner-error">
           {{ bot.configError }}（请重新填写密钥）
         </div>
@@ -519,6 +557,9 @@ onBeforeUnmount(() => {
           </span>
           <span v-if="typeof bot.config.appId === 'string' && bot.config.appId" class="badge badge-neutral">
             App ID：{{ bot.config.appId }}
+          </span>
+          <span v-if="typeof bot.config.appKey === 'string' && bot.config.appKey" class="badge badge-neutral">
+            App Key：{{ bot.config.appKey }}
           </span>
           <span v-if="typeof bot.config.robotCode === 'string' && bot.config.robotCode" class="badge badge-neutral">
             Robot Code：{{ bot.config.robotCode }}
@@ -679,15 +720,21 @@ onBeforeUnmount(() => {
         <template v-else-if="form.platform === 'dingtalk'">
           <div class="grid-2">
             <div class="field">
-              <label for="bot-ding-secret">App Secret</label>
-              <input id="bot-ding-secret" v-model="form.appSecret" class="input" type="password" autocomplete="new-password" :placeholder="isEditing ? '留空保留已保存值' : ''" />
-              <span class="field-hint">用于校验 Outgoing 回调签名。</span>
+              <label for="bot-ding-key">App Key（Client ID）</label>
+              <input id="bot-ding-key" v-model="form.appKey" class="input mono" />
             </div>
             <div class="field">
-              <label for="bot-robotcode">Robot Code</label>
-              <input id="bot-robotcode" v-model="form.robotCode" class="input mono" />
+              <label for="bot-ding-secret">App Secret</label>
+              <input id="bot-ding-secret" v-model="form.appSecret" class="input" type="password" autocomplete="new-password" :placeholder="isEditing ? '留空保留已保存值' : ''" />
             </div>
           </div>
+          <div class="field">
+            <label for="bot-robotcode">Robot Code</label>
+            <input id="bot-robotcode" v-model="form.robotCode" class="input mono" />
+          </div>
+          <p class="field-hint" style="margin-top: -6px">
+            App Secret 用于校验 Outgoing 回调签名；App Key、App Secret 与 Robot Code 同时填写后，机器人才可以推送事件通知。
+          </p>
         </template>
 
         <template v-else>
@@ -734,6 +781,13 @@ onBeforeUnmount(() => {
           <input v-model="form.enabled" type="checkbox" />
           启用该机器人（每个平台最多一个启用的机器人）
         </label>
+        <label class="inline" style="margin-top: 8px">
+          <input v-model="form.notifyEnabled" type="checkbox" />
+          接收事件通知（推送到最近活跃会话）
+        </label>
+        <p class="field-hint">
+          开启后，发售、促销、下架等事件会额外推送到该机器人最近一次被授权用户使用的会话；需要该用户先发送过指令。
+        </p>
 
         <div class="inline" style="justify-content: flex-end; margin-top: 16px">
           <button class="btn" type="button" @click="dialogOpen = false">取消</button>

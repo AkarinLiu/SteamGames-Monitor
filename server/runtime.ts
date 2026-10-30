@@ -19,6 +19,7 @@ import { InboundDispatcher } from './inbound/dispatcher'
 import { WecomLongConnectionManager } from './inbound/wecom/manager'
 import { WecomQrService } from './inbound/wecom/qr'
 import { sendCommandDelivery } from './inbound/reply'
+import { sendBotEvent } from './notify/botEvents'
 import type { CommandServices } from './inbound/commands/executor'
 
 export interface Runtime {
@@ -72,6 +73,11 @@ export function createRuntime(): Runtime {
   deliveryWorker.setCommandSender((delivery) =>
     sendCommandDelivery(db, delivery, {
       sendWecom: (target, text) => wecomBots.sendReply(delivery.bot_app_id!, target, text),
+    }),
+  )
+  deliveryWorker.setBotEventSender((delivery, bot, message) =>
+    sendBotEvent(db, bot, delivery, message, {
+      sendWecom: (botId, target, text) => wecomBots.sendEvent(botId, target, text),
     }),
   )
 

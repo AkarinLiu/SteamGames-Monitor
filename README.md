@@ -10,7 +10,7 @@
 - **状态变化**：发售（coming soon 翻转）、促销开始 / 变化 / 结束、原价变化、不可用（下架）与恢复。
 - **下架判定**：商店可购状态连续两次翻转才确认下架；配合 Steam 新闻关键词做提前预警（启发式，仅作参考）。
 - **通知渠道**：企业微信群机器人、飞书自定义机器人、钉钉自定义机器人、自定义 WebHook、SMTP 邮件；失败自动重试。
-- **指令机器人**：飞书 / 钉钉原生回调、企业微信智能机器人 WebSocket 长连接（支持扫码创建与未授权网页授权），支持 `/add`、`/list`、`/price`、`/check`、`/pause`、`/resume`、`/remove`、`/adddlc`、`/events`、`/cancel`；微信 ClawBot 与 QQ Bot 正在按平台官方协议接入。
+- **指令机器人**：飞书 / 钉钉原生回调、企业微信智能机器人 WebSocket 长连接（支持扫码创建、未授权网页授权和事件通知），支持 `/add`、`/list`、`/price`、`/check`、`/pause`、`/resume`、`/remove`、`/adddlc`、`/events`、`/cancel`；微信 ClawBot 与 QQ Bot 正在按平台官方协议接入。
 - **运维友好**：健康检查、Docker 镜像、数据库在线备份、可配置的数据保留策略。
 
 ## 技术栈
@@ -69,7 +69,7 @@ pnpm start   # 需要先构建；由 Node 同时提供 API 与静态前端
 GitHub Actions 会在 `main` 分支推送时自动构建并发布镜像，默认标签为 `latest`：
 
 ```bash
-docker pull ghcr.io/akarinliu/steamgames-monitor:latest
+docker pull akarinliu2000/steamgames-monitor:latest
 ```
 
 镜像支持 `linux/amd64` 与 `linux/arm64`，Docker 会按宿主机架构自动选择。提供两种基础镜像：
@@ -80,7 +80,7 @@ docker pull ghcr.io/akarinliu/steamgames-monitor:latest
 | `latest-alpine` | Alpine（`node:24-alpine`） |
 
 ```bash
-docker pull ghcr.io/akarinliu/steamgames-monitor:latest-alpine
+docker pull akarinliu2000/steamgames-monitor:latest-alpine
 # 本地构建 Alpine 版本
 docker build --build-arg BASE_IMAGE=node:24-alpine -t steam-monitor:alpine .
 ```
@@ -95,7 +95,7 @@ docker run -d --name steam-monitor \
   -p 8787:8787 \
   -v "$(pwd)/data:/data" \
   --restart unless-stopped \
-  ghcr.io/akarinliu/steamgames-monitor:latest
+  akarinliu2000/steamgames-monitor:latest
 ```
 
 查看容器日志：
@@ -112,7 +112,14 @@ docker compose logs -f steam-monitor
 
 应用日志还会按 UTC 日期写入 `${DATA_DIR}/logs/app-YYYY-MM-DD.log`；Docker 默认映射到宿主机 `./data/logs/`。容器 stdout 仍然保留，可用 `docker logs` 查看。日志文件不会自动删除，请按需归档或清理。
 
-本地构建 Compose：
+使用 Docker Hub 镜像启动 Compose：
+
+```bash
+docker compose pull
+docker compose up -d
+```
+
+修改代码后本地重新构建（会以 Docker Hub 同名标签覆盖本地镜像）：
 
 ```bash
 docker compose up -d --build
@@ -146,7 +153,7 @@ gh secret set DOCKERHUB_TOKEN --repo AkarinLiu/SteamGames-Monitor
 - `APP_SECRET` 必填，缺失时容器会退出；可执行 `docker compose logs -f steam-monitor` 查看启动错误。
 - 修改 `.env` 后执行 `docker compose up -d` 让容器重建生效。
 - 应用进程以非 root 用户运行，内置 `HEALTHCHECK` 访问 `/api/health`。
-- 更新镜像：`docker compose up -d --build`；停止：`docker compose down`（数据保留）。
+- 更新镜像：`docker compose pull && docker compose up -d`；本地构建用 `docker compose up -d --build`；停止：`docker compose down`（数据保留）。
 - 反向代理需注意：
   - 必须将 `/webhooks/*` 的**原始请求体**原样转发（不要改写或重新序列化）。
   - `client_max_body_size 1m`，读取超时 ≥10s。
@@ -183,6 +190,8 @@ gh secret set DOCKERHUB_TOKEN --repo AkarinLiu/SteamGames-Monitor
 也可以在「指令机器人」页点击 **企微扫码添加**，使用有创建权限的企业微信扫码；系统会自动获取 Bot ID / Secret，创建机器人并建立长连接。二维码 5 分钟内有效，成功后建议补充所有者 UserID。
 
 企业微信未授权用户发送指令时，机器人会回复一次性网页授权链接。机器人所有者登录网页后，可为该平台用户选择只读或管理员角色并批准，链接 30 分钟内有效。`PUBLIC_BASE_URL` 必须可从浏览器访问，否则链接无法打开。
+
+指令机器人还可以在编辑页开启 **接收事件通知**：开启后，发售、促销、下架等事件会推送到该机器人最近一次被授权用户使用的会话。需要先由授权用户在聊天中发送过至少一条指令，系统才会记录通知目标；没有最近会话时不会推送。钉钉事件通知还需要填写 App Key、App Secret 和 Robot Code。
 
 机器人的指令始终作用于**机器人所属账号**的数据。所有者平台 ID（`ownerPlatformUserId`）隐式拥有管理员权限；其他平台用户需加入允许名单，可选择 `viewer`（只读）或 `admin`。详细步骤见 [docs/BOT_INTEGRATION.md](docs/BOT_INTEGRATION.md)。
 
