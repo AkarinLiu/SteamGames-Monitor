@@ -93,7 +93,7 @@ cp .env.example .env
 docker run -d --name steam-monitor \
   --env-file .env \
   -p 8787:8787 \
-  -v sgm-data:/data \
+  -v "$(pwd)/data:/data" \
   --restart unless-stopped \
   ghcr.io/akarinliu/steamgames-monitor:latest
 ```
@@ -122,7 +122,8 @@ gh secret set DOCKERHUB_USERNAME --repo AkarinLiu/SteamGames-Monitor
 gh secret set DOCKERHUB_TOKEN --repo AkarinLiu/SteamGames-Monitor
 ```
 
-- 数据持久化在命名卷 `sgm-data`（挂载到容器 `/data`）。
+- 数据持久化在宿主机 `./data`（挂载到容器 `/data`），数据库、备份都会写到这里。
+- Linux 下确保 `./data` 对容器内 `node` 用户（UID 1000）可写：`mkdir -p data && sudo chown -R 1000:1000 data`。
 - 镜像入口脚本会把 `.env` 中的相对 `DATA_DIR` / `DATABASE_PATH` 自动映射到 `/data`，单独 `docker run --env-file .env` 也能正常进入初始化向导。
 - 容器内始终使用 `/data` 作为数据目录，Compose 会覆盖 `.env` 中的 `DATA_DIR` / `DATABASE_PATH`，不要改成容器内相对路径。
 - `PUBLIC_BASE_URL` 必须与浏览器实际访问地址一致（例如 `http://192.168.1.10:8787`）；使用域名 / HTTPS 反代时也要同步修改。
@@ -265,5 +266,5 @@ src/               Vue 前端
 scripts/           mock 服务、备份、E2E 启动脚本
 e2e/               Playwright 端到端测试
 Dockerfile         多阶段构建（构建前端与服务端 → 运行时仅生产依赖）
-docker-compose.yml 单服务部署，数据卷 sgm-data
+docker-compose.yml 单服务部署，宿主机 ./data 绑定挂载
 ```

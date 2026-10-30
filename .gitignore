@@ -14,7 +14,8 @@ dist-server
 dist-ssr
 coverage
 *.local
-data/
+data/*
+!data/.gitkeep
 *.db
 *.db-wal
 *.db-shm
