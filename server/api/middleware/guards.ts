@@ -37,14 +37,28 @@ export function csrfGuard(): MiddlewareHandler<AppBindings> {
     }
 
     const allowed = [env.PUBLIC_BASE_URL, ...env.TRUSTED_ORIGINS]
+    const host =
+      (env.TRUST_PROXY > 0 ? c.req.header('x-forwarded-host') : undefined) ?? c.req.header('host')
+    const sameHost = (value: string): boolean => {
+      try {
+        return Boolean(host) && new URL(value).host === host
+      } catch {
+        return false
+      }
+    }
     const origin = c.req.header('origin')
     if (origin) {
-      if (!allowed.includes(origin.replace(/\/+$/, ''))) {
+      const normalized = origin.replace(/\/+$/, '')
+      if (!allowed.includes(normalized) && !sameHost(normalized)) {
         throw forbidden('请求来源不被允许')
       }
     } else {
       const referer = c.req.header('referer')
-      if (referer && !allowed.some((item) => referer.startsWith(`${item}/`))) {
+      if (
+        referer &&
+        !allowed.some((item) => referer.startsWith(`${item}/`)) &&
+        !sameHost(referer)
+      ) {
         throw forbidden('请求来源不被允许')
       }
     }

@@ -92,6 +92,10 @@ docker compose up -d --build
 ```
 
 - 数据持久化在命名卷 `sgm-data`（挂载到容器 `/data`）。
+- 容器内始终使用 `/data` 作为数据目录，Compose 会覆盖 `.env` 中的 `DATA_DIR` / `DATABASE_PATH`，不要改成容器内相对路径。
+- `PUBLIC_BASE_URL` 必须与浏览器实际访问地址一致（例如 `http://192.168.1.10:8787`）；使用域名 / HTTPS 反代时也要同步修改。
+- `APP_SECRET` 必填，缺失时容器会退出；可执行 `docker compose logs -f steam-monitor` 查看启动错误。
+- 修改 `.env` 后执行 `docker compose up -d` 让容器重建生效。
 - 容器内以非 root 用户运行，内置 `HEALTHCHECK` 访问 `/api/health`。
 - 更新镜像：`docker compose up -d --build`；停止：`docker compose down`（数据保留）。
 - 反向代理需注意：

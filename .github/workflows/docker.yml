@@ -53,3 +53,35 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  compose-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Start with Docker Compose
+        run: |
+          cat > .env <<'EOF'
+          APP_SECRET=compose-smoke-secret-0123456789abcdef0123456789abcdef
+          PUBLIC_BASE_URL=http://127.0.0.1:8787
+          NODE_ENV=development
+          DATA_DIR=./data
+          DATABASE_PATH=./data/steam-monitor.db
+          EOF
+          docker compose up -d --build
+          for i in $(seq 1 40); do
+            if curl -fsS http://127.0.0.1:8787/api/health >/dev/null; then
+              echo "health check passed"
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "health check failed"
+          docker compose logs --no-color
+          exit 1
+
+      - name: Tear down
+        if: always()
+        run: docker compose down -v
+

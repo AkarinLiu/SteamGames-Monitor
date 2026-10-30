@@ -2,7 +2,15 @@ services:
   steam-monitor:
     build: .
     image: steamgames-monitor:latest
+    container_name: steam-monitor
     env_file: .env
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 8787
+      # 容器内始终使用持久化卷路径，避免被 .env 中的相对路径覆盖
+      DATA_DIR: /data
+      DATABASE_PATH: /data/steam-monitor.db
     ports:
       - '8787:8787'
     volumes:
