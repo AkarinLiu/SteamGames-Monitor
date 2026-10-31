@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { t, tf } from '@/i18n'
+
 import { onMounted, reactive, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import type { Monitor, SteamSearchResult } from '@shared/types'
@@ -97,7 +99,7 @@ function openAdd(): void {
 async function submitAdd(force = false): Promise<void> {
   addError.value = ''
   if (!addForm.query.trim()) {
-    addError.value = '请输入 Steam 商店链接、appid 或名称'
+    addError.value = t("请输入 Steam 商店链接、appid 或名称")
     return
   }
   addBusy.value = true
@@ -109,7 +111,7 @@ async function submitAdd(force = false): Promise<void> {
       force,
       newsWatch: addForm.newsWatch,
     })
-    toast.success(`已添加「${monitor.name}」，首次检查将建立基线`)
+    toast.success(tf('已添加「{name}」，首次检查将建立基线', { name: monitor.name }))
     addOpen.value = false
     resetAdd()
     page.value = 1
@@ -122,7 +124,7 @@ async function submitAdd(force = false): Promise<void> {
       if (err.code === 'selection_required' && details?.results?.length) {
         candidates.value = details.results
         notAvailable.value = null
-        addError.value = '找到多个匹配结果，请选择具体条目'
+        addError.value = t("找到多个匹配结果，请选择具体条目")
         return
       }
       if (err.code === 'not_available' && details?.requireForce) {
@@ -158,7 +160,7 @@ async function searchPreview(): Promise<void> {
       `/steam/search?q=${encodeURIComponent(query)}`,
     )
     preview.value = result.items
-    if (result.items.length === 0) addError.value = '未找到匹配的 Steam 商店条目'
+    if (result.items.length === 0) addError.value = t("未找到匹配的 Steam 商店条目")
   } catch (err) {
     addError.value = describeError(err)
   } finally {
@@ -174,16 +176,30 @@ function usePreview(result: SteamSearchResult): void {
 async function submitDlc(): Promise<void> {
   dlcError.value = ''
   if (!dlcForm.query.trim()) {
-    dlcError.value = '请输入基础游戏的链接、appid 或名称'
+    dlcError.value = t("请输入基础游戏的链接、appid 或名称")
     return
   }
   dlcBusy.value = true
   try {
     const result = await store.importDlc(dlcForm.query.trim(), dlcForm.max)
     toast.success(
-      `已导入 ${result.items.length} 个 DLC${
-        result.skipped ? `，跳过 ${result.skipped} 个已存在条目` : ''
-      }${result.failed ? `，${result.failed} 个失败` : ''}`,
+      result.skipped
+        ? result.failed
+          ? tf('已导入 {imported} 个 DLC，跳过 {skipped} 个已存在条目，{failed} 个失败', {
+              imported: result.items.length,
+              skipped: result.skipped,
+              failed: result.failed,
+            })
+          : tf('已导入 {imported} 个 DLC，跳过 {skipped} 个已存在条目', {
+              imported: result.items.length,
+              skipped: result.skipped,
+            })
+        : result.failed
+          ? tf('已导入 {imported} 个 DLC，{failed} 个失败', {
+              imported: result.items.length,
+              failed: result.failed,
+            })
+          : tf('已导入 {imported} 个 DLC', { imported: result.items.length }),
     )
     dlcOpen.value = false
     dlcForm.query = ''
@@ -199,7 +215,7 @@ async function runCheck(monitor: Monitor): Promise<void> {
   busyId.value = monitor.id
   try {
     const updated = await store.check(monitor.id)
-    toast.success(updated ? `已检查「${updated.name}」` : '检查已完成')
+    toast.success(updated ? tf('已检查「{name}」', { name: updated.name }) : t('检查已完成'))
     await load()
   } catch (err) {
     toast.error(describeError(err))
@@ -213,10 +229,10 @@ async function togglePause(monitor: Monitor): Promise<void> {
   try {
     if (monitor.enabled) {
       await store.pause(monitor.id)
-      toast.success(`已暂停「${monitor.name}」`)
+      toast.success(tf('已暂停「{name}」', { name: monitor.name }))
     } else {
       await store.resume(monitor.id)
-      toast.success(`已恢复「${monitor.name}」`)
+      toast.success(tf('已恢复「{name}」', { name: monitor.name }))
     }
     await load()
   } catch (err) {
@@ -232,7 +248,7 @@ async function confirmDelete(): Promise<void> {
   deleteBusy.value = true
   try {
     await store.remove(target.id)
-    toast.success(`已删除「${target.name}」`)
+    toast.success(tf('已删除「{name}」', { name: target.name }))
     deleteTarget.value = null
     await load()
   } catch (err) {
@@ -251,12 +267,12 @@ onMounted(() => {
   <div>
     <div class="page-header">
       <div>
-        <h1>监控项</h1>
-        <p>跟踪游戏与 DLC 的发售、促销、价格与下架状态。</p>
+        <h1>{{ $t("监控项") }}</h1>
+        <p>{{ $t("跟踪游戏与 DLC 的发售、促销、价格与下架状态。") }}</p>
       </div>
       <div class="page-actions">
-        <button class="btn" type="button" @click="dlcOpen = true">导入 DLC</button>
-        <button class="btn btn-primary" type="button" @click="openAdd">添加监控</button>
+        <button class="btn" type="button" @click="dlcOpen = true">{{ $t("导入 DLC") }}</button>
+        <button class="btn btn-primary" type="button" @click="openAdd">{{ $t("添加监控") }}</button>
       </div>
     </div>
 
@@ -264,7 +280,7 @@ onMounted(() => {
       v-if="store.quota"
       :used="store.quota.used"
       :limit="store.quota.limit"
-      label="监控项配额"
+      :label='$t("监控项配额")'
     />
 
     <ErrorBanner :message="error" />
@@ -274,26 +290,26 @@ onMounted(() => {
         v-model="filters.q"
         class="input"
         type="search"
-        placeholder="搜索名称或 appid"
-        aria-label="搜索监控项"
+        :placeholder='$t("搜索名称或 appid")'
+        :aria-label='$t("搜索监控项")'
       />
-      <select v-model="filters.status" class="select" aria-label="状态筛选" @change="applyFilters">
-        <option value="all">全部状态</option>
-        <option value="on_sale">促销中</option>
-        <option value="available">正常在售</option>
-        <option value="coming_soon">即将发售</option>
-        <option value="unavailable">不可购买</option>
-        <option value="paused">已暂停</option>
+      <select v-model="filters.status" class="select" :aria-label='$t("状态筛选")' @change="applyFilters">
+        <option value="all">{{ $t("全部状态") }}</option>
+        <option value="on_sale">{{ $t("促销中") }}</option>
+        <option value="available">{{ $t("正常在售") }}</option>
+        <option value="coming_soon">{{ $t("即将发售") }}</option>
+        <option value="unavailable">{{ $t("不可购买") }}</option>
+        <option value="paused">{{ $t("已暂停") }}</option>
       </select>
-      <select v-model="filters.sort" class="select" aria-label="排序" @change="applyFilters">
-        <option value="recent">最近添加</option>
-        <option value="name">名称</option>
-        <option value="last_check">最近检查</option>
-        <option value="next_check">下次检查</option>
+      <select v-model="filters.sort" class="select" :aria-label='$t("排序")' @change="applyFilters">
+        <option value="recent">{{ $t("最近添加") }}</option>
+        <option value="name">{{ $t("名称") }}</option>
+        <option value="last_check">{{ $t("最近检查") }}</option>
+        <option value="next_check">{{ $t("下次检查") }}</option>
       </select>
-      <button class="btn" type="submit">搜索</button>
+      <button class="btn" type="submit">{{ $t("搜索") }}</button>
       <div class="flex-1" />
-      <span class="small faint">{{ store.total }} 个条目</span>
+      <span class="small faint">{{ store.total }} {{ $t("个条目") }}</span>
     </form>
 
     <div v-if="store.loading && store.items.length === 0" class="card">
@@ -302,12 +318,10 @@ onMounted(() => {
 
     <EmptyState
       v-else-if="store.items.length === 0"
-      title="还没有监控项"
-      description="添加 Steam 游戏或 DLC，系统会自动建立基线并在状态变化时通知你。"
+      :title='$t("还没有监控项")'
+      :description='$t("添加 Steam 游戏或 DLC，系统会自动建立基线并在状态变化时通知你。")'
     >
-      <button class="btn btn-primary" type="button" style="margin-top: 12px" @click="openAdd">
-        添加第一个监控
-      </button>
+      <button class="btn btn-primary" type="button" style="margin-top: 12px" @click="openAdd"> {{ $t("添加第一个监控") }} </button>
     </EmptyState>
 
     <template v-else>
@@ -315,13 +329,13 @@ onMounted(() => {
         <table class="table">
           <thead>
             <tr>
-              <th>游戏 / DLC</th>
-              <th>状态</th>
-              <th class="num">价格</th>
-              <th class="num">最低折扣</th>
-              <th>上次检查</th>
-              <th>下次检查</th>
-              <th class="right">操作</th>
+              <th>{{ $t("游戏 / DLC") }}</th>
+              <th>{{ $t("状态") }}</th>
+              <th class="num">{{ $t("价格") }}</th>
+              <th class="num">{{ $t("最低折扣") }}</th>
+              <th>{{ $t("上次检查") }}</th>
+              <th>{{ $t("下次检查") }}</th>
+              <th class="right">{{ $t("操作") }}</th>
             </tr>
           </thead>
           <tbody>
@@ -344,8 +358,8 @@ onMounted(() => {
                     </RouterLink>
                     <div class="faint small">
                       <span class="mono">{{ monitor.appid }}</span>
-                      <span> · {{ monitor.kind === 'dlc' ? 'DLC' : '游戏' }}</span>
-                      <span v-if="monitor.parentAppid"> · 基础游戏 {{ monitor.parentAppid }}</span>
+                      <span> · {{ monitor.kind === 'dlc' ? 'DLC' : $t("游戏") }}</span>
+                      <span v-if="monitor.parentAppid"> {{ $t("· 基础游戏") }} {{ monitor.parentAppid }}</span>
                     </div>
                   </div>
                 </div>
@@ -362,7 +376,7 @@ onMounted(() => {
               </td>
               <td class="small nowrap">{{ formatDateTime(monitor.lastCheckAt, timezone) }}</td>
               <td class="small nowrap">
-                {{ monitor.enabled ? formatRelative(monitor.nextCheckAt) : '已暂停' }}
+                {{ monitor.enabled ? formatRelative(monitor.nextCheckAt) : $t("已暂停") }}
               </td>
               <td class="right">
                 <div class="inline nowrap" style="justify-content: flex-end">
@@ -371,24 +385,20 @@ onMounted(() => {
                     type="button"
                     :disabled="busyId === monitor.id"
                     @click="runCheck(monitor)"
-                  >
-                    检查
-                  </button>
+                  > {{ $t("检查") }} </button>
                   <button
                     class="btn btn-sm"
                     type="button"
                     :disabled="busyId === monitor.id"
                     @click="togglePause(monitor)"
                   >
-                    {{ monitor.enabled ? '暂停' : '恢复' }}
+                    {{ monitor.enabled ? $t("暂停") : $t("恢复") }}
                   </button>
                   <button
                     class="btn btn-sm btn-danger"
                     type="button"
                     @click="deleteTarget = monitor"
-                  >
-                    删除
-                  </button>
+                  > {{ $t("删除") }} </button>
                 </div>
               </td>
             </tr>
@@ -404,7 +414,7 @@ onMounted(() => {
       />
     </template>
 
-    <Modal v-model:open="addOpen" title="添加监控" width="620px">
+    <Modal v-model:open="addOpen" :title='$t("添加监控")' width="620px">
       <ErrorBanner :message="addError">
         <button
           v-if="notAvailable"
@@ -412,33 +422,29 @@ onMounted(() => {
           type="button"
           :disabled="addBusy"
           @click="submitAdd(true)"
-        >
-          仍然强制添加
-        </button>
+        > {{ $t("仍然强制添加") }} </button>
       </ErrorBanner>
 
       <form @submit.prevent="submitAdd(false)">
         <div class="field">
-          <label for="add-query">Steam 链接、appid 或名称</label>
+          <label for="add-query">{{ $t("Steam 链接、appid 或名称") }}</label>
           <div class="inline" style="flex-wrap: nowrap">
             <input
               id="add-query"
               v-model="addForm.query"
               class="input flex-1"
-              placeholder="例如 1091500 或 https://store.steampowered.com/app/1091500/"
+              :placeholder='$t("例如 1091500 或 https://store.steampowered.com/app/1091500/")'
               autocomplete="off"
             />
             <button class="btn" type="button" :disabled="previewBusy" @click="searchPreview">
-              {{ previewBusy ? '搜索中…' : '搜索' }}
+              {{ previewBusy ? $t("搜索中…") : $t("搜索") }}
             </button>
           </div>
-          <span class="field-hint">
-            名称可能匹配多个结果，届时会让你按序号选择；添加后首轮检查只建立基线。
-          </span>
+          <span class="field-hint"> {{ $t("名称可能匹配多个结果，届时会让你按序号选择；添加后首轮检查只建立基线。") }} </span>
         </div>
 
         <div v-if="candidates.length" class="card" style="padding: 10px; margin-bottom: 14px">
-          <p class="small muted" style="margin-bottom: 8px">请选择要监控的条目：</p>
+          <p class="small muted" style="margin-bottom: 8px">{{ $t("请选择要监控的条目：") }}</p>
           <div class="stack">
             <button
               v-for="(result, index) in candidates"
@@ -454,7 +460,7 @@ onMounted(() => {
         </div>
 
         <div v-if="preview.length" class="card" style="padding: 10px; margin-bottom: 14px">
-          <p class="small muted" style="margin-bottom: 8px">Steam 搜索结果：</p>
+          <p class="small muted" style="margin-bottom: 8px">{{ $t("Steam 搜索结果：") }}</p>
           <div class="stack">
             <button
               v-for="result in preview"
@@ -472,7 +478,7 @@ onMounted(() => {
 
         <div class="grid-2">
           <div class="field">
-            <label for="add-discount">最低折扣（%），留空使用账号默认</label>
+            <label for="add-discount">{{ $t("最低折扣（%），留空使用账号默认") }}</label>
             <input
               id="add-discount"
               v-model.number="addForm.minDiscount"
@@ -480,48 +486,46 @@ onMounted(() => {
               type="number"
               min="1"
               max="100"
-              placeholder="使用默认"
+              :placeholder='$t("使用默认")'
             />
           </div>
           <div class="field">
-            <span class="label">下架新闻预警</span>
+            <span class="label">{{ $t("下架新闻预警") }}</span>
             <label class="inline">
-              <input v-model="addForm.newsWatch" type="checkbox" />
-              扫描 Steam 新闻关键词
-            </label>
+              <input v-model="addForm.newsWatch" type="checkbox" /> {{ $t("扫描 Steam 新闻关键词") }} </label>
           </div>
         </div>
 
         <div class="field">
-          <label for="add-notes">备注（可选）</label>
+          <label for="add-notes">{{ $t("备注（可选）") }}</label>
           <textarea id="add-notes" v-model="addForm.notes" class="textarea" maxlength="2000" />
         </div>
 
         <div class="inline" style="justify-content: flex-end">
-          <button class="btn" type="button" @click="addOpen = false">取消</button>
+          <button class="btn" type="button" @click="addOpen = false">{{ $t("取消") }}</button>
           <button class="btn btn-primary" type="submit" :disabled="addBusy">
-            {{ addBusy ? '添加中…' : '添加' }}
+            {{ addBusy ? $t("添加中…") : $t("添加") }}
           </button>
         </div>
       </form>
     </Modal>
 
-    <Modal v-model:open="dlcOpen" title="导入 DLC" width="520px">
+    <Modal v-model:open="dlcOpen" :title='$t("导入 DLC")' width="520px">
       <ErrorBanner :message="dlcError" />
       <form @submit.prevent="submitDlc">
         <div class="field">
-          <label for="dlc-query">基础游戏链接、appid 或名称</label>
+          <label for="dlc-query">{{ $t("基础游戏链接、appid 或名称") }}</label>
           <input
             id="dlc-query"
             v-model="dlcForm.query"
             class="input"
-            placeholder="例如 1091500"
+            :placeholder='$t("例如 1091500")'
             autocomplete="off"
           />
-          <span class="field-hint">将导入该游戏在 Steam 上列出的所有 DLC，已存在的条目会被跳过。</span>
+          <span class="field-hint">{{ $t("将导入该游戏在 Steam 上列出的所有 DLC，已存在的条目会被跳过。") }}</span>
         </div>
         <div class="field">
-          <label for="dlc-max">最多导入数量</label>
+          <label for="dlc-max">{{ $t("最多导入数量") }}</label>
           <input
             id="dlc-max"
             v-model.number="dlcForm.max"
@@ -532,9 +536,9 @@ onMounted(() => {
           />
         </div>
         <div class="inline" style="justify-content: flex-end">
-          <button class="btn" type="button" @click="dlcOpen = false">取消</button>
+          <button class="btn" type="button" @click="dlcOpen = false">{{ $t("取消") }}</button>
           <button class="btn btn-primary" type="submit" :disabled="dlcBusy">
-            {{ dlcBusy ? '导入中…' : '开始导入' }}
+            {{ dlcBusy ? $t("导入中…") : $t("开始导入") }}
           </button>
         </div>
       </form>
@@ -542,9 +546,9 @@ onMounted(() => {
 
     <ConfirmDialog
       :open="deleteTarget !== null"
-      title="删除监控项"
-      :message="`确定删除「${deleteTarget?.name ?? ''}」吗？历史事件与快照会保留，重新添加会恢复该监控项并重新建立基线。`"
-      confirm-text="删除"
+      :title='$t("删除监控项")'
+      :message="$tf('确定删除「{name}」吗？历史事件与快照会保留，重新添加会恢复该监控项并重新建立基线。', { name: deleteTarget?.name ?? '' })"
+      :confirm-text='$t("删除")'
       danger
       :busy="deleteBusy"
       @update:open="deleteTarget = null"

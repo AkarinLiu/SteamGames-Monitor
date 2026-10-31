@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { t } from '@/i18n'
+
 import Modal from './Modal.vue'
 
 withDefaults(
@@ -10,7 +12,7 @@ withDefaults(
     danger?: boolean
     busy?: boolean
   }>(),
-  { title: '请确认', confirmText: '确认', danger: false, busy: false },
+  { title: t("请确认"), confirmText: t("确认"), danger: false, busy: false },
 )
 const emit = defineEmits<{
   'update:open': [boolean]
@@ -27,9 +29,7 @@ const emit = defineEmits<{
   >
     <p class="muted" style="white-space: pre-line">{{ message }}</p>
     <template #footer>
-      <button class="btn" type="button" :disabled="busy" @click="emit('update:open', false)">
-        取消
-      </button>
+      <button class="btn" type="button" :disabled="busy" @click="emit('update:open', false)"> {{ $t("取消") }} </button>
       <button
         class="btn"
         :class="danger ? 'btn-danger' : 'btn-primary'"
@@ -37,7 +37,7 @@ const emit = defineEmits<{
         :disabled="busy"
         @click="emit('confirm')"
       >
-        {{ busy ? '处理中…' : confirmText }}
+        {{ busy ? $t("处理中…") : confirmText }}
       </button>
     </template>
   </Modal>

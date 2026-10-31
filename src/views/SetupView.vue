@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { t, tf } from '@/i18n'
+
 import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import {
@@ -11,6 +13,7 @@ import {
 import { useSessionStore } from '@/stores/session'
 import { describeError } from '@/api/client'
 import ErrorBanner from '@/components/ErrorBanner.vue'
+import LocaleSelect from '@/components/LocaleSelect.vue'
 
 const router = useRouter()
 const session = useSessionStore()
@@ -33,15 +36,15 @@ const busy = ref(false)
 async function submit(): Promise<void> {
   error.value = ''
   if (form.password !== form.confirm) {
-    error.value = '两次输入的密码不一致'
+    error.value = t("两次输入的密码不一致")
     return
   }
   if (form.password.length < LIMITS.passwordMinLength) {
-    error.value = `密码至少需要 ${LIMITS.passwordMinLength} 位`
+    error.value = tf('密码至少需要 {min} 位', { min: LIMITS.passwordMinLength })
     return
   }
   if (!form.region || !form.language || !form.timezone) {
-    error.value = '请选择区域、语言和时区'
+    error.value = t("请选择区域、语言和时区")
     return
   }
   busy.value = true
@@ -68,67 +71,68 @@ async function submit(): Promise<void> {
 <template>
   <main class="auth-shell">
     <div class="auth-card">
-      <div class="brand" style="padding: 0 0 8px">
-        <span class="brand-mark">S</span>
-        <span>{{ APP_NAME }}</span>
+      <div class="inline" style="justify-content: space-between">
+        <div class="brand" style="padding: 0 0 8px">
+          <span class="brand-mark">S</span>
+          <span>{{ $t(APP_NAME) }}</span>
+        </div>
+        <LocaleSelect />
       </div>
-      <h1>初始化系统</h1>
-      <p class="muted">
-        创建首个管理员账号。初始化完成后此页面会自动失效。请在任何情况下都不要把未初始化的实例直接暴露在公网。
-      </p>
+      <h1>{{ $t("初始化系统") }}</h1>
+      <p class="muted"> {{ $t("创建首个管理员账号。初始化完成后此页面会自动失效。请在任何情况下都不要把未初始化的实例直接暴露在公网。") }} </p>
 
       <ErrorBanner :message="error" />
 
       <form @submit.prevent="submit">
         <div class="grid-2">
           <div class="field">
-            <label for="setup-username">用户名</label>
+            <label for="setup-username">{{ $t("用户名") }}</label>
             <input id="setup-username" v-model="form.username" class="input" required autocomplete="username" />
-            <span class="field-hint">字母、数字、下划线、点或短横线，至少 3 位</span>
+            <span class="field-hint">{{ $t("字母、数字、下划线、点或短横线，至少 3 位") }}</span>
           </div>
           <div class="field">
-            <label for="setup-display">显示名称</label>
+            <label for="setup-display">{{ $t("显示名称") }}</label>
             <input id="setup-display" v-model="form.displayName" class="input" required />
           </div>
         </div>
         <div class="grid-2">
           <div class="field">
-            <label for="setup-password">密码</label>
+            <label for="setup-password">{{ $t("密码") }}</label>
             <input id="setup-password" v-model="form.password" class="input" type="password" required autocomplete="new-password" />
-            <span class="field-hint">至少 {{ LIMITS.passwordMinLength }} 位</span>
+            <span class="field-hint">{{ $t("至少") }} {{ LIMITS.passwordMinLength }} {{ $t("位") }}</span>
           </div>
           <div class="field">
-            <label for="setup-confirm">确认密码</label>
+            <label for="setup-confirm">{{ $t("确认密码") }}</label>
             <input id="setup-confirm" v-model="form.confirm" class="input" type="password" required autocomplete="new-password" />
           </div>
         </div>
 
         <div class="divider" />
-        <p class="small muted">区域与语言决定 Steam 商店返回的货币与文案，初始化后仍可在个人设置中修改。</p>
+        <p class="small muted">{{ $t("区域与语言决定 Steam 商店返回的货币与文案，初始化后仍可在个人设置中修改。") }}</p>
 
         <div class="grid-3">
           <div class="field">
-            <label for="setup-region">区域</label>
+            <label for="setup-region">{{ $t("区域") }}</label>
             <select id="setup-region" v-model="form.region" class="select" required>
-              <option value="" disabled>请选择区域</option>
+              <option value="" disabled>{{ $t("请选择区域") }}</option>
               <option v-for="option in REGION_OPTIONS" :key="option.value" :value="option.value">
-                {{ option.label }}
+                {{ $t(option.label) }}
               </option>
             </select>
           </div>
           <div class="field">
-            <label for="setup-language">语言</label>
+            <label for="setup-language">{{ $t("语言") }}</label>
             <select id="setup-language" v-model="form.language" class="select" required>
-              <option value="" disabled>请选择语言</option>
+              <option value="" disabled>{{ $t("请选择语言") }}</option>
               <option v-for="option in LANGUAGE_OPTIONS" :key="option.value" :value="option.value">
-                {{ option.label }}
+                {{ $t(option.label) }}
               </option>
             </select>
           </div>
           <div class="field">
-            <label for="setup-tz">时区</label>
+            <label for="setup-tz">{{ $t("时区") }}</label>
             <select id="setup-tz" v-model="form.timezone" class="select" required>
-              <option value="" disabled>请选择时区</option>
+              <option value="" disabled>{{ $t("请选择时区") }}</option>
               <option v-for="zone in TIMEZONE_OPTIONS" :key="zone" :value="zone">{{ zone }}</option>
             </select>
           </div>
@@ -136,7 +140,7 @@ async function submit(): Promise<void> {
 
         <div class="grid-2">
           <div class="field">
-            <label for="setup-poll">默认轮询间隔（分钟）</label>
+            <label for="setup-poll">{{ $t("默认轮询间隔（分钟）") }}</label>
             <input
               id="setup-poll"
               v-model.number="form.pollMinutes"
@@ -147,7 +151,7 @@ async function submit(): Promise<void> {
             />
           </div>
           <div class="field">
-            <label for="setup-discount">最低通知折扣（%）</label>
+            <label for="setup-discount">{{ $t("最低通知折扣（%）") }}</label>
             <input
               id="setup-discount"
               v-model.number="form.minDiscountPercent"
@@ -160,7 +164,7 @@ async function submit(): Promise<void> {
         </div>
 
         <button class="btn btn-primary" type="submit" :disabled="busy">
-          {{ busy ? '初始化中…' : '创建管理员并进入系统' }}
+          {{ busy ? $t("初始化中…") : $t("创建管理员并进入系统") }}
         </button>
       </form>
     </div>

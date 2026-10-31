@@ -544,4 +544,23 @@ test.describe.serial('Steam 销售监控端到端', () => {
       expect(smtp[0]?.subject ?? '').toContain('测试')
     })
   })
+
+  test('切换界面语言并持久化', async ({ page }) => {
+    await apiLogin(page.request, ADMIN_USERNAME, ADMIN_PASSWORD)
+    await page.goto('/bots')
+    await expect(page.getByRole('heading', { name: '指令机器人' })).toBeVisible()
+
+    await page.getByLabel('UI locale').selectOption('en')
+    await expect(page.getByRole('heading', { name: 'Command bots' })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Overview' })).toBeVisible()
+
+    await page.reload()
+    await expect(page.getByRole('heading', { name: 'Command bots' })).toBeVisible()
+
+    for (const locale of ['de', 'fr', 'it', 'ja', 'ko', 'ko-KP', 'nl', 'ru', 'zh-TW']) {
+      await page.getByLabel('UI locale').selectOption(locale)
+      await expect(page.locator('h1')).not.toHaveText('指令机器人')
+      await expect(page.locator('h1')).not.toBeEmpty()
+    }
+  })
 })

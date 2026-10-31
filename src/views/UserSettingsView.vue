@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { t, tf } from '@/i18n'
+
 import { computed, reactive, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import {
@@ -46,13 +48,13 @@ const regionWillChange = computed(
 async function saveProfile(): Promise<void> {
   profileError.value = ''
   if (!profileForm.displayName.trim()) {
-    profileError.value = '显示名称不能为空'
+    profileError.value = t("显示名称不能为空")
     return
   }
   profileBusy.value = true
   try {
     await session.updateProfile(profileForm.displayName.trim())
-    toast.success('显示名称已更新')
+    toast.success(t("显示名称已更新"))
   } catch (err) {
     profileError.value = describeError(err)
   } finally {
@@ -63,7 +65,7 @@ async function saveProfile(): Promise<void> {
 function requestSaveSettings(): void {
   settingsError.value = ''
   if (!settings.region || !settings.language || !settings.timezone) {
-    settingsError.value = '请选择区域、语言和时区'
+    settingsError.value = t("请选择区域、语言和时区")
     return
   }
   if (regionWillChange.value) {
@@ -90,8 +92,10 @@ async function saveSettings(): Promise<void> {
     confirmRegionOpen.value = false
     toast.success(
       result.regionChanged
-        ? `设置已保存，${result.monitorsReset} 个监控项将重新建立基线`
-        : '设置已保存',
+        ? tf('设置已保存，{count} 个监控项将重新建立基线', {
+            count: result.monitorsReset,
+          })
+        : t('设置已保存'),
     )
   } catch (err) {
     settingsError.value = describeError(err)
@@ -106,8 +110,8 @@ async function saveSettings(): Promise<void> {
   <div>
     <div class="page-header">
       <div>
-        <h1>个人设置</h1>
-        <p>账号资料、Steam 区域与通知偏好。修改区域会影响你的全部监控项。</p>
+        <h1>{{ $t("个人设置") }}</h1>
+        <p>{{ $t("账号资料、Steam 区域与通知偏好。修改区域会影响你的全部监控项。") }}</p>
       </div>
     </div>
 
@@ -115,104 +119,100 @@ async function saveSettings(): Promise<void> {
       <div class="stack">
         <section class="card">
           <div class="card-title">
-            <h2>账号资料</h2>
+            <h2>{{ $t("账号资料") }}</h2>
           </div>
           <ErrorBanner :message="profileError" />
           <form @submit.prevent="saveProfile">
             <div class="field">
-              <label for="set-display">显示名称</label>
+              <label for="set-display">{{ $t("显示名称") }}</label>
               <input id="set-display" v-model="profileForm.displayName" class="input" maxlength="48" required />
             </div>
             <button class="btn" type="submit" :disabled="profileBusy">
-              {{ profileBusy ? '保存中…' : '保存资料' }}
+              {{ profileBusy ? $t("保存中…") : $t("保存资料") }}
             </button>
           </form>
           <dl class="meta-list" style="margin-top: 16px">
-            <dt>用户名</dt>
+            <dt>{{ $t("用户名") }}</dt>
             <dd class="mono">{{ user?.username }}</dd>
-            <dt>角色</dt>
-            <dd>{{ user?.role === 'admin' ? '管理员' : '普通用户' }}</dd>
-            <dt>创建时间</dt>
+            <dt>{{ $t("角色") }}</dt>
+            <dd>{{ user?.role === 'admin' ? $t("管理员") : $t("普通用户") }}</dd>
+            <dt>{{ $t("创建时间") }}</dt>
             <dd>{{ formatDateTime(user?.createdAt, timezone) }}</dd>
-            <dt>上次登录</dt>
+            <dt>{{ $t("上次登录") }}</dt>
             <dd>{{ formatDateTime(user?.lastLoginAt, timezone) }}</dd>
           </dl>
           <div class="divider" />
-          <RouterLink :to="{ name: 'change-password' }" class="btn btn-sm">修改密码</RouterLink>
+          <RouterLink :to="{ name: 'change-password' }" class="btn btn-sm">{{ $t("修改密码") }}</RouterLink>
         </section>
 
         <section class="card">
           <div class="card-title">
-            <h2>监控与通知偏好</h2>
+            <h2>{{ $t("监控与通知偏好") }}</h2>
           </div>
           <ErrorBanner :message="settingsError" />
           <form @submit.prevent="requestSaveSettings">
             <div class="grid-3">
               <div class="field">
-                <label for="set-region">区域</label>
+                <label for="set-region">{{ $t("区域") }}</label>
                 <select id="set-region" v-model="settings.region" class="select" required>
-                  <option value="" disabled>请选择区域</option>
+                  <option value="" disabled>{{ $t("请选择区域") }}</option>
                   <option v-for="option in REGION_OPTIONS" :key="option.value" :value="option.value">
-                    {{ option.label }}
+                    {{ $t(option.label) }}
                   </option>
                 </select>
               </div>
               <div class="field">
-                <label for="set-language">语言</label>
+                <label for="set-language">{{ $t("语言") }}</label>
                 <select id="set-language" v-model="settings.language" class="select" required>
-                  <option value="" disabled>请选择语言</option>
+                  <option value="" disabled>{{ $t("请选择语言") }}</option>
                   <option v-for="option in LANGUAGE_OPTIONS" :key="option.value" :value="option.value">
-                    {{ option.label }}
+                    {{ $t(option.label) }}
                   </option>
                 </select>
               </div>
               <div class="field">
-                <label for="set-tz">时区</label>
+                <label for="set-tz">{{ $t("时区") }}</label>
                 <select id="set-tz" v-model="settings.timezone" class="select" required>
-                  <option value="" disabled>请选择时区</option>
+                  <option value="" disabled>{{ $t("请选择时区") }}</option>
                   <option v-for="zone in TIMEZONE_OPTIONS" :key="zone" :value="zone">{{ zone }}</option>
                 </select>
               </div>
             </div>
 
-            <div v-if="regionWillChange" class="banner banner-warning">
-              修改区域会重新建立所有监控项的基线，首轮检查只写入快照，不发送促销 / 下架通知。
-            </div>
+            <div v-if="regionWillChange" class="banner banner-warning"> {{ $t("修改区域会重新建立所有监控项的基线，首轮检查只写入快照，不发送促销 / 下架通知。") }} </div>
 
             <div class="grid-2">
               <div class="field">
-                <label for="set-poll">默认轮询间隔（分钟）</label>
+                <label for="set-poll">{{ $t("默认轮询间隔（分钟）") }}</label>
                 <input id="set-poll" v-model.number="settings.pollMinutes" class="input" type="number" min="15" max="240" />
               </div>
               <div class="field">
-                <label for="set-discount">最低通知折扣（%）</label>
+                <label for="set-discount">{{ $t("最低通知折扣（%）") }}</label>
                 <input id="set-discount" v-model.number="settings.minDiscountPercent" class="input" type="number" min="1" max="100" />
               </div>
             </div>
 
             <div class="divider" />
             <div class="card-title">
-              <h3>下架新闻预警</h3>
+              <h3>{{ $t("下架新闻预警") }}</h3>
               <label class="inline small">
-                <input v-model="settings.newsEnabled" type="checkbox" />
-                启用
-              </label>
+                <input v-model="settings.newsEnabled" type="checkbox" /> {{ $t("启用") }} </label>
             </div>
             <div class="field">
-              <span class="label">关键词</span>
+              <span class="label">{{ $t("关键词") }}</span>
               <KeywordEditor v-model="settings.newsKeywords" />
             </div>
             <div class="field">
-              <label for="set-mode">匹配范围</label>
+              <label for="set-mode">{{ $t("匹配范围") }}</label>
               <select id="set-mode" v-model="settings.newsMatchMode" class="select">
                 <option v-for="option in NEWS_MATCH_MODE_OPTIONS" :key="option.value" :value="option.value">
-                  {{ option.label }}
+                  {{ $t(option.label) }}
                 </option>
               </select>
             </div>
 
             <button class="btn btn-primary" type="submit" :disabled="settingsBusy">
-              {{ settingsBusy ? '保存中…' : '保存设置' }}
+              {{ settingsBusy ? $t("保存中…") : $t("保存设置") }}
             </button>
           </form>
         </section>
@@ -221,39 +221,37 @@ async function saveSettings(): Promise<void> {
       <div class="stack">
         <section class="card">
           <div class="card-title">
-            <h2>当前生效设置</h2>
+            <h2>{{ $t("当前生效设置") }}</h2>
           </div>
           <dl class="meta-list">
-            <dt>区域</dt>
+            <dt>{{ $t("区域") }}</dt>
             <dd>{{ user?.region?.toUpperCase() ?? '—' }}</dd>
-            <dt>语言</dt>
+            <dt>{{ $t("语言") }}</dt>
             <dd>{{ user?.language ?? '—' }}</dd>
-            <dt>时区</dt>
+            <dt>{{ $t("时区") }}</dt>
             <dd>{{ timezone }}</dd>
-            <dt>轮询间隔</dt>
-            <dd>{{ Math.round((user?.pollIntervalSeconds ?? 0) / 60) }} 分钟</dd>
-            <dt>最低折扣</dt>
+            <dt>{{ $t("轮询间隔") }}</dt>
+            <dd>{{ Math.round((user?.pollIntervalSeconds ?? 0) / 60) }} {{ $t("分钟") }}</dd>
+            <dt>{{ $t("最低折扣") }}</dt>
             <dd>{{ user?.minDiscountPercent ?? 0 }}%</dd>
-            <dt>新闻预警</dt>
-            <dd>{{ user?.newsEnabled ? '已启用' : '已关闭' }}</dd>
+            <dt>{{ $t("新闻预警") }}</dt>
+            <dd>{{ user?.newsEnabled ? $t("已启用") : $t("已关闭") }}</dd>
           </dl>
         </section>
         <section class="card">
           <div class="card-title">
-            <h2>说明</h2>
+            <h2>{{ $t("说明") }}</h2>
           </div>
-          <p class="small muted">
-            促销中与即将发售的监控项会自动加密检查频率；已确认不可用的监控项会降低检查频率以节省 Steam 请求额度。
-          </p>
+          <p class="small muted"> {{ $t("促销中与即将发售的监控项会自动加密检查频率；已确认不可用的监控项会降低检查频率以节省 Steam 请求额度。") }} </p>
         </section>
       </div>
     </div>
 
     <ConfirmDialog
       :open="confirmRegionOpen"
-      title="修改区域？"
-      message="修改区域后，你的所有监控项会重新建立基线，首轮检查不会产生促销或下架通知。确定继续吗？"
-      confirm-text="修改区域并保存"
+      :title='$t("修改区域？")'
+      :message='$t("修改区域后，你的所有监控项会重新建立基线，首轮检查不会产生促销或下架通知。确定继续吗？")'
+      :confirm-text='$t("修改区域并保存")'
       danger
       :busy="settingsBusy"
       @update:open="confirmRegionOpen = false"

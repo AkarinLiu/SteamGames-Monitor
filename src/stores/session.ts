@@ -1,3 +1,4 @@
+import { t } from '@/i18n'
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import type { PublicUser, SetupStatus } from '@shared/types'
@@ -90,7 +91,7 @@ export const useSessionStore = defineStore('session', () => {
       newPassword,
     })
     setUser(result.user)
-    useToastStore().success('密码已更新')
+    useToastStore().success(t("密码已更新"))
   }
 
   async function updateProfile(displayName: string): Promise<void> {

@@ -8,7 +8,7 @@ import type {
 } from '../types'
 
 export const APP_NAME = 'Steam 销售监控'
-export const API_VERSION = '1.0.0'
+export const API_VERSION = '1.1.0'
 
 export interface Option<T extends string = string> {
   value: T

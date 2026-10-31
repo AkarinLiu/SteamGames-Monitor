@@ -1,6 +1,8 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { APP_NAME } from '@shared/constants'
 import { setUnauthorizedHandler } from '@/api/client'
 import { useSessionStore } from '@/stores/session'
+import { t } from '@/i18n'
 import AppShell from '@/layouts/AppShell.vue'
 
 const router = createRouter({
@@ -153,6 +155,11 @@ router.beforeEach(async (to) => {
   if (to.meta.admin === true && !session.isAdmin) return { name: 'dashboard' }
 
   return true
+})
+
+router.afterEach((to) => {
+  const title = typeof to.meta.title === 'string' ? t(to.meta.title) : ''
+  document.title = title ? `${title} · ${t(APP_NAME)}` : t(APP_NAME)
 })
 
 setUnauthorizedHandler(() => {

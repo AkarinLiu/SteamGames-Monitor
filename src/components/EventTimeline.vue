@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { t } from '@/i18n'
+
 import { RouterLink } from 'vue-router'
 import { EVENT_META } from '@shared/constants'
 import type { EventListItem, EventType } from '@shared/types'
@@ -13,7 +15,7 @@ withDefaults(
     showMonitor?: boolean
     emptyText?: string
   }>(),
-  { timezone: 'UTC', showMonitor: true, emptyText: '暂无事件记录' },
+  { timezone: 'UTC', showMonitor: true, emptyText: t("暂无事件记录") },
 )
 
 function badge(type: EventType): string {
@@ -21,7 +23,7 @@ function badge(type: EventType): string {
 }
 
 function label(type: EventType): string {
-  return EVENT_META[type]?.label ?? type
+  return t(EVENT_META[type]?.label ?? type)
 }
 
 </script>
@@ -58,9 +60,7 @@ function label(type: EventType): string {
         target="_blank"
         rel="noopener noreferrer"
         class="small"
-      >
-        查看新闻 ↗
-      </a>
+      > {{ $t("查看新闻 ↗") }} </a>
     </div>
   </div>
 </template>

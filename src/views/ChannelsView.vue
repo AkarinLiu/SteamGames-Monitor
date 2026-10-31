@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { t, tf } from '@/i18n'
+
 import { computed, onMounted, reactive, ref } from 'vue'
 import type { ChannelType, EventType } from '@shared/types'
 import {
@@ -66,7 +68,7 @@ const CHANNEL_DOCS: Record<ChannelType, string> = {
 const channelDocsUrl = computed(() => CHANNEL_DOCS[form.type])
 
 function typeLabel(type: ChannelType): string {
-  return CHANNEL_TYPE_OPTIONS.find((option) => option.value === type)?.label ?? type
+  return t(CHANNEL_TYPE_OPTIONS.find((option) => option.value === type)?.label ?? type)
 }
 
 function configSummary(channel: ChannelView): string {
@@ -78,9 +80,9 @@ function configSummary(channel: ChannelView): string {
     return `${host}${port ? `:${port}` : ''}${to ? ` → ${to}` : ''}`
   }
   const host = typeof config.webhookHost === 'string' ? config.webhookHost : ''
-  const secret = config.secretSet === true ? ' · 已配置签名密钥' : ''
-  const auth = config.authorizationSet === true ? ' · 已配置 Authorization' : ''
-  return `${host || '未配置 Webhook'}${secret}${auth}`
+  const secret = config.secretSet === true ? t(" · 已配置签名密钥") : ''
+  const auth = config.authorizationSet === true ? t(" · 已配置 Authorization") : ''
+  return `${host || t("未配置 Webhook")}${secret}${auth}`
 }
 
 function resetForm(): void {
@@ -163,7 +165,7 @@ function buildConfig(): Record<string, unknown> | null {
     config.authorization = form.authorization.trim()
   }
   if (!isEditing.value && !config.webhookUrl) {
-    dialogError.value = '请填写 Webhook 地址'
+    dialogError.value = t("请填写 Webhook 地址")
     return null
   }
   return Object.keys(config).length ? config : null
@@ -172,12 +174,12 @@ function buildConfig(): Record<string, unknown> | null {
 async function save(): Promise<void> {
   dialogError.value = ''
   if (!form.name.trim()) {
-    dialogError.value = '请填写渠道名称'
+    dialogError.value = t("请填写渠道名称")
     return
   }
   if (isSmtp.value) {
     if (!form.host.trim() || !form.from.trim() || !form.to.trim()) {
-      dialogError.value = '请填写 SMTP 服务器、发件人与至少一个收件人'
+      dialogError.value = t("请填写 SMTP 服务器、发件人与至少一个收件人")
       return
     }
   }
@@ -193,7 +195,7 @@ async function save(): Promise<void> {
       }
       if (config) patch.config = config
       await store.update(editing.value.id, patch)
-      toast.success('通知渠道已更新')
+      toast.success(t("通知渠道已更新"))
     } else {
       await store.create({
         name: form.name.trim(),
@@ -202,7 +204,7 @@ async function save(): Promise<void> {
         eventTypes: form.eventTypes,
         config: config ?? {},
       })
-      toast.success('通知渠道已创建')
+      toast.success(t("通知渠道已创建"))
     }
     dialogOpen.value = false
   } catch (err) {
@@ -216,7 +218,7 @@ async function toggleEnabled(channel: ChannelView): Promise<void> {
   busyId.value = channel.id
   try {
     await store.update(channel.id, { enabled: !channel.enabled })
-    toast.success(channel.enabled ? '渠道已停用' : '渠道已启用')
+    toast.success(channel.enabled ? t("渠道已停用") : t("渠道已启用"))
   } catch (err) {
     toast.error(describeError(err))
   } finally {
@@ -226,12 +228,17 @@ async function toggleEnabled(channel: ChannelView): Promise<void> {
 
 async function sendTest(channel: ChannelView): Promise<void> {
   busyId.value = channel.id
-  testResult.value = { ...testResult.value, [channel.id]: '发送中…' }
+  testResult.value = { ...testResult.value, [channel.id]: t("发送中…") }
   try {
     const result = await store.test(channel.id)
     const message = result.ok
-      ? `测试消息发送成功（${result.latencyMs} ms）`
-      : `测试失败${result.httpStatus ? `（HTTP ${result.httpStatus}）` : ''}：${result.error ?? '未知错误'}`
+      ? tf('测试消息发送成功（{latency} ms）', { latency: result.latencyMs })
+      : result.httpStatus
+        ? tf('测试失败（HTTP {status}）：{error}', {
+            status: result.httpStatus,
+            error: result.error ?? t('未知错误'),
+          })
+        : tf('测试失败：{error}', { error: result.error ?? t('未知错误') })
     testResult.value = { ...testResult.value, [channel.id]: message }
     if (result.ok) toast.success(message)
     else toast.error(message)
@@ -250,7 +257,7 @@ async function confirmDelete(): Promise<void> {
   deleteBusy.value = true
   try {
     await store.remove(target.id)
-    toast.success('通知渠道已删除')
+    toast.success(t("通知渠道已删除"))
     deleteTarget.value = null
   } catch (err) {
     toast.error(describeError(err))
@@ -277,11 +284,11 @@ onMounted(() => {
   <div>
     <div class="page-header">
       <div>
-        <h1>通知渠道</h1>
-        <p>通过企业微信、飞书、钉钉群机器人、自定义 WebHook 或 SMTP 邮件接收状态变化通知。</p>
+        <h1>{{ $t("通知渠道") }}</h1>
+        <p>{{ $t("通过企业微信、飞书、钉钉群机器人、自定义 WebHook 或 SMTP 邮件接收状态变化通知。") }}</p>
       </div>
       <div class="page-actions">
-        <button class="btn btn-primary" type="button" @click="openCreate">添加渠道</button>
+        <button class="btn btn-primary" type="button" @click="openCreate">{{ $t("添加渠道") }}</button>
       </div>
     </div>
 
@@ -289,7 +296,7 @@ onMounted(() => {
       v-if="store.quota"
       :used="store.quota.used"
       :limit="store.quota.limit"
-      label="通知渠道配额"
+      :label='$t("通知渠道配额")'
     />
 
     <ErrorBanner :message="error" />
@@ -300,24 +307,22 @@ onMounted(() => {
 
     <EmptyState
       v-else-if="store.items.length === 0"
-      title="还没有通知渠道"
-      description="配置群机器人、自定义 WebHook 或 SMTP 邮件，状态变化会自动推送。"
+      :title='$t("还没有通知渠道")'
+      :description='$t("配置群机器人、自定义 WebHook 或 SMTP 邮件，状态变化会自动推送。")'
     >
-      <button class="btn btn-primary" type="button" style="margin-top: 12px" @click="openCreate">
-        添加第一个渠道
-      </button>
+      <button class="btn btn-primary" type="button" style="margin-top: 12px" @click="openCreate"> {{ $t("添加第一个渠道") }} </button>
     </EmptyState>
 
     <div v-else class="table-wrap">
       <table class="table">
         <thead>
           <tr>
-            <th>名称</th>
-            <th>类型 / 目标</th>
-            <th>事件</th>
-            <th>上次测试</th>
-            <th>状态</th>
-            <th class="right">操作</th>
+            <th>{{ $t("名称") }}</th>
+            <th>{{ $t("类型 / 目标") }}</th>
+            <th>{{ $t("事件") }}</th>
+            <th>{{ $t("上次测试") }}</th>
+            <th>{{ $t("状态") }}</th>
+            <th class="right">{{ $t("操作") }}</th>
           </tr>
         </thead>
         <tbody>
@@ -333,7 +338,7 @@ onMounted(() => {
               <div class="faint small">{{ configSummary(channel) }}</div>
             </td>
             <td class="small">
-              {{ channel.eventTypes.length ? channel.eventTypes.length + ' 种' : '全部（不含异常）' }}
+              {{ channel.eventTypes.length ? channel.eventTypes.length + $t(" 种") : $t("全部（不含异常）") }}
             </td>
             <td class="small">
               <div v-if="channel.lastTestAt" class="nowrap">
@@ -344,14 +349,14 @@ onMounted(() => {
                 class="badge"
                 :class="channel.lastTestOk ? 'badge-green' : 'badge-danger'"
               >
-                {{ channel.lastTestOk ? '成功' : '失败' }}
+                {{ channel.lastTestOk ? $t("成功") : $t("失败") }}
               </span>
-              <span v-else class="faint">未测试</span>
+              <span v-else class="faint">{{ $t("未测试") }}</span>
               <div v-if="testResult[channel.id]" class="faint small">{{ testResult[channel.id] }}</div>
             </td>
             <td>
               <span class="badge" :class="channel.enabled ? 'badge-green' : 'badge-neutral'">
-                {{ channel.enabled ? '已启用' : '已停用' }}
+                {{ channel.enabled ? $t("已启用") : $t("已停用") }}
               </span>
             </td>
             <td class="right">
@@ -361,21 +366,17 @@ onMounted(() => {
                   type="button"
                   :disabled="busyId === channel.id"
                   @click="sendTest(channel)"
-                >
-                  测试
-                </button>
-                <button class="btn btn-sm" type="button" @click="openEdit(channel)">编辑</button>
+                > {{ $t("测试") }} </button>
+                <button class="btn btn-sm" type="button" @click="openEdit(channel)">{{ $t("编辑") }}</button>
                 <button
                   class="btn btn-sm"
                   type="button"
                   :disabled="busyId === channel.id"
                   @click="toggleEnabled(channel)"
                 >
-                  {{ channel.enabled ? '停用' : '启用' }}
+                  {{ channel.enabled ? $t("停用") : $t("启用") }}
                 </button>
-                <button class="btn btn-sm btn-danger" type="button" @click="deleteTarget = channel">
-                  删除
-                </button>
+                <button class="btn btn-sm btn-danger" type="button" @click="deleteTarget = channel"> {{ $t("删除") }} </button>
               </div>
             </td>
           </tr>
@@ -385,61 +386,55 @@ onMounted(() => {
 
     <Modal
       v-model:open="dialogOpen"
-      :title="isEditing ? '编辑通知渠道' : '添加通知渠道'"
+      :title="isEditing ? $t('编辑通知渠道') : $t('添加通知渠道')"
       width="600px"
     >
       <ErrorBanner :message="dialogError" />
       <form @submit.prevent="save">
         <div class="grid-2">
           <div class="field">
-            <label for="ch-name">渠道名称</label>
+            <label for="ch-name">{{ $t("渠道名称") }}</label>
             <input id="ch-name" v-model="form.name" class="input" required maxlength="64" />
           </div>
           <div class="field">
-            <label for="ch-type">类型</label>
+            <label for="ch-type">{{ $t("类型") }}</label>
             <select id="ch-type" v-model="form.type" class="select" :disabled="isEditing">
               <option v-for="option in CHANNEL_TYPE_OPTIONS" :key="option.value" :value="option.value">
-                {{ option.label }}
+                {{ $t(option.label) }}
               </option>
             </select>
           </div>
         </div>
 
         <p v-if="channelDocsUrl" class="field-hint" style="margin-top: -6px">
-          <a :href="channelDocsUrl" target="_blank" rel="noopener noreferrer">
-            查看 {{ typeLabel(form.type) }} 官方接入文档 ↗
-          </a>
+          <a :href="channelDocsUrl" target="_blank" rel="noopener noreferrer"> {{ $t("查看") }} {{ typeLabel(form.type) }} {{ $t("官方接入文档 ↗") }} </a>
         </p>
 
         <template v-if="isSmtp">
           <div class="grid-2">
             <div class="field">
-              <label for="ch-host">SMTP 服务器</label>
+              <label for="ch-host">{{ $t("SMTP 服务器") }}</label>
               <input id="ch-host" v-model="form.host" class="input" placeholder="smtp.example.com" />
             </div>
             <div class="field">
-              <label for="ch-port">端口</label>
+              <label for="ch-port">{{ $t("端口") }}</label>
               <input id="ch-port" v-model.number="form.port" class="input" type="number" min="1" max="65535" />
             </div>
           </div>
           <div class="grid-2">
             <div class="field">
               <label class="inline">
-                <input v-model="form.secure" type="checkbox" />
-                SSL/TLS（通常 465 端口）
-              </label>
+                <input v-model="form.secure" type="checkbox" /> {{ $t("SSL/TLS（通常 465 端口）") }} </label>
               <label class="inline">
-                <input v-model="form.requireTls" type="checkbox" />
-                强制 STARTTLS
-              </label>
+                <input v-model="form.requireTls" type="checkbox" /> {{ $t("强制 STARTTLS") }} </label>
             </div>
             <div class="field">
-              <label for="ch-user">用户名（可选）</label>
+              <label for="ch-user">{{ $t("用户名（可选）") }}</label>
               <input id="ch-user" v-model="form.username" class="input" autocomplete="off" />
             </div>
           </div>
           <div class="field">
-            <label for="ch-pass">密码</label>
+            <label for="ch-pass">{{ $t("密码") }}</label>
             <input
               id="ch-pass"
               v-model="form.password"
@@ -447,16 +442,16 @@ onMounted(() => {
               type="password"
               autocomplete="new-password"
             />
-            <span v-if="isEditing" class="field-hint">留空表示保留已保存的密码。</span>
+            <span v-if="isEditing" class="field-hint">{{ $t("留空表示保留已保存的密码。") }}</span>
           </div>
           <div class="grid-2">
             <div class="field">
-              <label for="ch-from">发件人</label>
+              <label for="ch-from">{{ $t("发件人") }}</label>
               <input id="ch-from" v-model="form.from" class="input" placeholder="Monitor &lt;monitor@example.com&gt;" />
             </div>
             <div class="field">
-              <label for="ch-to">收件人</label>
-              <input id="ch-to" v-model="form.to" class="input" placeholder="多个地址用逗号分隔" />
+              <label for="ch-to">{{ $t("收件人") }}</label>
+              <input id="ch-to" v-model="form.to" class="input" :placeholder='$t("多个地址用逗号分隔")' />
             </div>
           </div>
         </template>
@@ -464,29 +459,29 @@ onMounted(() => {
         <template v-else>
           <div class="field">
             <label for="ch-webhook">
-              {{ form.type === 'webhook' ? 'WebHook 地址' : '机器人 Webhook 地址' }}
+              {{ form.type === 'webhook' ? $t("WebHook 地址") : $t("机器人 Webhook 地址") }}
             </label>
             <input
               id="ch-webhook"
               v-model="form.webhookUrl"
               class="input"
-              :placeholder="isEditing ? '留空保留当前 Webhook' : 'https://...'"
+              :placeholder="isEditing ? $t('留空保留当前 Webhook') : 'https://...'"
             />
             <span class="field-hint">
               {{
                 form.type === 'wecom_bot'
-                  ? '企业微信群机器人 Webhook，支持 markdown 消息。'
+                  ? $t("企业微信群机器人 Webhook，支持 markdown 消息。")
                   : form.type === 'feishu_bot'
-                    ? '飞书自定义机器人 Webhook，请填写签名密钥（如已开启签名校验）。'
+                    ? $t("飞书自定义机器人 Webhook，请填写签名密钥（如已开启签名校验）。")
                     : form.type === 'dingtalk_bot'
-                      ? '钉钉自定义机器人 Webhook，请填写加签密钥（如已开启加签）。'
-                      : '系统会向该地址 POST JSON 事件，支持 HMAC-SHA256 签名和可选 Authorization 头。'
+                      ? $t("钉钉自定义机器人 Webhook，请填写加签密钥（如已开启加签）。")
+                      : $t("系统会向该地址 POST JSON 事件，支持 HMAC-SHA256 签名和可选 Authorization 头。")
               }}
             </span>
           </div>
           <div v-if="form.type !== 'wecom_bot'" class="field">
             <label for="ch-secret">
-              {{ form.type === 'webhook' ? 'HMAC 签名密钥（可选）' : '签名密钥' }}
+              {{ form.type === 'webhook' ? $t("HMAC 签名密钥（可选）") : $t("签名密钥") }}
             </label>
             <input
               id="ch-secret"
@@ -494,37 +489,33 @@ onMounted(() => {
               class="input"
               type="password"
               autocomplete="new-password"
-              :placeholder="isEditing ? '留空保留当前密钥' : '可选'"
+              :placeholder="isEditing ? $t('留空保留当前密钥') : $t('可选')"
             />
-            <span v-if="form.type === 'webhook'" class="field-hint">
-              设置后，请求头会携带 X-SGM-Timestamp 和 X-SGM-Signature。
-            </span>
+            <span v-if="form.type === 'webhook'" class="field-hint"> {{ $t("设置后，请求头会携带 X-SGM-Timestamp 和 X-SGM-Signature。") }} </span>
           </div>
           <div v-if="form.type === 'webhook'" class="field">
-            <label for="ch-authorization">Authorization 头（可选）</label>
+            <label for="ch-authorization">{{ $t("Authorization 头（可选）") }}</label>
             <input
               id="ch-authorization"
               v-model="form.authorization"
               class="input"
               type="password"
               autocomplete="new-password"
-              :placeholder="isEditing ? '留空保留当前 Authorization' : '例如 Bearer <token>'"
+              :placeholder="isEditing ? $t('留空保留当前 Authorization') : $t('例如 Bearer <token>')"
             />
-            <span class="field-hint">
-              会原样作为 Authorization 请求头发送，适合需要 Bearer / Basic 认证的接口。
-            </span>
+            <span class="field-hint"> {{ $t("会原样作为 Authorization 请求头发送，适合需要 Bearer / Basic 认证的接口。") }} </span>
           </div>
         </template>
 
         <div class="divider" />
         <div class="card-title">
-          <span class="label">订阅事件</span>
+          <span class="label">{{ $t("订阅事件") }}</span>
           <div class="inline">
-            <button class="btn-link small" type="button" @click="selectAllEvents">全选默认</button>
-            <button class="btn-link small" type="button" @click="form.eventTypes = []">清空</button>
+            <button class="btn-link small" type="button" @click="selectAllEvents">{{ $t("全选默认") }}</button>
+            <button class="btn-link small" type="button" @click="form.eventTypes = []">{{ $t("清空") }}</button>
           </div>
         </div>
-        <p class="small faint">不选择任何事件表示接收除“检查异常”外的全部事件。</p>
+        <p class="small faint">{{ $t("不选择任何事件表示接收除“检查异常”外的全部事件。") }}</p>
         <div class="grid-3">
           <label v-for="option in EVENT_TYPE_OPTIONS" :key="option.value" class="inline small">
             <input
@@ -532,20 +523,18 @@ onMounted(() => {
               :checked="form.eventTypes.includes(option.value)"
               @change="toggleEventType(option.value, ($event.target as HTMLInputElement).checked)"
             />
-            {{ option.label }}
+            {{ $t(option.label) }}
           </label>
         </div>
 
         <div class="divider" />
         <label class="inline">
-          <input v-model="form.enabled" type="checkbox" />
-          启用该渠道
-        </label>
+          <input v-model="form.enabled" type="checkbox" /> {{ $t("启用该渠道") }} </label>
 
         <div class="inline" style="justify-content: flex-end; margin-top: 16px">
-          <button class="btn" type="button" @click="dialogOpen = false">取消</button>
+          <button class="btn" type="button" @click="dialogOpen = false">{{ $t("取消") }}</button>
           <button class="btn btn-primary" type="submit" :disabled="dialogBusy">
-            {{ dialogBusy ? '保存中…' : '保存' }}
+            {{ dialogBusy ? $t("保存中…") : $t("保存") }}
           </button>
         </div>
       </form>
@@ -553,9 +542,9 @@ onMounted(() => {
 
     <ConfirmDialog
       :open="deleteTarget !== null"
-      title="删除通知渠道"
-      :message="`确定删除「${deleteTarget?.name ?? ''}」吗？未发送的通知会被取消。`"
-      confirm-text="删除"
+      :title='$t("删除通知渠道")'
+      :message="$tf('确定删除「{name}」吗？未发送的通知会被取消。', { name: deleteTarget?.name ?? '' })"
+      :confirm-text='$t("删除")'
       danger
       :busy="deleteBusy"
       @update:open="deleteTarget = null"

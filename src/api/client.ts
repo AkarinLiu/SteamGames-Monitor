@@ -1,3 +1,4 @@
+import { t, tf } from '@/i18n'
 import type { ApiErrorBody } from '@shared/types'
 
 export class ApiError extends Error {
@@ -33,7 +34,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
       body: body === undefined ? undefined : JSON.stringify(body),
     })
   } catch {
-    throw new ApiError('网络请求失败，请检查与服务端的连接', 0, 'network_error')
+    throw new ApiError(t("网络请求失败，请检查与服务端的连接"), 0, 'network_error')
   }
 
   if (response.status === 401) unauthorizedHandler?.()
@@ -51,7 +52,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   if (!response.ok) {
     const error = (data as ApiErrorBody | null)?.error
     throw new ApiError(
-      error?.message ?? `请求失败（HTTP ${response.status}）`,
+      error?.message ?? tf('请求失败（HTTP {status}）', { status: response.status }),
       response.status,
       error?.code ?? 'http_error',
       error?.details,
@@ -71,5 +72,5 @@ export const api = {
 export function describeError(error: unknown): string {
   if (error instanceof ApiError) return error.message
   if (error instanceof Error) return error.message
-  return '发生未知错误'
+  return t("发生未知错误")
 }

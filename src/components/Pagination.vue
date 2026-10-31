@@ -19,17 +19,13 @@ function go(next: number): void {
 
 <template>
   <div v-if="total > pageSize" class="pagination">
-    <span>共 {{ total }} 条 · 第 {{ page }} / {{ pageCount }} 页</span>
-    <button class="btn btn-sm" type="button" :disabled="disabled || page <= 1" @click="go(page - 1)">
-      上一页
-    </button>
+    <span>{{ $t("共") }} {{ total }} {{ $t("条 · 第") }} {{ page }} / {{ pageCount }} {{ $t("页") }}</span>
+    <button class="btn btn-sm" type="button" :disabled="disabled || page <= 1" @click="go(page - 1)"> {{ $t("上一页") }} </button>
     <button
       class="btn btn-sm"
       type="button"
       :disabled="disabled || page >= pageCount"
       @click="go(page + 1)"
-    >
-      下一页
-    </button>
+    > {{ $t("下一页") }} </button>
   </div>
 </template>

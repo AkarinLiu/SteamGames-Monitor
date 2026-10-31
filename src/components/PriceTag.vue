@@ -1,11 +1,13 @@
 <script setup lang="ts">
+import { t } from '@/i18n'
+
 import { computed } from 'vue'
 import type { Monitor } from '@shared/types'
 
 const props = defineProps<{ monitor: Monitor }>()
 
 const finalText = computed(() => {
-  if (props.monitor.isFree) return '免费'
+  if (props.monitor.isFree) return t("免费")
   return props.monitor.priceFinalFormatted ?? '—'
 })
 const initialText = computed(() =>

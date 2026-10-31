@@ -25,6 +25,7 @@ export default defineConfig({
     actionTimeout: 15 * 1000,
     trace: 'on-first-retry',
     headless: true,
+    locale: 'zh-CN',
   },
 
   projects: [

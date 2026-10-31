@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { tf } from '@/i18n'
 import { onMounted, reactive, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import type { Monitor } from '@shared/types'
@@ -68,7 +69,7 @@ async function redeliver(eventId: number): Promise<void> {
   busyId.value = eventId
   try {
     const count = await store.redeliver(eventId)
-    toast.success(`已重新排队 ${count} 条失败投递`)
+    toast.success(tf('已重新排队 {count} 条失败投递', { count }))
     await load()
   } catch (err) {
     toast.error(describeError(err))
@@ -87,35 +88,35 @@ onMounted(() => {
   <div>
     <div class="page-header">
       <div>
-        <h1>事件记录</h1>
-        <p>发售、促销、价格、下架与检查异常的历史记录及通知投递状态。</p>
+        <h1>{{ $t("事件记录") }}</h1>
+        <p>{{ $t("发售、促销、价格、下架与检查异常的历史记录及通知投递状态。") }}</p>
       </div>
     </div>
 
     <ErrorBanner :message="error" />
 
     <form class="toolbar" @submit.prevent="applyFilters">
-      <select v-model="filters.type" class="select" aria-label="事件类型" @change="applyFilters">
-        <option value="">全部类型</option>
+      <select v-model="filters.type" class="select" :aria-label='$t("事件类型")' @change="applyFilters">
+        <option value="">{{ $t("全部类型") }}</option>
         <option v-for="option in EVENT_TYPE_OPTIONS" :key="option.value" :value="option.value">
-          {{ option.label }}
+          {{ $t(option.label) }}
         </option>
       </select>
-      <select v-model="filters.monitorId" class="select" aria-label="监控项" @change="applyFilters">
-        <option value="">全部监控项</option>
+      <select v-model="filters.monitorId" class="select" :aria-label='$t("监控项")' @change="applyFilters">
+        <option value="">{{ $t("全部监控项") }}</option>
         <option v-for="monitor in monitors" :key="monitor.id" :value="String(monitor.id)">
           {{ monitor.name }}
         </option>
       </select>
-      <select v-model="filters.range" class="select" aria-label="时间范围" @change="applyFilters">
-        <option value="1">最近 24 小时</option>
-        <option value="7">最近 7 天</option>
-        <option value="30">最近 30 天</option>
-        <option value="0">全部时间</option>
+      <select v-model="filters.range" class="select" :aria-label='$t("时间范围")' @change="applyFilters">
+        <option value="1">{{ $t("最近 24 小时") }}</option>
+        <option value="7">{{ $t("最近 7 天") }}</option>
+        <option value="30">{{ $t("最近 30 天") }}</option>
+        <option value="0">{{ $t("全部时间") }}</option>
       </select>
-      <button class="btn" type="submit">筛选</button>
+      <button class="btn" type="submit">{{ $t("筛选") }}</button>
       <div class="flex-1" />
-      <span class="small faint">{{ store.total }} 条事件</span>
+      <span class="small faint">{{ store.total }} {{ $t("条事件") }}</span>
     </form>
 
     <div v-if="store.loading && store.items.length === 0" class="card">
@@ -124,8 +125,8 @@ onMounted(() => {
 
     <EmptyState
       v-else-if="store.items.length === 0"
-      title="暂无事件"
-      description="当监控项出现发售、促销、下架等状态变化时会记录在这里。"
+      :title='$t("暂无事件")'
+      :description='$t("当监控项出现发售、促销、下架等状态变化时会记录在这里。")'
     />
 
     <div v-else class="stack">
@@ -155,21 +156,17 @@ onMounted(() => {
             :href="newsUrlOf(event.payload) ?? '#'"
             target="_blank"
             rel="noopener noreferrer"
-          >
-            查看新闻 ↗
-          </a>
+          > {{ $t("查看新闻 ↗") }} </a>
         </p>
 
         <div class="inline small">
-          <span class="faint">通知投递：</span>
-          <span class="badge badge-green">成功 {{ event.deliveries.sent }}</span>
-          <span v-if="event.deliveries.pending" class="badge badge-neutral">
-            待发送 {{ event.deliveries.pending }}
+          <span class="faint">{{ $t("通知投递：") }}</span>
+          <span class="badge badge-green">{{ $t("成功") }} {{ event.deliveries.sent }}</span>
+          <span v-if="event.deliveries.pending" class="badge badge-neutral"> {{ $t("待发送") }} {{ event.deliveries.pending }}
           </span>
-          <span v-if="event.deliveries.failed" class="badge badge-danger">
-            失败 {{ event.deliveries.failed }}
+          <span v-if="event.deliveries.failed" class="badge badge-danger"> {{ $t("失败") }} {{ event.deliveries.failed }}
           </span>
-          <span v-if="event.deliveries.total === 0" class="badge badge-neutral">无匹配渠道</span>
+          <span v-if="event.deliveries.total === 0" class="badge badge-neutral">{{ $t("无匹配渠道") }}</span>
           <button
             v-if="event.deliveries.failed > 0"
             class="btn btn-sm"
@@ -177,7 +174,7 @@ onMounted(() => {
             :disabled="busyId === event.id"
             @click="redeliver(event.id)"
           >
-            {{ busyId === event.id ? '重投中…' : '重投失败通知' }}
+            {{ busyId === event.id ? $t("重投中…") : $t("重投失败通知") }}
           </button>
         </div>
       </article>

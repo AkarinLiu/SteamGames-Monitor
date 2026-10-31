@@ -40,7 +40,7 @@ onBeforeUnmount(() => {
       <div class="modal" :style="{ width: `min(${width}, 100%)` }" role="dialog" aria-modal="true">
         <header class="modal-header">
           <h2>{{ title }}</h2>
-          <button class="btn-link" type="button" aria-label="关闭" @click="close">✕</button>
+          <button class="btn-link" type="button" :aria-label='$t("关闭")' @click="close">✕</button>
         </header>
         <div class="modal-body">
           <slot />

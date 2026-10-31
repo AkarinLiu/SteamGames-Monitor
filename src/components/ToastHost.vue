@@ -12,7 +12,7 @@ function tone(kind: 'info' | 'success' | 'error'): string {
   <div class="toast-host" aria-live="polite">
     <div v-for="item in toast.items" :key="item.id" class="toast" :class="tone(item.kind)">
       <span class="flex-1">{{ item.message }}</span>
-      <button class="btn-link small" type="button" @click="toast.dismiss(item.id)">关闭</button>
+      <button class="btn-link small" type="button" @click="toast.dismiss(item.id)">{{ $t("关闭") }}</button>
     </div>
   </div>
 </template>

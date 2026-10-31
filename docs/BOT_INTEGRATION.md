@@ -1,5 +1,7 @@
 # 飞书 / Lark、钉钉、企业微信接入指南
 
+[简体中文](BOT_INTEGRATION.md) | [繁體中文](BOT_INTEGRATION.zh-TW.md) | [English](BOT_INTEGRATION.en.md) | [Deutsch](BOT_INTEGRATION.de.md) | [Français](BOT_INTEGRATION.fr.md) | [Italiano](BOT_INTEGRATION.it.md) | [日本語](BOT_INTEGRATION.ja.md) | [한국어](BOT_INTEGRATION.ko.md) | [조선어](BOT_INTEGRATION.ko-KP.md) | [Nederlands](BOT_INTEGRATION.nl.md) | [Русский](BOT_INTEGRATION.ru.md)
+
 本文说明如何把飞书 / Lark、钉钉和企业微信接入 Steam Games Monitor。项目里有两套互不替代的能力，请先确认目标：
 
 | 目标                                | 平台侧应创建                                                                             | 系统入口       | 方向                     |

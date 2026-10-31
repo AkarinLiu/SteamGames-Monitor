@@ -68,17 +68,15 @@ const lastPoint = computed(() => sorted.value[sorted.value.length - 1] ?? null)
 </script>
 
 <template>
-  <div aria-label="价格走势">
-    <div v-if="sorted.length === 0" class="empty-state small" style="padding: 12px">
-      暂无价格快照
-    </div>
+  <div :aria-label='$t("价格走势")'>
+    <div v-if="sorted.length === 0" class="empty-state small" style="padding: 12px"> {{ $t("暂无价格快照") }} </div>
     <svg
       v-else
       class="sparkline"
       :viewBox="`0 0 ${width} ${height}`"
       preserveAspectRatio="none"
       role="img"
-      :aria-label="label || '价格走势'"
+      :aria-label="label || $t('价格走势')"
     >
       <defs>
         <linearGradient id="spark-fill" x1="0" y1="0" x2="0" y2="1">
@@ -106,7 +104,7 @@ const lastPoint = computed(() => sorted.value[sorted.value.length - 1] ?? null)
     </svg>
     <div v-if="bounds && sorted.length > 0" class="inline small faint" style="justify-content: space-between">
       <span>{{ label }}</span>
-      <span>{{ sorted.length }} 个快照</span>
+      <span>{{ sorted.length }} {{ $t("个快照") }}</span>
     </div>
   </div>
 </template>
