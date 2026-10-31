@@ -101,6 +101,67 @@ describe('database schema', () => {
     raw.close()
   })
 
+  it('preserves events and their references when adding release_date', () => {
+    const raw = new DatabaseSync(':memory:')
+    raw.exec(
+      'CREATE TABLE schema_migrations (version INTEGER PRIMARY KEY, applied_at INTEGER NOT NULL)',
+    )
+    raw.exec('PRAGMA foreign_keys = ON')
+    for (const migration of migrations.filter((item) => item.version <= 8)) {
+      migration.up(raw)
+      raw
+        .prepare('INSERT INTO schema_migrations (version, applied_at) VALUES (?, ?)')
+        .run(migration.version, Date.now())
+    }
+    raw.exec(`
+      INSERT INTO users (username, display_name, password_hash, created_at, updated_at)
+      VALUES ('events', 'Events', 'scrypt$test', 1, 1);
+
+      INSERT INTO monitors
+        (user_id, appid, kind, name, store_url, region, language, next_check_at, created_at, updated_at)
+      VALUES
+        (1, 300, 'game', 'Event Game', 'https://store.steampowered.com/app/300/', 'cn', 'schinese', 1, 1, 1);
+
+      INSERT INTO events
+        (id, monitor_id, user_id, type, severity, payload_json, dedupe_key, source, created_at)
+      VALUES
+        (1, 1, 1, 'sale_start', 'info', '{"discountPercent":50}', 'sale-start-1', 'steam', 100);
+
+      INSERT INTO deliveries
+        (user_id, kind, event_id, target_json, payload_json, created_at)
+      VALUES
+        (1, 'event', 1, '{}', '{"eventId":1}', 100);
+
+      INSERT INTO news_seen
+        (monitor_id, gid, title, url, event_id, seen_at)
+      VALUES
+        (1, 'gid-1', 'News', 'https://example.com/news', 1, 100);
+    `)
+
+    runMigrations(raw)
+    const event = raw.prepare('SELECT id, type FROM events').get() as {
+      id: number
+      type: string
+    }
+    expect(event).toEqual({ id: 1, type: 'sale_start' })
+    expect(
+      (raw.prepare('SELECT COUNT(*) AS n FROM deliveries').get() as { n: number }).n,
+    ).toBe(1)
+    expect(
+      (raw.prepare('SELECT COUNT(*) AS n FROM news_seen').get() as { n: number }).n,
+    ).toBe(1)
+    expect(() =>
+      raw
+        .prepare(
+          `INSERT INTO events
+            (monitor_id, user_id, type, severity, payload_json, dedupe_key, source, created_at)
+           VALUES (1, 1, 'release_date', 'info', '{}', 'release-date-1', 'steam', 200)`,
+        )
+        .run(),
+    ).not.toThrow()
+    raw.close()
+  })
+
   it('enforces case-insensitive usernames', () => {
     makeUser('Alice')
     expect(findUserByUsername(db, 'alice')?.username).toBe('Alice')

@@ -508,4 +508,36 @@ export const migrations: Migration[] = [
       db.exec(`ALTER TABLE users ADD COLUMN ui_locale TEXT NOT NULL DEFAULT 'zh-CN';`)
     },
   },
+  {
+    version: 9,
+    name: 'release date event',
+    up(db) {
+      db.exec(`
+        CREATE TABLE events_release_date (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          monitor_id INTEGER NOT NULL REFERENCES monitors(id) ON DELETE CASCADE,
+          user_id INTEGER NOT NULL,
+          type TEXT NOT NULL CHECK (type IN ('release', 'release_date', 'sale_start', 'sale_change', 'sale_end', 'price_change', 'delisting_warning', 'delisted', 'restored', 'check_error')),
+          severity TEXT NOT NULL CHECK (severity IN ('info', 'warning', 'critical')),
+          payload_json TEXT NOT NULL CHECK (json_valid(payload_json)),
+          dedupe_key TEXT NOT NULL UNIQUE,
+          source TEXT NOT NULL DEFAULT 'steam',
+          created_at INTEGER NOT NULL
+        );
+
+        INSERT INTO events_release_date
+          (id, monitor_id, user_id, type, severity, payload_json, dedupe_key, source, created_at)
+        SELECT id, monitor_id, user_id, type, severity, payload_json, dedupe_key, source, created_at
+        FROM events;
+
+        DROP TABLE events;
+        ALTER TABLE events_release_date RENAME TO events;
+
+        CREATE INDEX idx_events_user ON events(user_id, created_at DESC);
+        CREATE INDEX idx_events_monitor ON events(monitor_id, created_at DESC);
+        CREATE INDEX idx_events_type ON events(type, created_at DESC);
+        CREATE INDEX idx_events_created ON events(created_at);
+      `)
+    },
+  },
 ]

@@ -47,6 +47,17 @@ function buildEventLines(
       if (dateText) lines.push(fmt(messages.notificationReleaseDate, { date: dateText }))
       break
     }
+    case 'release_date': {
+      const dateText = asString(p.releaseDateText)
+      const previous = asString(p.previousReleaseDateText)
+      if (dateText) {
+        lines.push(fmt(messages.notificationReleaseDateAnnounced, { date: dateText }))
+      }
+      if (previous) {
+        lines.push(fmt(messages.notificationPreviousReleaseDate, { date: previous }))
+      }
+      break
+    }
     case 'sale_start': {
       const initial = asString(p.priceInitialFormatted)
       const final = asString(p.priceFinalFormatted)

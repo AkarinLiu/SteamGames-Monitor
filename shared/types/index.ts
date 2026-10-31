@@ -9,6 +9,7 @@ export type ReleaseStatus = 'coming_soon' | 'released' | 'unknown'
 
 export type EventType =
   | 'release'
+  | 'release_date'
   | 'sale_start'
   | 'sale_change'
   | 'sale_end'

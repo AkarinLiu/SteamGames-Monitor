@@ -99,6 +99,82 @@ describe('deriveMonitorUpdate', () => {
     expect(result.events.map((e) => e.type)).toEqual(['release'])
   })
 
+  it('emits release_date when an exact release date is announced', () => {
+    const result = deriveMonitorUpdate({
+      monitorId: 1,
+      now: NOW,
+      threshold: 20,
+      prev: state({ releaseStatus: 'coming_soon', releaseDateText: '即将推出' }),
+      next: app({ release: { comingSoon: true, dateText: '2026 年 10 月 29 日' } }),
+      unavailableConfirmed: false,
+    })
+    expect(result.events.map((e) => e.type)).toEqual(['release_date'])
+    expect(result.events[0]?.payload.previousReleaseDateText).toBe('即将推出')
+    expect(result.events[0]?.payload.releaseDateText).toBe('2026 年 10 月 29 日')
+  })
+
+  it('emits release_date when an exact release date changes', () => {
+    const result = deriveMonitorUpdate({
+      monitorId: 1,
+      now: NOW,
+      threshold: 20,
+      prev: state({ releaseStatus: 'coming_soon', releaseDateText: '2026 年 10 月 29 日' }),
+      next: app({ release: { comingSoon: true, dateText: '2026 年 11 月 5 日' } }),
+      unavailableConfirmed: false,
+    })
+    expect(result.events.map((e) => e.type)).toEqual(['release_date'])
+  })
+
+  it('does not emit release_date for vague dates, unchanged dates or baselines', () => {
+    const vague = deriveMonitorUpdate({
+      monitorId: 1,
+      now: NOW,
+      threshold: 20,
+      prev: state({ releaseStatus: 'coming_soon', releaseDateText: '2026' }),
+      next: app({ release: { comingSoon: true, dateText: '2026 年 10 月' } }),
+      unavailableConfirmed: false,
+    })
+    expect(vague.events).toEqual([])
+
+    const unchanged = deriveMonitorUpdate({
+      monitorId: 1,
+      now: NOW,
+      threshold: 20,
+      prev: state({ releaseStatus: 'coming_soon', releaseDateText: '2026 年 10 月 29 日' }),
+      next: app({ release: { comingSoon: true, dateText: '2026 年 10 月 29 日' } }),
+      unavailableConfirmed: false,
+    })
+    expect(unchanged.events).toEqual([])
+
+    const baseline = deriveMonitorUpdate({
+      monitorId: 1,
+      now: NOW,
+      threshold: 20,
+      prev: state({
+        baselinePending: true,
+        availability: 'unknown',
+        everAvailable: false,
+        releaseStatus: 'coming_soon',
+        releaseDateText: null,
+      }),
+      next: app({ release: { comingSoon: true, dateText: '2026 年 10 月 29 日' } }),
+      unavailableConfirmed: false,
+    })
+    expect(baseline.events).toEqual([])
+  })
+
+  it('does not emit release_date after the item has released', () => {
+    const result = deriveMonitorUpdate({
+      monitorId: 1,
+      now: NOW,
+      threshold: 20,
+      prev: state({ releaseStatus: 'coming_soon', releaseDateText: '即将推出' }),
+      next: app({ release: { comingSoon: false, dateText: '2026 年 10 月 29 日' } }),
+      unavailableConfirmed: false,
+    })
+    expect(result.events.map((e) => e.type)).toEqual(['release'])
+  })
+
   it('emits sale_start when discount crosses the threshold', () => {
     const result = deriveMonitorUpdate({
       monitorId: 1,

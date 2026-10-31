@@ -170,6 +170,7 @@ Nei canali di notifica è possibile selezionare i tipi di evento da sottoscriver
 | Evento | Descrizione |
 | ------------------- | ---------------------------------------------- |
 | `release` | Uscita ufficiale del gioco / DLC |
+| `release_date` | Data di uscita esatta ottenuta o modificata |
 | `sale_start` | Lo sconto raggiunge la soglia di monitoraggio |
 | `sale_change` | Variazione dello sconto o del prezzo durante una promozione |
 | `sale_end` | Fine dello sconto, ripristino del prezzo originale |

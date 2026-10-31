@@ -44,6 +44,7 @@ export function formatBotMessage(
 
 const EVENT_LABEL_KEYS: Record<EventType, keyof BotMessages> = {
   release: 'eventRelease',
+  release_date: 'eventReleaseDate',
   sale_start: 'eventSaleStart',
   sale_change: 'eventSaleChange',
   sale_end: 'eventSaleEnd',

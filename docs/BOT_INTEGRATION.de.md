@@ -170,6 +170,7 @@ Für Benachrichtigungskanäle können Sie die zu abonnierenden Ereignistypen aus
 | Ereignis | Beschreibung |
 | ------------------- | ---------------------------------------------- |
 | `release` | Spiel / DLC offiziell veröffentlicht |
+| `release_date` | Genaues Veröffentlichungsdatum erhalten oder geändert |
 | `sale_start` | Rabatt erreicht den Überwachungsschwellenwert |
 | `sale_change` | Rabatt oder Preis während einer Rabattaktion geändert |
 | `sale_end` | Rabatt beendet, Rückkehr zum Grundpreis |

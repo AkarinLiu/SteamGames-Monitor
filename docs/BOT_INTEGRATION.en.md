@@ -170,6 +170,7 @@ Notification channels can subscribe to the following event types:
 | Event | Description |
 | ------------------- | ---------------------------------------------- |
 | `release` | Game / DLC officially released |
+| `release_date` | An exact release date was obtained or the release date changed |
 | `sale_start` | Discount reaches the monitor threshold |
 | `sale_change` | Discount or price changes during a sale |
 | `sale_end` | Discount ends and the base price is restored |

@@ -170,6 +170,7 @@ Un canal de notification permet de cocher les types d'événements auxquels s'ab
 | Événement            | Description                                                            |
 | -------------------- | ---------------------------------------------------------------------- |
 | `release`            | Sortie officielle d'un jeu / DLC                                       |
+| `release_date`       | Date de sortie exacte obtenue ou modifiée                              |
 | `sale_start`         | La remise atteint le seuil de surveillance                             |
 | `sale_change`        | Variation de la remise ou du prix pendant une promotion                |
 | `sale_end`           | Fin de la remise, retour au prix initial                               |

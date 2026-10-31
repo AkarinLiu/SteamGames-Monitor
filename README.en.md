@@ -11,7 +11,7 @@ A single process serves the web UI, REST API, Steam polling scheduler, notificat
 
 - **Independent multi-user accounts**: admins create accounts, and each user has their own monitors, events, notification channels, and command bots, with strict data isolation.
 - **Monitors**: appid, store link, or name search; bulk-import all DLC for a base game.
-- **Status changes**: release (coming soon flips), sale start / change / end, base price change, unavailable (delisted), and restored.
+- **Status changes**: release (coming soon flips), release date announced / changed, sale start / change / end, base price change, unavailable (delisted), and restored.
 - **Delisting detection**: the store purchasability state must flip twice in a row before a delisting is confirmed; Steam news keywords provide early warning (heuristic, for reference only).
 - **Notification channels**: WeCom group bot, Feishu custom bot, DingTalk custom bot, custom WebHook, SMTP email; failed deliveries are retried automatically.
 - **Command bots**: Feishu / Lark app bot (one-click QR creation, HTTP callback or WebSocket long connection), DingTalk bot (one-click QR creation, HTTP callback or Stream long connection), WeCom intelligent bot long connection, with QR creation, web authorization for unauthorized users, and event notifications; supports `/add`, `/list`, `/price`, `/check`, `/pause`, `/resume`, `/remove`, `/adddlc`, `/events`, `/cancel`; WeChat ClawBot and QQ Bot are being integrated following the platforms' official protocols.

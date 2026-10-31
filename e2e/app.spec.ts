@@ -173,6 +173,11 @@ test.describe.serial('Steam 销售监控端到端', () => {
     const noEvents = await request.get('/api/events')
     expect(((await noEvents.json()) as { total: number }).total).toBe(0)
 
+    await setMockApp(request, { releaseDate: '2026 年 10 月 29 日' })
+    await checkNow(request, monitorId)
+    const releaseDateEvents = await request.get('/api/events?type=release_date')
+    expect(((await releaseDateEvents.json()) as { total: number }).total).toBe(1)
+
     await setMockApp(request, { comingSoon: false, releaseDate: '2026 年 10 月 29 日' })
     await checkNow(request, monitorId)
 
@@ -193,7 +198,7 @@ test.describe.serial('Steam 销售监控端到端', () => {
     await setMockApp(request, { available: true })
     await checkNow(request, monitorId)
 
-    for (const type of ['release', 'sale_start', 'sale_end', 'delisted', 'restored']) {
+    for (const type of ['release', 'release_date', 'sale_start', 'sale_end', 'delisted', 'restored']) {
       const response = await request.get(`/api/events?type=${type}`)
       const body = (await response.json()) as { total: number }
       expect(body.total, `事件类型 ${type}`).toBe(1)

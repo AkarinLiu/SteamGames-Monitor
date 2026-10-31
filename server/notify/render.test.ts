@@ -52,6 +52,28 @@ describe('notification rendering locale', () => {
     expect(message.webhook).toMatchObject({ title: '[Test] Steam Monitor', kind: 'test' })
   })
 
+  it('renders release date announcements with the previous date', () => {
+    const message = renderEventMessage(
+      {
+        ...event,
+        type: 'release_date',
+        payload: {
+          name: 'Test Game',
+          region: 'us',
+          releaseDateText: 'Oct 29, 2026',
+          previousReleaseDateText: 'Coming soon',
+        },
+      },
+      monitor,
+      'UTC',
+      'en',
+    )
+
+    expect(message.title).toBe('[Release date announced] Test Game')
+    expect(message.text).toContain('Release date confirmed: Oct 29, 2026')
+    expect(message.text).toContain('Previous release date: Coming soon')
+  })
+
   it('falls back to Chinese for unsupported locales', () => {
     const message = renderTestMessage('Webhook', 'UTC', 'not-a-locale')
     expect(message.title).toBe('【测试通知】Steam 监控')

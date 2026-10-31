@@ -94,6 +94,7 @@ export const TIMEZONE_OPTIONS = [
 
 export const EVENT_TYPES = [
   'release',
+  'release_date',
   'sale_start',
   'sale_change',
   'sale_end',
@@ -113,6 +114,12 @@ export const EVENT_META: Record<
     short: '发售',
     severity: 'info',
     description: '游戏或 DLC 结束抢先体验 / 预售，正式发售',
+  },
+  release_date: {
+    label: '发售日期确定',
+    short: '发售日期',
+    severity: 'info',
+    description: '获取到确切的游戏或 DLC 发售日期，或发售日期发生变化',
   },
   sale_start: {
     label: '促销开始',

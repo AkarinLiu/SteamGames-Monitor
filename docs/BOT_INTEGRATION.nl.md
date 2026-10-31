@@ -170,6 +170,7 @@ Bij een notificatiekanaal kunt u de gebeurtenistypen aanvinken waarop u zich abo
 | Gebeurtenis          | Beschrijving                                                                     |
 | -------------------- | -------------------------------------------------------------------------------- |
 | `release`            | Officiële release van een game / DLC                                             |
+| `release_date`       | Exacte releasedatum gevonden of releasedatum gewijzigd                           |
 | `sale_start`         | De korting bereikt de ingestelde drempel                                         |
 | `sale_change`        | Wijziging van de korting of prijs tijdens een actie                              |
 | `sale_end`           | Einde van de korting, terug naar de oorspronkelijke prijs                        |

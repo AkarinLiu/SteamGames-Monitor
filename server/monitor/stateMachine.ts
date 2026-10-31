@@ -9,6 +9,7 @@ import type {
 import type { MonitorPatch } from '../db/repo/monitors'
 import type { MonitorRow } from '../db/rows'
 import type { NormalizedApp } from '../steam/types'
+import { isExactReleaseDate } from './releaseDate'
 
 export interface MonitorState {
   baselinePending: boolean
@@ -139,6 +140,7 @@ export function deriveMonitorUpdate(input: DeriveInput): DeriveResult {
   const priceInitialFormatted = next.price?.initialFormatted ?? null
   const priceFinalFormatted = next.price?.finalFormatted ?? null
   const releaseStatus: ReleaseStatus = next.release.comingSoon ? 'coming_soon' : 'released'
+  const releaseDateText = next.release.dateText
   const saleStartedAt =
     discountPercent > 0
       ? prev.discountPercent > 0 && prev.saleStartedAt
@@ -160,6 +162,23 @@ export function deriveMonitorUpdate(input: DeriveInput): DeriveResult {
             previousStatus: prev.releaseStatus,
           },
           `release:${monitorId}:${now}`,
+        ),
+      )
+    }
+
+    if (
+      releaseStatus === 'coming_soon' &&
+      isExactReleaseDate(releaseDateText) &&
+      releaseDateText !== prev.releaseDateText
+    ) {
+      events.push(
+        event(
+          'release_date',
+          {
+            releaseDateText,
+            previousReleaseDateText: prev.releaseDateText,
+          },
+          `release_date:${monitorId}:${releaseDateText}`,
         ),
       )
     }

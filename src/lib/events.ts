@@ -13,6 +13,14 @@ export function eventSummary(type: EventType, payload: EventPayload): string {
       const date = payloadString(payload.releaseDateText)
       return date ? tf('发售日期 {date}', { date }) : t('游戏已发售')
     }
+    case 'release_date': {
+      const date = payloadString(payload.releaseDateText)
+      const previous = payloadString(payload.previousReleaseDateText)
+      if (date && previous) {
+        return tf('发售日期 {previous} → {date}', { previous, date })
+      }
+      return date ? tf('发售日期 {date}', { date }) : t('发售日期更新')
+    }
     case 'sale_start': {
       const price = payloadString(payload.priceFinalFormatted)
       return price
