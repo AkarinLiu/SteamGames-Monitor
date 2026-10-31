@@ -258,6 +258,15 @@ onMounted(() => {
             <dd>{{ effectiveMinDiscount }}%</dd>
             <dt>{{ $t("新闻预警") }}</dt>
             <dd>{{ monitor.newsWatch ? $t("已启用") : $t("已关闭") }}</dd>
+            <template v-if="monitor.delistingWarningAt">
+              <dt>{{ $t("下架新闻预警") }}</dt>
+              <dd>
+                <StatusBadge :label='$t("即将停售")' tone="badge-warning" />
+                <span class="faint small">
+                  {{ formatDateTime(monitor.delistingWarningAt, timezone) }}
+                </span>
+              </dd>
+            </template>
             <dt>{{ $t("备注") }}</dt>
             <dd style="white-space: pre-line">{{ monitor.notes || '—' }}</dd>
           </dl>

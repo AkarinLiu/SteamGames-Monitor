@@ -1,18 +1,9 @@
 import { ref } from 'vue'
 import type { App } from 'vue'
+import { localeFromLanguageTag, type UiLocale } from '@shared/i18n'
 
-export type UiLocale =
-  | 'zh-CN'
-  | 'zh-TW'
-  | 'en'
-  | 'de'
-  | 'fr'
-  | 'it'
-  | 'ja'
-  | 'ko'
-  | 'ko-KP'
-  | 'nl'
-  | 'ru'
+export { localeFromLanguageTag }
+export type { UiLocale }
 
 export const UI_LOCALE_OPTIONS: Array<{ value: UiLocale; label: string }> = [
   { value: 'zh-CN', label: '简体中文' },
@@ -52,24 +43,6 @@ function isUiLocale(value: string): value is UiLocale {
   return UI_LOCALE_OPTIONS.some((option) => option.value === value)
 }
 
-export function localeFromLanguageTag(tag: string): UiLocale {
-  const normalized = tag.replace('_', '-').toLowerCase()
-  if (normalized === 'zh-tw' || normalized === 'zh-hk' || normalized === 'zh-hant') {
-    return 'zh-TW'
-  }
-  if (normalized.startsWith('zh')) return 'zh-CN'
-  if (normalized.startsWith('ko-kp') || normalized === 'ko-kp') return 'ko-KP'
-  if (normalized.startsWith('ko')) return 'ko'
-  if (normalized.startsWith('en')) return 'en'
-  if (normalized.startsWith('de')) return 'de'
-  if (normalized.startsWith('fr')) return 'fr'
-  if (normalized.startsWith('it')) return 'it'
-  if (normalized.startsWith('ja')) return 'ja'
-  if (normalized.startsWith('nl')) return 'nl'
-  if (normalized.startsWith('ru')) return 'ru'
-  return 'zh-CN'
-}
-
 export function detectUiLocale(): UiLocale {
   const stored = localStorage.getItem(STORAGE_KEY)
   if (stored && isUiLocale(stored)) return stored
@@ -79,6 +52,10 @@ export function detectUiLocale(): UiLocale {
     if (locale !== 'zh-CN' || tag.toLowerCase().startsWith('zh')) return locale
   }
   return 'zh-CN'
+}
+
+export function hasStoredUiLocale(): boolean {
+  return localStorage.getItem(STORAGE_KEY) !== null
 }
 
 export const uiLocale = ref<UiLocale>('zh-CN')

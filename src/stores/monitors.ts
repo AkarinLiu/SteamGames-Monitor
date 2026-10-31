@@ -10,6 +10,7 @@ export interface MonitorStats {
   onSale: number
   unavailable: number
   comingSoon: number
+  delistingSoon: number
   paused: number
   lastCheckAt: number | null
 }

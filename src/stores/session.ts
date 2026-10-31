@@ -1,4 +1,4 @@
-import { t } from '@/i18n'
+import { t, uiLocale } from '@/i18n'
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import type { PublicUser, SetupStatus } from '@shared/types'
@@ -71,7 +71,10 @@ export const useSessionStore = defineStore('session', () => {
   }
 
   async function completeSetup(input: SetupInput): Promise<void> {
-    const result = await api.post<{ user: PublicUser }>('/setup', input)
+    const result = await api.post<{ user: PublicUser }>('/setup', {
+      ...input,
+      uiLocale: uiLocale.value,
+    })
     setUser(result.user)
     setupRequired.value = false
   }
@@ -79,7 +82,7 @@ export const useSessionStore = defineStore('session', () => {
   async function completeOnboarding(input: OnboardingInput): Promise<{ monitorsReset: number }> {
     const result = await api.post<{ user: PublicUser; monitorsReset: number }>(
       '/auth/onboarding',
-      input,
+      { ...input, uiLocale: uiLocale.value },
     )
     setUser(result.user)
     return { monitorsReset: result.monitorsReset }

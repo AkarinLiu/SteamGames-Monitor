@@ -1,3 +1,5 @@
+import type { UiLocale } from '../i18n'
+
 export type Role = 'admin' | 'member'
 export type UserStatus = 'active' | 'disabled'
 
@@ -39,6 +41,7 @@ export interface PublicUser {
   region: string | null
   language: string | null
   timezone: string | null
+  uiLocale: UiLocale
   pollIntervalSeconds: number
   minDiscountPercent: number
   newsEnabled: boolean
@@ -90,6 +93,7 @@ export interface Monitor {
   saleStartedAt: number | null
   unavailableSince: number | null
   delistedNotifiedAt: number | null
+  delistingWarningAt: number | null
   nextCheckAt: number
   nextNewsCheckAt: number | null
   lastCheckAt: number | null
@@ -303,6 +307,7 @@ export interface DashboardStats {
     onSale: number
     unavailable: number
     comingSoon: number
+    delistingSoon: number
     paused: number
   }
   events24h: number

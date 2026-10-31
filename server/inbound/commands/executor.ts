@@ -9,9 +9,15 @@ import {
   softDeleteMonitor,
 } from '../../db/repo/monitors'
 import { clearCommandContext, getCommandContext, setCommandContext } from '../../db/repo/inbound'
-import { addMonitor, importDlcMonitors, type AddMonitorOutcome, type ImportDlcOutcome } from '../../monitor/addMonitor'
+import {
+  addMonitor,
+  importDlcMonitors,
+  type AddMonitorOutcome,
+  type ImportDlcOutcome,
+} from '../../monitor/addMonitor'
 import type { CheckOutcome, CheckOptions } from '../../monitor/checkMonitor'
 import type { SteamRateLimiter } from '../../monitor/rateLimiter'
+import { botMessages, formatBotMessage as fmt, type BotMessages } from '../../i18n'
 import { numericFlag, parseCommand, stringFlag, type ParsedCommand } from './parser'
 import { resolveMonitorTarget } from './resolveTarget'
 import {
@@ -37,93 +43,135 @@ export interface CommandActor {
   role: BotAccessRole
 }
 
-export const HELP_TEXT = [
-  'Steam 销售监控指令',
-  '/help — 查看帮助',
-  '/add <appid|链接|名称> [--discount 20] [--note 备注] [--force] — 添加监控',
-  '/adddlc <本体 appid|链接|名称> [--max 50] — 导入全部 DLC',
-  '/remove <id|appid|名称> — 删除监控',
-  '/pause <id|appid|名称> — 暂停检查',
-  '/resume <id|appid|名称> — 恢复检查',
-  '/check <id|appid|名称> — 立即检查',
-  '/price <id|appid|名称> — 查看当前价格',
-  '/list [--all] [--sale] [--paused] [--page 2] — 查看监控列表',
-  '/events [--item id] [--limit 10] — 查看最近事件',
-  '/cancel — 取消待选择操作',
-  '',
-  '查看者可使用 /help /list /price /events，其余指令需要管理权限。',
-].join('\n')
-
 function ok(lines: string[]): CommandExecutionResult {
   return { ok: true, result: 'ok', lines }
 }
 
-function fail(lines: string[], result: CommandExecutionResult['result'] = 'error'): CommandExecutionResult {
+function fail(
+  lines: string[],
+  result: CommandExecutionResult['result'] = 'error',
+): CommandExecutionResult {
   return { ok: false, result, lines }
 }
 
-function describeAddOutcome(outcome: AddMonitorOutcome): CommandExecutionResult {
+function describeAddError(
+  outcome: Extract<AddMonitorOutcome | ImportDlcOutcome, { status: 'error' }>,
+  messages: BotMessages,
+): string {
+  switch (outcome.code) {
+    case 'onboarding_required':
+      return messages.onboardingRequired
+    case 'not_found':
+      return fmt(messages.searchNotFound, { query: outcome.query ?? '' })
+    case 'network':
+      return messages.steamNetwork
+    case 'timeout':
+      return messages.steamTimeout
+    case 'rate_limited':
+      return messages.steamRateLimited
+    case 'unknown':
+      return messages.unknownError
+    default:
+      return fmt(messages.steamError, { code: outcome.code })
+  }
+}
+
+function describeAddOutcome(
+  outcome: AddMonitorOutcome,
+  messages: BotMessages,
+): CommandExecutionResult {
   switch (outcome.status) {
     case 'added':
       return ok([
-        `已添加监控：${outcome.monitor.name}（${outcome.monitor.appid}）`,
-        `当前状态：${monitorStatusLabel(outcome.monitor)} · 已写入基线，后续变化会推送通知。`,
+        fmt(messages.addAdded, { name: outcome.monitor.name, appid: outcome.monitor.appid }),
+        fmt(messages.addAddedStatus, {
+          status: monitorStatusLabel(outcome.monitor, messages),
+        }),
       ])
     case 'already_exists':
-      return ok([`已在监控中：${formatMonitorLine(outcome.monitor)}`])
+      return ok([
+        fmt(messages.addAlready, { line: formatMonitorLine(outcome.monitor, messages) }),
+      ])
     case 'not_available':
       return fail([
-        `在区域 ${outcome.region} 无法获取该应用（不存在 / 已下架 / 区域不可售）。`,
-        `确认仍要添加请追加 --force，届时只做新闻预警。`,
+        fmt(messages.appNotAvailable, { region: outcome.region }),
+        messages.addForceHint,
       ])
     case 'quota_exceeded':
-      return fail([outcome.message], 'denied')
+      return fail(
+        [
+          outcome.scope === 'user'
+            ? fmt(messages.quotaUser, { limit: outcome.limit })
+            : fmt(messages.quotaSystem, { limit: outcome.limit }),
+        ],
+        'denied',
+      )
     case 'error':
-      return fail([outcome.message])
+      return fail([describeAddError(outcome, messages)])
     default:
-      return fail(['未预期的结果'])
+      return fail([messages.unexpected])
   }
 }
 
-function describeImportOutcome(outcome: ImportDlcOutcome): CommandExecutionResult {
+function describeImportOutcome(
+  outcome: ImportDlcOutcome,
+  messages: BotMessages,
+): CommandExecutionResult {
   switch (outcome.status) {
     case 'ok':
       return ok([
-        `已导入 ${outcome.created.length} 个 DLC，跳过 ${outcome.skipped} 个，失败 ${outcome.failed} 个。`,
-        ...outcome.created.slice(0, 10).map((monitor) => formatMonitorLine(monitor)),
+        fmt(messages.importDone, {
+          created: outcome.created.length,
+          skipped: outcome.skipped,
+          failed: outcome.failed,
+        }),
+        ...outcome.created.slice(0, 10).map((monitor) => formatMonitorLine(monitor, messages)),
       ])
     case 'no_dlc':
-      return ok([`App ${outcome.appid} 没有可导入的 DLC。`])
+      return ok([fmt(messages.importNoDlc, { appid: outcome.appid })])
     case 'not_available':
-      return fail([`在区域 ${outcome.region} 无法获取该应用（不存在 / 已下架 / 区域不可售）。`])
+      return fail([fmt(messages.appNotAvailable, { region: outcome.region })])
     case 'quota_exceeded':
-      return fail([outcome.message], 'denied')
+      return fail(
+        [
+          outcome.scope === 'user'
+            ? fmt(messages.importQuotaUser, {
+                current: outcome.current ?? 0,
+                limit: outcome.limit,
+                maxImport: outcome.maxImport ?? 0,
+              })
+            : fmt(messages.importQuotaSystem, { limit: outcome.limit }),
+        ],
+        'denied',
+      )
     case 'error':
-      return fail([outcome.message])
+      return fail([describeAddError(outcome, messages)])
     default:
-      return fail(['未预期的结果'])
+      return fail([messages.unexpected])
   }
 }
 
-function requireQuery(parsed: ParsedCommand, usage: string): string | null {
-  const query = parsed.args.join(' ').trim()
-  return query || usage
-}
-
-function describeCheck(outcome: CheckOutcome): string {
+function describeCheck(outcome: CheckOutcome, messages: BotMessages): string {
   switch (outcome.status) {
     case 'ok':
-      return `检查完成${outcome.fromCache ? '（使用缓存）' : ''}，新增事件 ${outcome.eventsCreated} 条。`
+      return fmt(outcome.fromCache ? messages.checkDoneCached : messages.checkDone, {
+        count: outcome.eventsCreated,
+      })
     case 'not_found':
-      return 'Steam 未返回该应用（可能已下架或当前区域不可售）。'
+      return messages.checkNotFound
     case 'skipped':
-      return '已跳过：监控项不存在或账号已停用。'
+      return messages.checkSkipped
     default:
-      return `检查失败：${outcome.errorCode ?? '未知错误'}`
+      return fmt(messages.checkFailed, { code: outcome.errorCode ?? messages.unknownError })
   }
 }
 
-function listMonitors(services: CommandServices, user: UserRow, parsed: ParsedCommand): CommandExecutionResult {
+function listMonitors(
+  services: CommandServices,
+  user: UserRow,
+  parsed: ParsedCommand,
+  messages: BotMessages,
+): CommandExecutionResult {
   const page = Math.max(1, numericFlag(parsed.flags, 'page') ?? 1)
   const includePaused = parsed.flags.all === true
   const rows = listMonitorsForCommand(services.db, user.id, {
@@ -134,32 +182,52 @@ function listMonitors(services: CommandServices, user: UserRow, parsed: ParsedCo
   })
   const pageRows = rows.slice((page - 1) * 10)
   if (pageRows.length === 0) {
-    return ok([page === 1 ? '暂无监控项，使用 /add 添加。' : '没有更多监控项。'])
+    return ok([page === 1 ? messages.listEmpty : messages.listNoMore])
   }
-  return ok([`监控项（第 ${page} 页，共 ${rows.length} 条）：`, ...pageRows.map(formatMonitorLine)])
+  return ok([
+    fmt(messages.listHeader, { page, total: rows.length }),
+    ...pageRows.map((monitor) => formatMonitorLine(monitor, messages)),
+  ])
+}
+
+type TargetAction = 'remove' | 'pause' | 'resume' | 'check' | 'price'
+
+const NOT_FOUND_KEYS: Record<TargetAction, keyof BotMessages> = {
+  remove: 'notFoundRemove',
+  pause: 'notFoundPause',
+  resume: 'notFoundResume',
+  check: 'notFoundCheck',
+  price: 'notFoundPrice',
 }
 
 function resolveOne(
   services: CommandServices,
   user: UserRow,
   parsed: ParsedCommand,
-  forWhat: string,
-):
-  | { result: CommandExecutionResult }
-  | { monitor: MonitorRow } {
-  const query = requireQuery(parsed, `用法：/${parsed.command} <id|appid|名称>`)
+  messages: BotMessages,
+  action: TargetAction,
+): { result: CommandExecutionResult } | { monitor: MonitorRow } {
+  const query = parsed.args.join(' ').trim()
   if (!query || !parsed.args.length) {
-    return { result: fail([query ?? '请提供监控项 ID、AppID 或名称。']) }
+    return {
+      result: fail([
+        parsed.args.length
+          ? fmt(messages.usageTarget, { command: parsed.command })
+          : messages.provideTarget,
+      ]),
+    }
   }
   const resolution = resolveMonitorTarget(services.db, user.id, query)
   if (resolution.kind === 'none') {
-    return { result: fail([`未找到用于${forWhat}的监控项「${query}」。`]) }
+    return {
+      result: fail([fmt(messages[NOT_FOUND_KEYS[action]], { query })]),
+    }
   }
   if (resolution.kind === 'many') {
     return {
       result: fail([
-        `「${query}」匹配多个监控项，请改用 ID 或 AppID：`,
-        ...resolution.monitors.map(formatMonitorLine),
+        fmt(messages.manyMatches, { query }),
+        ...resolution.monitors.map((monitor) => formatMonitorLine(monitor, messages)),
       ]),
     }
   }
@@ -171,29 +239,30 @@ async function executeParsed(
   actor: CommandActor,
   user: UserRow,
   parsed: ParsedCommand,
+  messages: BotMessages,
 ): Promise<CommandExecutionResult> {
   const readOnly = new Set(['help', 'list', 'price', 'events'])
   if (actor.role === 'viewer' && !readOnly.has(parsed.command)) {
-    return fail(['未授权：查看者只能使用 /help、/list、/price、/events。'], 'denied')
+    return fail([messages.viewerDenied], 'denied')
   }
 
   switch (parsed.command) {
     case 'help':
-      return ok([HELP_TEXT])
+      return ok([messages.help])
     case 'cancel':
       clearCommandContext(services.db, actor.botAppId, actor.platformUserId, actor.chatId)
-      return ok(['已取消待选择操作。'])
+      return ok([messages.cancelDone])
     case 'list':
-      return listMonitors(services, user, parsed)
+      return listMonitors(services, user, parsed, messages)
     case 'add': {
       const query = parsed.args.join(' ').trim()
-      if (!query) return fail(['用法：/add <appid|链接|名称> [--discount 20] [--note 备注] [--force]'])
+      if (!query) return fail([messages.addUsage])
       const discount = numericFlag(parsed.flags, 'discount')
       if (parsed.flags.discount !== undefined && discount === null) {
-        return fail(['--discount 必须是 0-100 的整数。'], 'parse_error')
+        return fail([messages.discountInvalid], 'parse_error')
       }
       if (discount !== null && discount > 100) {
-        return fail(['--discount 必须是 0-100 的整数。'], 'parse_error')
+        return fail([messages.discountInvalid], 'parse_error')
       }
       const outcome = await addMonitor(
         {
@@ -227,15 +296,15 @@ async function executeParsed(
           expiresAt: Date.now() + 10 * 60_000,
         })
         return ok([
-          `「${outcome.query}」匹配多个结果，请回复序号（10 分钟内有效）：`,
-          ...outcome.results.map((item, index) => `${index + 1}. ${item.name}（${item.appid}）`),
+          fmt(messages.selectionPrompt, { query: outcome.query }),
+          ...outcome.results.map((item, index) => `${index + 1}. ${item.name} (${item.appid})`),
         ])
       }
-      return describeAddOutcome(outcome)
+      return describeAddOutcome(outcome, messages)
     }
     case 'adddlc': {
       const query = parsed.args.join(' ').trim()
-      if (!query) return fail(['用法：/adddlc <本体 appid|链接|名称> [--max 50]'])
+      if (!query) return fail([messages.addDlcUsage])
       const max = numericFlag(parsed.flags, 'max') ?? LIMITS.maxDlcImport
       const outcome = await importDlcMonitors(
         {
@@ -264,39 +333,53 @@ async function executeParsed(
           expiresAt: Date.now() + 10 * 60_000,
         })
         return ok([
-          `「${outcome.query}」匹配多个结果，请回复序号（10 分钟内有效）：`,
-          ...outcome.results.map((item, index) => `${index + 1}. ${item.name}（${item.appid}）`),
+          fmt(messages.selectionPrompt, { query: outcome.query }),
+          ...outcome.results.map((item, index) => `${index + 1}. ${item.name} (${item.appid})`),
         ])
       }
-      return describeImportOutcome(outcome)
+      return describeImportOutcome(outcome, messages)
     }
     case 'remove': {
-      const target = resolveOne(services, user, parsed, '删除')
+      const target = resolveOne(services, user, parsed, messages, 'remove')
       if ('result' in target) return target.result
       softDeleteMonitor(services.db, user.id, target.monitor.id)
-      return ok([`已删除监控：${formatMonitorLine(target.monitor)}`])
+      return ok([
+        fmt(messages.removed, { line: formatMonitorLine(target.monitor, messages) }),
+      ])
     }
     case 'pause':
     case 'resume': {
-      const target = resolveOne(services, user, parsed, parsed.command === 'pause' ? '暂停' : '恢复')
-      if ('result' in target) return target.result
       const enable = parsed.command === 'resume'
+      const target = resolveOne(
+        services,
+        user,
+        parsed,
+        messages,
+        enable ? 'resume' : 'pause',
+      )
+      if ('result' in target) return target.result
       setMonitorEnabled(services.db, user.id, target.monitor.id, enable)
-      return ok([`${enable ? '已恢复' : '已暂停'}：${formatMonitorLine(target.monitor)}`])
+      return ok([
+        fmt(enable ? messages.resumed : messages.paused, {
+          line: formatMonitorLine(target.monitor, messages),
+        }),
+      ])
     }
     case 'check': {
-      const target = resolveOne(services, user, parsed, '检查')
+      const target = resolveOne(services, user, parsed, messages, 'check')
       if ('result' in target) return target.result
       const outcome = await services.checkMonitor(target.monitor.id, {
         force: true,
         source: 'command',
       })
-      return ok([`${target.monitor.name}（${target.monitor.appid}）：${describeCheck(outcome)}`])
+      return ok([
+        `${target.monitor.name} (${target.monitor.appid}): ${describeCheck(outcome, messages)}`,
+      ])
     }
     case 'price': {
-      const target = resolveOne(services, user, parsed, '查询')
+      const target = resolveOne(services, user, parsed, messages, 'price')
       if ('result' in target) return target.result
-      return ok([formatMonitorDetail(target.monitor, user.timezone)])
+      return ok([formatMonitorDetail(target.monitor, user.timezone, messages)])
     }
     case 'events': {
       const limit = Math.min(Math.max(1, numericFlag(parsed.flags, 'limit') ?? 10), 20)
@@ -304,21 +387,32 @@ async function executeParsed(
       const item = stringFlag(parsed.flags, 'item')
       if (item) {
         const resolution = resolveMonitorTarget(services.db, user.id, item)
-        if (resolution.kind === 'none') return fail([`未找到监控项「${item}」。`])
+        if (resolution.kind === 'none') {
+          return fail([fmt(messages.eventsNotFound, { item })])
+        }
         if (resolution.kind === 'many') {
-          return fail(['事件查询匹配多个监控项，请改用 ID 或 AppID。', ...resolution.monitors.map(formatMonitorLine)])
+          return fail([
+            messages.eventsMany,
+            ...resolution.monitors.map((monitor) => formatMonitorLine(monitor, messages)),
+          ])
         }
         monitorId = resolution.monitor.id
       }
-      const { rows } = listEvents(services.db, user.id, { monitorId, page: 1, pageSize: limit })
-      if (rows.length === 0) return ok(['暂无事件记录。'])
+      const { rows } = listEvents(services.db, user.id, {
+        monitorId,
+        page: 1,
+        pageSize: limit,
+      })
+      if (rows.length === 0) return ok([messages.eventsEmpty])
       return ok([
-        '最近事件：',
-        ...rows.map((event) => formatEventLine(event, user.timezone, event.monitorName)),
+        messages.eventsHeader,
+        ...rows.map((event) =>
+          formatEventLine(event, user.timezone, event.monitorName, messages),
+        ),
       ])
     }
     default:
-      return fail(['未知指令，发送 /help 查看用法。'], 'parse_error')
+      return fail([messages.unknownCommandReply], 'parse_error')
   }
 }
 
@@ -327,6 +421,7 @@ async function executeSelection(
   actor: CommandActor,
   user: UserRow,
   text: string,
+  messages: BotMessages,
 ): Promise<CommandExecutionResult | null> {
   if (!/^\d{1,2}$/.test(text.trim())) return null
   const context = getCommandContext(
@@ -346,12 +441,15 @@ async function executeSelection(
   const index = Number(text.trim()) - 1
   const picked = payload.results[index]
   if (!picked) {
-    return fail([`序号无效，请回复 1-${payload.results.length}，或发送 /cancel 取消。`], 'parse_error')
+    return fail(
+      [fmt(messages.selectionInvalid, { count: payload.results.length })],
+      'parse_error',
+    )
   }
   clearCommandContext(services.db, actor.botAppId, actor.platformUserId, actor.chatId)
 
   if (actor.role === 'viewer') {
-    return fail(['未授权：查看者不能添加监控。'], 'denied')
+    return fail([messages.selectionViewerDenied], 'denied')
   }
 
   if (payload.command === 'adddlc') {
@@ -367,10 +465,11 @@ async function executeSelection(
       String(picked.appid),
       Math.min(max, LIMITS.maxDlcImport),
     )
-    return describeImportOutcome(outcome)
+    return describeImportOutcome(outcome, messages)
   }
 
-  const discount = typeof payload.flags.discount === 'string' ? Number(payload.flags.discount) : null
+  const discount =
+    typeof payload.flags.discount === 'string' ? Number(payload.flags.discount) : null
   const outcome = await addMonitor(
     {
       db: services.db,
@@ -387,7 +486,7 @@ async function executeSelection(
       newsWatch: user.news_enabled === 1,
     },
   )
-  return describeAddOutcome(outcome)
+  return describeAddOutcome(outcome, messages)
 }
 
 export async function executeCommand(
@@ -396,10 +495,11 @@ export async function executeCommand(
   user: UserRow,
   text: string,
 ): Promise<CommandExecutionResult> {
-  const selected = await executeSelection(services, actor, user, text)
+  const messages = botMessages(user.ui_locale)
+  const selected = await executeSelection(services, actor, user, text, messages)
   if (selected) return selected
 
-  const parsed = parseCommand(text)
+  const parsed = parseCommand(text, messages)
   if (!parsed.ok) return fail([parsed.error], 'parse_error')
-  return executeParsed(services, actor, user, parsed.parsed)
+  return executeParsed(services, actor, user, parsed.parsed, messages)
 }

@@ -1,0 +1,139 @@
+import type { BotMessages } from './zh-CN'
+
+export const ko: BotMessages = {
+  help: [
+    'Steam 판매 모니터 명령',
+    '/help — 도움말 보기',
+    '/add <appid|링크|이름> [--discount 20] [--note 메모] [--force] — 모니터링 추가',
+    '/adddlc <본체 appid|링크|이름> [--max 50] — 모든 DLC 가져오기',
+    '/remove <id|appid|이름> — 모니터링 삭제',
+    '/pause <id|appid|이름> — 검사 일시 중지',
+    '/resume <id|appid|이름> — 검사 재개',
+    '/check <id|appid|이름> — 지금 검사',
+    '/price <id|appid|이름> — 현재 가격 보기',
+    '/list [--all] [--sale] [--paused] [--page 2] — 모니터링 목록 보기',
+    '/events [--item id] [--limit 10] — 최근 이벤트 보기',
+    '/cancel — 대기 중인 선택 취소',
+    '',
+    '뷰어는 /help /list /price /events를 사용할 수 있으며, 다른 명령은 관리자 권한이 필요합니다.',
+  ].join('\n'),
+  viewerDenied:
+    '권한 없음: 뷰어는 /help, /list, /price, /events만 사용할 수 있습니다.',
+  cancelDone: '대기 중인 선택을 취소했습니다.',
+  unexpected: '예상하지 못한 결과입니다.',
+  unknownCommandReply: '알 수 없는 명령입니다. /help를 보내 사용법을 확인하세요.',
+
+  missingSlash: '명령은 /로 시작해야 합니다. /help를 보내 사용법을 확인하세요.',
+  missingCommand: '명령 이름이 없습니다. /help를 보내 사용법을 확인하세요.',
+  unknownCommandWithName:
+    '알 수 없는 명령 /{command}입니다. /help를 보내 사용 가능한 명령을 확인하세요.',
+
+  statusPaused: '일시중지됨',
+  statusUnavailable: '사용 불가',
+  statusDelistingSoon: '곧 판매 종료',
+  statusComingSoon: '출시 예정',
+  statusUnknown: '검사 대기',
+  statusOnSale: '할인 중',
+  statusAvailable: '판매 중',
+
+  priceFree: '무료',
+  priceWithDiscount: '{price}(-{discount}%)',
+  priceNone: '가격 없음',
+
+  monitorLine: '#{id} {name}({appid}) · {status} · {price}',
+  appidOnly: 'AppID: {appid}',
+  appidWithParent: 'AppID: {appid}(DLC, 본체 {parent})',
+  detailStatus: '상태: {status}',
+  detailPrice: '가격: {price}',
+  detailInitialPrice: '정가: {price}',
+  detailReleaseDate: '출시일: {date}',
+  detailMinDiscount: '최소 할인: {discount}',
+  followAccount: '계정 설정 따름',
+  detailRegionLanguage: '지역 / 언어: {region} / {language}',
+  detailLastCheck: '마지막 검사: {time}',
+  neverChecked: '아직 검사하지 않음',
+  detailFailures: '연속 실패: {count}',
+  detailNotes: '메모: {notes}',
+  detailStore: '상점: {url}',
+
+  eventLine: '{time} · {type} · {name}{suffix}',
+  eventDiscountSuffix: ' · -{discount}%',
+  eventRelease: '게임 발매',
+  eventSaleStart: '할인 시작',
+  eventSaleChange: '할인 변경',
+  eventSaleEnd: '할인 종료',
+  eventPriceChange: '가격 변동',
+  eventDelistingWarning: '판매 중지 경고(휴리스틱)',
+  eventDelisted: '판매 중지 / 구매 불가',
+  eventRestored: '판매 재개',
+  eventCheckError: '검사 오류',
+
+  addUsage: '사용법: /add <appid|링크|이름> [--discount 20] [--note 메모] [--force]',
+  addDlcUsage: '사용법: /adddlc <본체 appid|링크|이름> [--max 50]',
+  discountInvalid: '--discount는 0~100 사이의 정수여야 합니다.',
+  addAdded: '모니터링 추가됨: {name}({appid})',
+  addAddedStatus:
+    '현재 상태: {status} · 기준선을 기록했습니다. 이후 변경 사항은 알림으로 전송됩니다.',
+  addAlready: '이미 모니터링 중: {line}',
+  appNotAvailable:
+    '지역 {region}에서 이 앱을 가져올 수 없습니다(없음 / 판매 중지 / 해당 지역 판매 불가).',
+  addForceHint:
+    '그래도 추가하려면 --force를 붙이세요. 이 경우 뉴스 경고만 수행됩니다.',
+  selectionPrompt:
+    '"{query}"에 여러 결과가 일치합니다. 번호를 회신하세요(10분 동안 유효):',
+  selectionInvalid:
+    '잘못된 번호입니다. 1-{count}로 회신하거나 /cancel을 보내 취소하세요.',
+  selectionViewerDenied: '권한 없음: 뷰어는 모니터링을 추가할 수 없습니다.',
+  importDone: 'DLC {created}개를 가져왔고, {skipped}개를 건너뛰었으며, {failed}개가 실패했습니다.',
+  importNoDlc: 'App {appid}에 가져올 DLC가 없습니다.',
+
+  quotaUser: '계정 모니터링 한도({limit})에 도달했습니다.',
+  quotaSystem: '시스템 모니터링 한도({limit})에 도달했습니다.',
+  importQuotaUser:
+    '모니터링 할당량이 부족합니다: 현재 {current}/{limit}, 이번에 최대 {maxImport}개의 DLC를 가져올 수 있습니다.',
+  importQuotaSystem: '시스템 모니터링 할당량이 부족합니다(한도 {limit}).',
+
+  steamNetwork: 'Steam 상점에 연결할 수 없습니다. 잠시 후 다시 시도하세요.',
+  steamTimeout: 'Steam 상점 응답 시간이 초과되었습니다. 잠시 후 다시 시도하세요.',
+  steamRateLimited: 'Steam 요청이 제한되었습니다. 잠시 후 다시 시도하세요.',
+  steamError: 'Steam 요청 실패({code}).',
+  onboardingRequired: '먼저 지역과 언어 설정을 완료하세요.',
+  searchNotFound: '"{query}"와 일치하는 게임을 찾지 못했습니다.',
+  unknownError: '알 수 없는 오류',
+
+  checkDone: '검사 완료, 새 이벤트 {count}개.',
+  checkDoneCached: '검사 완료(캐시 사용), 새 이벤트 {count}개.',
+  checkNotFound: 'Steam이 이 앱을 반환하지 않았습니다(판매 중지 또는 현재 지역에서 이용 불가일 수 있음).',
+  checkSkipped: '건너뜀: 모니터링이 없거나 계정이 비활성화되었습니다.',
+  checkFailed: '검사 실패: {code}',
+
+  listEmpty: '모니터링이 없습니다. /add로 추가하세요.',
+  listNoMore: '더 이상 모니터링이 없습니다.',
+  listHeader: '모니터링({page}페이지, 총 {total}개):',
+
+  usageTarget: '사용법: /{command} <id|appid|이름>',
+  provideTarget: '모니터링 ID, AppID 또는 이름을 지정하세요.',
+  notFoundRemove: '삭제할 모니터링 "{query}"을(를) 찾지 못했습니다.',
+  notFoundPause: '일시 중지할 모니터링 "{query}"을(를) 찾지 못했습니다.',
+  notFoundResume: '재개할 모니터링 "{query}"을(를) 찾지 못했습니다.',
+  notFoundCheck: '검사할 모니터링 "{query}"을(를) 찾지 못했습니다.',
+  notFoundPrice: '조회할 모니터링 "{query}"을(를) 찾지 못했습니다.',
+  manyMatches: '"{query}"에 여러 모니터링이 일치합니다. ID 또는 AppID를 사용하세요:',
+  removed: '모니터링 삭제됨: {line}',
+  paused: '일시 중지됨: {line}',
+  resumed: '재개됨: {line}',
+
+  eventsNotFound: '모니터링 "{item}"을(를) 찾지 못했습니다.',
+  eventsMany: '이벤트 조회에 여러 모니터링이 일치합니다. ID 또는 AppID를 사용하세요.',
+  eventsEmpty: '아직 이벤트가 없습니다.',
+  eventsHeader: '최근 이벤트:',
+
+  ownerMissing: '봇 소유자 계정이 존재하지 않습니다.',
+  decryptFailed:
+    '봇 자격 증명을 복호화할 수 없습니다. 관리자에게 설정을 다시 입력하도록 요청하세요.',
+  throttled: '요청이 너무 많습니다. 잠시 후 다시 시도하세요(분당 최대 10개 명령).',
+  unauthorized:
+    '권한이 없습니다. 봇 소유자에게 플랫폼 ID를 허용 목록에 추가하도록 요청하세요.',
+  authorizePrompt:
+    '아직 "{bot}" 사용 권한이 없습니다. 아래 링크를 봇 소유자에게 보내세요. 소유자인 경우 브라우저에서 로그인하여 승인하세요(30분 동안 유효):',
+}

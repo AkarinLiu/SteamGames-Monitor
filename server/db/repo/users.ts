@@ -1,5 +1,7 @@
 import type { AdminUserSummary, PublicUser, Role, UserStatus } from '../../../shared/types'
 import { DEFAULT_NEWS_KEYWORDS } from '../../../shared/constants'
+import type { UiLocale } from '../../../shared/i18n'
+import { DEFAULT_UI_LOCALE } from '../../../shared/i18n'
 import type { Db } from '../database'
 import { lastInsertId } from '../database'
 import type { UserRow } from '../rows'
@@ -14,6 +16,7 @@ export interface CreateUserInput {
   region?: string | null
   language?: string | null
   timezone?: string | null
+  uiLocale?: UiLocale
   mustChangePassword?: boolean
   onboardedAt?: number | null
 }
@@ -26,6 +29,7 @@ export interface UserPatch {
   region?: string | null
   language?: string | null
   timezone?: string | null
+  uiLocale?: UiLocale
   mustChangePassword?: boolean
   pollIntervalSeconds?: number
   minDiscountPercent?: number
@@ -43,6 +47,7 @@ const PATCH_COLUMNS: Record<keyof UserPatch, string> = {
   region: 'region',
   language: 'language',
   timezone: 'timezone',
+  uiLocale: 'ui_locale',
   mustChangePassword: 'must_change_password',
   pollIntervalSeconds: 'poll_interval_seconds',
   minDiscountPercent: 'min_discount_percent',
@@ -89,9 +94,9 @@ export function createUser(db: Db, input: CreateUserInput): UserRow {
   const result = db
     .prepare(
       `INSERT INTO users (
-        username, display_name, password_hash, role, status, region, language, timezone,
+        username, display_name, password_hash, role, status, region, language, timezone, ui_locale,
         news_keywords_json, must_change_password, max_monitors, onboarded_at, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, 'active', ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, 'active', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .run(
       input.username,
@@ -101,6 +106,7 @@ export function createUser(db: Db, input: CreateUserInput): UserRow {
       input.region ?? null,
       input.language ?? null,
       input.timezone ?? null,
+      input.uiLocale ?? DEFAULT_UI_LOCALE,
       JSON.stringify(DEFAULT_NEWS_KEYWORDS),
       input.mustChangePassword === false ? 0 : 1,
       input.maxMonitors ?? 200,

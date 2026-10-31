@@ -99,6 +99,7 @@ export function authRoutes(runtime: Runtime): Hono<AppBindings> {
           region: input.region,
           language: input.language,
           timezone: input.timezone,
+          uiLocale: input.uiLocale,
           pollIntervalSeconds: input.pollIntervalSeconds ?? user.poll_interval_seconds,
           minDiscountPercent: input.minDiscountPercent ?? user.min_discount_percent,
           newsEnabled: input.newsEnabled ?? user.news_enabled === 1,

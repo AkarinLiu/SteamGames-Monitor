@@ -473,4 +473,39 @@ export const migrations: Migration[] = [
       `)
     },
   },
+  {
+    version: 7,
+    name: 'delisting warning status',
+    up(db) {
+      db.exec(`
+        ALTER TABLE monitors ADD COLUMN delisting_warning_at INTEGER;
+
+        UPDATE monitors
+        SET delisting_warning_at = (
+          SELECT MAX(e.created_at) FROM events e
+          WHERE e.monitor_id = monitors.id AND e.type = 'delisting_warning'
+        )
+        WHERE availability <> 'unavailable'
+          AND EXISTS (
+            SELECT 1 FROM events e
+            WHERE e.monitor_id = monitors.id AND e.type = 'delisting_warning'
+          )
+          AND NOT EXISTS (
+            SELECT 1 FROM events r
+            WHERE r.monitor_id = monitors.id AND r.type = 'restored'
+              AND r.created_at > (
+                SELECT MAX(e.created_at) FROM events e
+                WHERE e.monitor_id = monitors.id AND e.type = 'delisting_warning'
+              )
+          );
+      `)
+    },
+  },
+  {
+    version: 8,
+    name: 'per-user UI locale',
+    up(db) {
+      db.exec(`ALTER TABLE users ADD COLUMN ui_locale TEXT NOT NULL DEFAULT 'zh-CN';`)
+    },
+  },
 ]

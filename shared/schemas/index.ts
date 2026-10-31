@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { EVENT_TYPES, LIMITS, NEWS_MATCH_MODE_OPTIONS } from '../constants'
+import { UI_LOCALES } from '../i18n'
 
 const trimmed = (min: number, max: number) => z.string().trim().min(min).max(max)
 
@@ -56,6 +57,7 @@ export const NewsKeywordsSchema = z
   .max(LIMITS.maxNewsKeywords)
 
 export const EventTypeSchema = z.enum(EVENT_TYPES)
+export const UiLocaleSchema = z.enum(UI_LOCALES)
 
 // ---------------------------------------------------------------------------
 // Auth / setup
@@ -68,6 +70,7 @@ export const SetupSchema = z.object({
   region: RegionSchema,
   language: LanguageSchema,
   timezone: TimezoneSchema,
+  uiLocale: UiLocaleSchema.optional(),
   pollIntervalSeconds: PollIntervalSchema.optional(),
   minDiscountPercent: NewDiscountSchema.optional(),
   newsKeywords: NewsKeywordsSchema.optional(),
@@ -88,6 +91,7 @@ export const OnboardingSchema = z.object({
   region: RegionSchema,
   language: LanguageSchema,
   timezone: TimezoneSchema,
+  uiLocale: UiLocaleSchema.optional(),
   pollIntervalSeconds: PollIntervalSchema.optional(),
   minDiscountPercent: NewDiscountSchema.optional(),
   newsEnabled: z.boolean().optional(),
@@ -184,7 +188,15 @@ export const ImportDlcSchema = z.object({
 export const MonitorListQuerySchema = z.object({
   q: z.string().trim().max(100).optional(),
   status: z
-    .enum(['all', 'on_sale', 'paused', 'unavailable', 'coming_soon', 'available'])
+    .enum([
+      'all',
+      'on_sale',
+      'paused',
+      'unavailable',
+      'coming_soon',
+      'delisting_soon',
+      'available',
+    ])
     .optional(),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(LIMITS.maxPageSize).default(20),

@@ -26,6 +26,7 @@ export function dashboardRoutes(runtime: Runtime): Hono<AppBindings> {
         onSale: stats.onSale,
         unavailable: stats.unavailable,
         comingSoon: stats.comingSoon,
+        delistingSoon: stats.delistingSoon,
         paused: stats.paused,
       },
       events24h: countEventsSince(db, user.id, Date.now() - 24 * 60 * 60 * 1000),

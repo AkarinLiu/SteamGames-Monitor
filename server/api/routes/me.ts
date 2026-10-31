@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 import { z } from 'zod'
-import { UpdateMeSchema } from '../../../shared/schemas'
+import { UiLocaleSchema, UpdateMeSchema } from '../../../shared/schemas'
 import type { AppBindings } from '../context'
 import type { Runtime } from '../../runtime'
 import { parseJson } from '../respond'
@@ -16,6 +16,8 @@ const DisplayNameOnlySchema = z.object({
 })
 
 const SettingsOnlySchema = UpdateMeSchema.omit({ displayName: true })
+
+const UiLocaleOnlySchema = z.object({ uiLocale: UiLocaleSchema })
 
 export function meRoutes(runtime: Runtime): Hono<AppBindings> {
   const router = new Hono<AppBindings>()
@@ -43,6 +45,20 @@ export function meRoutes(runtime: Runtime): Hono<AppBindings> {
   router.get('/settings', (c) => {
     const user = c.get('user') as UserRow
     return c.json({ user: publicUser(user) })
+  })
+
+  router.patch('/locale', async (c) => {
+    const user = c.get('user') as UserRow
+    const input = await parseJson(c, UiLocaleOnlySchema)
+    const updated = updateUser(db, user.id, { uiLocale: input.uiLocale })
+    writeAudit(db, {
+      actorUserId: user.id,
+      action: 'user.ui_locale_update',
+      target: `user:${user.id}`,
+      detail: { uiLocale: input.uiLocale },
+      ip: getClientIp(c),
+    })
+    return c.json({ user: publicUser(updated as UserRow) })
   })
 
   router.patch('/settings', async (c) => {

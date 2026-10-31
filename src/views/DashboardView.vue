@@ -67,7 +67,7 @@ onBeforeUnmount(() => {
     <ErrorBanner :message="error" />
 
     <div v-if="loading" class="stat-grid">
-      <div v-for="index in 6" :key="index" class="stat">
+      <div v-for="index in 7" :key="index" class="stat">
         <div class="skeleton" style="height: 12px; width: 60%" />
         <div class="skeleton" style="height: 26px; margin-top: 10px; width: 40%" />
       </div>
@@ -89,6 +89,13 @@ onBeforeUnmount(() => {
           {{ stats?.monitors.onSale ?? 0 }}
         </div>
         <div class="stat-foot">{{ $t("达到监控折扣阈值") }}</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">{{ $t("即将停售") }}</div>
+        <div class="stat-value" style="color: var(--color-warning)">
+          {{ stats?.monitors.delistingSoon ?? 0 }}
+        </div>
+        <div class="stat-foot">{{ $t("新闻预警") }}</div>
       </div>
       <div class="stat">
         <div class="stat-label">{{ $t("不可购买") }}</div>

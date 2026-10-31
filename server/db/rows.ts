@@ -35,6 +35,7 @@ export interface UserRow {
   region: string | null
   language: string | null
   timezone: string | null
+  ui_locale: string
   poll_interval_seconds: number
   min_discount_percent: number
   news_enabled: number
@@ -89,6 +90,7 @@ export interface MonitorRow {
   sale_started_at: number | null
   unavailable_since: number | null
   delisted_notified_at: number | null
+  delisting_warning_at: number | null
   next_check_at: number
   next_news_check_at: number | null
   last_check_at: number | null
@@ -239,6 +241,7 @@ export function toPublicUser(row: UserRow): PublicUser {
     region: row.region,
     language: row.language,
     timezone: row.timezone,
+    uiLocale: row.ui_locale as PublicUser['uiLocale'],
     pollIntervalSeconds: Number(row.poll_interval_seconds),
     minDiscountPercent: Number(row.min_discount_percent),
     newsEnabled: row.news_enabled === 1,
@@ -284,6 +287,7 @@ export function toMonitor(row: MonitorRow): Monitor {
     saleStartedAt: row.sale_started_at,
     unavailableSince: row.unavailable_since,
     delistedNotifiedAt: row.delisted_notified_at,
+    delistingWarningAt: row.delisting_warning_at,
     nextCheckAt: Number(row.next_check_at),
     nextNewsCheckAt: row.next_news_check_at,
     lastCheckAt: row.last_check_at,

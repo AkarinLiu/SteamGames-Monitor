@@ -1,65 +1,130 @@
 import type { EventType, MonitorEvent } from '../../../shared/types'
-import { EVENT_META } from '../../../shared/constants'
 import {
-  eventTypeLabel,
   formatDateTime,
-  formatDiscount,
   truncateUtf8,
   utf8Bytes,
 } from '../../../shared/utils'
 import type { MonitorRow } from '../../db/rows'
+import type { BotMessages } from '../../i18n'
+import { formatBotMessage as fmt } from '../../i18n'
 
-export function monitorStatusLabel(monitor: MonitorRow): string {
-  if (monitor.enabled !== 1) return '已暂停'
-  if (monitor.availability === 'unavailable') return '不可用'
-  if (monitor.release_status === 'coming_soon') return '即将发售'
-  if (monitor.availability === 'unknown') return '待检查'
-  if (Number(monitor.discount_percent) > 0) return '促销中'
-  return '在售'
+export function monitorStatusLabel(monitor: MonitorRow, messages: BotMessages): string {
+  if (monitor.enabled !== 1) return messages.statusPaused
+  if (monitor.availability === 'unavailable') return messages.statusUnavailable
+  if (monitor.delisting_warning_at) return messages.statusDelistingSoon
+  if (monitor.release_status === 'coming_soon') return messages.statusComingSoon
+  if (monitor.availability === 'unknown') return messages.statusUnknown
+  if (Number(monitor.discount_percent) > 0) return messages.statusOnSale
+  return messages.statusAvailable
 }
 
-export function monitorPriceText(monitor: MonitorRow): string {
-  if (monitor.is_free === 1) return '免费'
+export function monitorPriceText(monitor: MonitorRow, messages: BotMessages): string {
+  if (monitor.is_free === 1) return messages.priceFree
   const final = monitor.price_final_formatted
   const discount = Number(monitor.discount_percent)
-  if (final) return `${final}${discount > 0 ? `（-${discount}%）` : ''}`
+  if (final) {
+    return discount > 0
+      ? fmt(messages.priceWithDiscount, { price: final, discount })
+      : final
+  }
   if (monitor.price_initial_formatted) return monitor.price_initial_formatted
-  return '暂无价格'
+  return messages.priceNone
 }
 
-export function formatMonitorLine(monitor: MonitorRow): string {
-  return `#${monitor.id} ${monitor.name}（${monitor.appid}）· ${monitorStatusLabel(monitor)} · ${monitorPriceText(monitor)}`
+export function formatMonitorLine(monitor: MonitorRow, messages: BotMessages): string {
+  return fmt(messages.monitorLine, {
+    id: monitor.id,
+    name: monitor.name,
+    appid: monitor.appid,
+    status: monitorStatusLabel(monitor, messages),
+    price: monitorPriceText(monitor, messages),
+  })
 }
 
-export function formatMonitorDetail(monitor: MonitorRow, timezone: string | null): string {
+export function formatMonitorDetail(
+  monitor: MonitorRow,
+  timezone: string | null,
+  messages: BotMessages,
+): string {
   const lines = [
     `#${monitor.id} ${monitor.name}`,
-    `AppID：${monitor.appid}${monitor.parent_appid ? `（DLC，本体 ${monitor.parent_appid}）` : ''}`,
-    `状态：${monitorStatusLabel(monitor)}`,
-    `价格：${monitorPriceText(monitor)}`,
+    monitor.parent_appid
+      ? fmt(messages.appidWithParent, { appid: monitor.appid, parent: monitor.parent_appid })
+      : fmt(messages.appidOnly, { appid: monitor.appid }),
+    fmt(messages.detailStatus, { status: monitorStatusLabel(monitor, messages) }),
+    fmt(messages.detailPrice, { price: monitorPriceText(monitor, messages) }),
   ]
   if (monitor.price_initial_formatted && Number(monitor.discount_percent) > 0) {
-    lines.push(`原价：${monitor.price_initial_formatted}`)
+    lines.push(fmt(messages.detailInitialPrice, { price: monitor.price_initial_formatted }))
   }
-  if (monitor.release_date_text) lines.push(`发售日期：${monitor.release_date_text}`)
-  lines.push(`最低折扣：${monitor.min_discount_percent ?? '跟随账号设置'}`)
-  lines.push(`区域 / 语言：${monitor.region} / ${monitor.language}`)
+  if (monitor.release_date_text) {
+    lines.push(fmt(messages.detailReleaseDate, { date: monitor.release_date_text }))
+  }
   lines.push(
-    `上次检查：${monitor.last_check_at ? formatDateTime(Number(monitor.last_check_at), timezone) : '尚未检查'}`,
+    fmt(messages.detailMinDiscount, {
+      discount: monitor.min_discount_percent ?? messages.followAccount,
+    }),
   )
-  if (monitor.consecutive_failures > 0) lines.push(`连续失败：${monitor.consecutive_failures}`)
-  if (monitor.notes) lines.push(`备注：${monitor.notes}`)
-  lines.push(`商店：${monitor.store_url}`)
+  lines.push(
+    fmt(messages.detailRegionLanguage, {
+      region: monitor.region,
+      language: monitor.language,
+    }),
+  )
+  lines.push(
+    fmt(messages.detailLastCheck, {
+      time: monitor.last_check_at
+        ? formatDateTime(Number(monitor.last_check_at), timezone)
+        : messages.neverChecked,
+    }),
+  )
+  if (monitor.consecutive_failures > 0) {
+    lines.push(fmt(messages.detailFailures, { count: monitor.consecutive_failures }))
+  }
+  if (monitor.notes) lines.push(fmt(messages.detailNotes, { notes: monitor.notes }))
+  lines.push(fmt(messages.detailStore, { url: monitor.store_url }))
   return lines.join('\n')
 }
 
-export function formatEventLine(event: MonitorEvent, timezone: string | null, name?: string): string {
-  const title = name ?? (typeof event.payload.name === 'string' ? event.payload.name : `#${event.monitorId}`)
+const EVENT_LABEL_KEYS: Record<EventType, keyof BotMessages> = {
+  release: 'eventRelease',
+  sale_start: 'eventSaleStart',
+  sale_change: 'eventSaleChange',
+  sale_end: 'eventSaleEnd',
+  price_change: 'eventPriceChange',
+  delisting_warning: 'eventDelistingWarning',
+  delisted: 'eventDelisted',
+  restored: 'eventRestored',
+  check_error: 'eventCheckError',
+}
+
+export function eventLabel(type: string, messages: BotMessages): string {
+  const key = EVENT_LABEL_KEYS[type as EventType]
+  return key ? messages[key] : type
+}
+
+export function formatEventLine(
+  event: MonitorEvent,
+  timezone: string | null,
+  name: string | undefined,
+  messages: BotMessages,
+): string {
+  const title =
+    name ??
+    (typeof event.payload.name === 'string' ? event.payload.name : `#${event.monitorId}`)
   const time = formatDateTime(event.createdAt, timezone)
-  const label = eventTypeLabel(event.type)
-  const discount = typeof event.payload.discountPercent === 'number' ? event.payload.discountPercent : null
-  const suffix = discount !== null && discount > 0 ? ` · ${formatDiscount(discount)}` : ''
-  return `${time} · ${label} · ${title}${suffix}`
+  const discount =
+    typeof event.payload.discountPercent === 'number' ? event.payload.discountPercent : null
+  const suffix =
+    discount !== null && discount > 0
+      ? fmt(messages.eventDiscountSuffix, { discount: discount })
+      : ''
+  return fmt(messages.eventLine, {
+    time,
+    type: eventLabel(event.type, messages),
+    name: title,
+    suffix,
+  })
 }
 
 function splitByLimit(text: string, limit: number, measure: (value: string) => number): string[] {
@@ -114,10 +179,6 @@ export function splitReply(
   const chunks = splitByLimit(text, limit - 10, measure)
   if (chunks.length <= 1) return chunks
   return chunks.map((chunk, index) => `(${index + 1}/${chunks.length}) ${chunk}`)
-}
-
-export function formatEventType(type: string): string {
-  return EVENT_META[type as EventType]?.label ?? type
 }
 
 export function truncateForReply(text: string, maxBytes = 3500): string {

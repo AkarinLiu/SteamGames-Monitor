@@ -29,6 +29,7 @@ function state(overrides: Partial<MonitorState> = {}): MonitorState {
     saleStartedAt: null,
     unavailableSince: null,
     delistedNotifiedAt: null,
+    delistingWarningAt: null,
     consecutiveUnavailable: 0,
     ...overrides,
   }
@@ -259,6 +260,35 @@ describe('deriveMonitorUpdate', () => {
     expect(result.events.map((e) => e.type)).toEqual(['restored'])
     expect(result.patch.delistedNotifiedAt).toBeNull()
     expect(result.patch.unavailableSince).toBeNull()
+  })
+
+  it('keeps a delisting warning during routine available checks', () => {
+    const result = deriveMonitorUpdate({
+      monitorId: 1,
+      now: NOW,
+      threshold: 20,
+      prev: state({ delistingWarningAt: NOW - 60_000 }),
+      next: app(),
+      unavailableConfirmed: false,
+    })
+    expect(result.patch.delistingWarningAt).toBe(NOW - 60_000)
+  })
+
+  it('clears the delisting warning when an unavailable item is restored', () => {
+    const result = deriveMonitorUpdate({
+      monitorId: 1,
+      now: NOW,
+      threshold: 20,
+      prev: state({
+        availability: 'unavailable',
+        unavailableSince: NOW - 3_600_000,
+        consecutiveUnavailable: 2,
+        delistingWarningAt: NOW - 7_200_000,
+      }),
+      next: app(),
+      unavailableConfirmed: false,
+    })
+    expect(result.patch.delistingWarningAt).toBeNull()
   })
 
   it('treats the first ever successful check as restored for forced adds', () => {

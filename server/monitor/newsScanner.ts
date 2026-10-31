@@ -178,6 +178,7 @@ export class NewsScanner {
         })
         if (!created) return
         attachNewsEvent(db, monitor.id, item.gid, event.id)
+        updateMonitor(db, monitor.id, { delistingWarningAt: now })
         eventsCreated += 1
         enqueueEventDeliveries(db, event)
       })

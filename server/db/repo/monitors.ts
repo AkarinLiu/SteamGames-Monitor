@@ -49,6 +49,7 @@ export interface MonitorPatch {
   saleStartedAt?: number | null
   unavailableSince?: number | null
   delistedNotifiedAt?: number | null
+  delistingWarningAt?: number | null
   nextCheckAt?: number
   nextNewsCheckAt?: number | null
   lastCheckAt?: number | null
@@ -85,6 +86,7 @@ const PATCH_COLUMNS: Record<keyof MonitorPatch, string> = {
   saleStartedAt: 'sale_started_at',
   unavailableSince: 'unavailable_since',
   delistedNotifiedAt: 'delisted_notified_at',
+  delistingWarningAt: 'delisting_warning_at',
   nextCheckAt: 'next_check_at',
   nextNewsCheckAt: 'next_news_check_at',
   lastCheckAt: 'last_check_at',
@@ -174,7 +176,14 @@ export function findMonitorByAppidIncludeDeleted(
 
 export interface MonitorListFilters {
   q?: string
-  status?: 'all' | 'on_sale' | 'paused' | 'unavailable' | 'coming_soon' | 'available'
+  status?:
+    | 'all'
+    | 'on_sale'
+    | 'paused'
+    | 'unavailable'
+    | 'coming_soon'
+    | 'delisting_soon'
+    | 'available'
   page: number
   pageSize: number
   sort?: 'recent' | 'name' | 'last_check' | 'next_check'
@@ -204,6 +213,9 @@ export function listMonitors(
       break
     case 'coming_soon':
       where.push("release_status = 'coming_soon'")
+      break
+    case 'delisting_soon':
+      where.push("delisting_warning_at IS NOT NULL AND availability != 'unavailable'")
       break
     case 'available':
       where.push("availability = 'available'")
@@ -343,6 +355,7 @@ export function restoreMonitor(db: Db, input: RestoreMonitorInput): MonitorRow {
       sale_started_at = NULL,
       unavailable_since = NULL,
       delisted_notified_at = NULL,
+      delisting_warning_at = NULL,
       consecutive_failures = 0,
       consecutive_unavailable = 0,
       name = ?,
@@ -397,6 +410,7 @@ export function resetMonitorsForRegion(db: Db, userId: number, region: string, n
         sale_started_at = NULL,
         unavailable_since = NULL,
         delisted_notified_at = NULL,
+        delisting_warning_at = NULL,
         consecutive_failures = 0,
         consecutive_unavailable = 0,
         next_check_at = ?,
@@ -477,6 +491,7 @@ export interface MonitorStats {
   onSale: number
   unavailable: number
   comingSoon: number
+  delistingSoon: number
   paused: number
   lastCheckAt: number | null
 }
@@ -490,6 +505,7 @@ export function getMonitorStats(db: Db, userId: number): MonitorStats {
         COALESCE(SUM(CASE WHEN availability = 'available' AND discount_percent > 0 THEN 1 ELSE 0 END), 0) AS on_sale,
         COALESCE(SUM(CASE WHEN availability = 'unavailable' THEN 1 ELSE 0 END), 0) AS unavailable,
         COALESCE(SUM(CASE WHEN release_status = 'coming_soon' THEN 1 ELSE 0 END), 0) AS coming_soon,
+        COALESCE(SUM(CASE WHEN delisting_warning_at IS NOT NULL AND availability != 'unavailable' THEN 1 ELSE 0 END), 0) AS delisting_soon,
         COALESCE(SUM(CASE WHEN enabled = 0 THEN 1 ELSE 0 END), 0) AS paused,
         MAX(last_check_at) AS last_check_at
        FROM monitors WHERE user_id = ? AND deleted_at IS NULL`,
@@ -500,6 +516,7 @@ export function getMonitorStats(db: Db, userId: number): MonitorStats {
     on_sale: number
     unavailable: number
     coming_soon: number
+    delisting_soon: number
     paused: number
     last_check_at: number | null
   }
@@ -509,6 +526,7 @@ export function getMonitorStats(db: Db, userId: number): MonitorStats {
     onSale: Number(row.on_sale),
     unavailable: Number(row.unavailable),
     comingSoon: Number(row.coming_soon),
+    delistingSoon: Number(row.delisting_soon),
     paused: Number(row.paused),
     lastCheckAt: row.last_check_at,
   }

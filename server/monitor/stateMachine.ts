@@ -26,6 +26,7 @@ export interface MonitorState {
   saleStartedAt: number | null
   unavailableSince: number | null
   delistedNotifiedAt: number | null
+  delistingWarningAt: number | null
   consecutiveUnavailable: number
 }
 
@@ -68,6 +69,7 @@ export function monitorRowToState(row: MonitorRow): MonitorState {
     saleStartedAt: row.sale_started_at,
     unavailableSince: row.unavailable_since,
     delistedNotifiedAt: row.delisted_notified_at,
+    delistingWarningAt: row.delisting_warning_at,
     consecutiveUnavailable: Number(row.consecutive_unavailable),
   }
 }
@@ -297,6 +299,7 @@ export function deriveMonitorUpdate(input: DeriveInput): DeriveResult {
       saleStartedAt,
       unavailableSince: null,
       delistedNotifiedAt: null,
+      delistingWarningAt: wasUnavailable ? null : prev.delistingWarningAt,
       consecutiveUnavailable: 0,
     },
     events,

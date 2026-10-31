@@ -1,4 +1,6 @@
 import { expect, test, type APIRequestContext, type Page } from '@playwright/test'
+import { DatabaseSync } from 'node:sqlite'
+import path from 'node:path'
 
 const MOCK = 'http://127.0.0.1:9998'
 const ADMIN_USERNAME = 'admin'
@@ -210,6 +212,40 @@ test.describe.serial('Steam 销售监控端到端', () => {
 
     await page.goto(`/monitors/${monitorId}`)
     await expect(page.getByRole('heading', { name: APP_NAME })).toBeVisible()
+
+    await test.step('即将停售状态', async () => {
+      const dbPath = path.resolve('data/e2e/steam-monitor.db')
+      const sqlite = new DatabaseSync(dbPath)
+      sqlite.exec('PRAGMA busy_timeout = 5000')
+      try {
+        sqlite
+          .prepare('UPDATE monitors SET delisting_warning_at = ? WHERE id = ?')
+          .run(Date.now(), monitorId)
+      } finally {
+        sqlite.close()
+      }
+
+      await page.goto('/monitors')
+      const row = page.getByRole('row', { name: new RegExp(APP_NAME) })
+      await expect(row.getByText('即将停售', { exact: true })).toBeVisible()
+
+      await page.getByLabel('状态筛选').selectOption('delisting_soon')
+      await expect(page.getByRole('row', { name: new RegExp(APP_NAME) })).toBeVisible()
+
+      await page.goto('/')
+      const card = page.locator('.stat').filter({ hasText: '即将停售' })
+      await expect(card).toContainText('1')
+
+      const cleanup = new DatabaseSync(dbPath)
+      cleanup.exec('PRAGMA busy_timeout = 5000')
+      try {
+        cleanup
+          .prepare('UPDATE monitors SET delisting_warning_at = NULL WHERE id = ?')
+          .run(monitorId)
+      } finally {
+        cleanup.close()
+      }
+    })
 
     await test.step('三平台机器人配置与模拟指令', async () => {
       const bots = [
@@ -556,6 +592,15 @@ test.describe.serial('Steam 销售监控端到端', () => {
 
     await page.reload()
     await expect(page.getByRole('heading', { name: 'Command bots' })).toBeVisible()
+
+    const bots = (await (await page.request.get('/api/bots')).json()) as BotListResponse
+    const botId = bots.items[0]?.id ?? 0
+    expect(botId).toBeGreaterThan(0)
+    const botReply = await page.request.post(`/api/bots/${botId}/test-inbound`, {
+      data: { text: '/help' },
+    })
+    const botReplyBody = (await botReply.json()) as { lines: string[] }
+    expect(botReplyBody.lines.join('\n')).toContain('Steam Sales Monitor commands')
 
     for (const locale of ['de', 'fr', 'it', 'ja', 'ko', 'ko-KP', 'nl', 'ru', 'zh-TW']) {
       await page.getByLabel('UI locale').selectOption(locale)

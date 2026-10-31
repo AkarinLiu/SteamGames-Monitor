@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { openDatabase, type Db } from './database'
+import { DatabaseSync } from 'node:sqlite'
+import { openDatabase, runMigrations, type Db } from './database'
+import { migrations } from './migrations'
 import { countActiveAdmins, createUser, findUserByUsername, updateUser } from './repo/users'
 import { createSession, findSessionWithUser } from './repo/sessions'
 import { createMonitor, findMonitorByAppid, listMonitors } from './repo/monitors'
@@ -55,6 +57,48 @@ describe('database schema', () => {
     ]) {
       expect(names).toContain(table)
     }
+  })
+
+  it('backfills the delisting warning status from existing warning events', () => {
+    const raw = new DatabaseSync(':memory:')
+    raw.exec(
+      'CREATE TABLE schema_migrations (version INTEGER PRIMARY KEY, applied_at INTEGER NOT NULL)',
+    )
+    raw.exec('PRAGMA foreign_keys = ON')
+    for (const migration of migrations.filter((item) => item.version <= 6)) {
+      migration.up(raw)
+      raw
+        .prepare('INSERT INTO schema_migrations (version, applied_at) VALUES (?, ?)')
+        .run(migration.version, Date.now())
+    }
+    raw.exec(`
+      INSERT INTO users (username, display_name, password_hash, created_at, updated_at)
+      VALUES ('backfill', 'Backfill', 'scrypt$test', 1, 1);
+
+      INSERT INTO monitors
+        (user_id, appid, kind, name, store_url, region, language, next_check_at, created_at, updated_at)
+      VALUES
+        (1, 1, 'game', 'Still Warned', 'https://store.steampowered.com/app/1/', 'cn', 'schinese', 1, 1, 1),
+        (1, 2, 'game', 'Already Restored', 'https://store.steampowered.com/app/2/', 'cn', 'schinese', 1, 1, 1);
+
+      INSERT INTO events
+        (monitor_id, user_id, type, severity, payload_json, dedupe_key, source, created_at)
+      VALUES
+        (1, 1, 'delisting_warning', 'warning', '{}', 'warn-1', 'steam', 2000),
+        (1, 1, 'restored', 'info', '{}', 'restored-1', 'steam', 1000),
+        (2, 1, 'delisting_warning', 'warning', '{}', 'warn-2', 'steam', 2000),
+        (2, 1, 'restored', 'info', '{}', 'restored-2', 'steam', 3000);
+    `)
+
+    runMigrations(raw)
+    const rows = raw
+      .prepare('SELECT id, delisting_warning_at FROM monitors ORDER BY id')
+      .all() as Array<{ id: number; delisting_warning_at: number | null }>
+    expect(rows).toEqual([
+      { id: 1, delisting_warning_at: 2000 },
+      { id: 2, delisting_warning_at: null },
+    ])
+    raw.close()
   })
 
   it('enforces case-insensitive usernames', () => {

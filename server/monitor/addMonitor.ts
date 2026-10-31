@@ -40,24 +40,42 @@ export type AddMonitorOutcome =
   | { status: 'already_exists'; monitor: MonitorRow }
   | { status: 'selection_required'; query: string; results: SteamSearchResult[] }
   | { status: 'not_available'; appid: number; region: string }
-  | { status: 'quota_exceeded'; message: string }
-  | { status: 'error'; code: string; message: string }
+  | { status: 'quota_exceeded'; message: string; scope: 'user' | 'system'; limit: number }
+  | { status: 'error'; code: string; message: string; query?: string }
 
 export type ImportDlcOutcome =
   | { status: 'ok'; created: MonitorRow[]; skipped: number; failed: number }
   | { status: 'selection_required'; query: string; results: SteamSearchResult[] }
   | { status: 'not_available'; appid: number; region: string }
   | { status: 'no_dlc'; appid: number }
-  | { status: 'quota_exceeded'; message: string }
-  | { status: 'error'; code: string; message: string }
+  | {
+      status: 'quota_exceeded'
+      message: string
+      scope: 'user' | 'system'
+      limit: number
+      current?: number
+      maxImport?: number
+    }
+  | { status: 'error'; code: string; message: string; query?: string }
 
-function quotaMessage(ctx: AddContext, user: UserRow): string | null {
+function quotaInfo(
+  ctx: AddContext,
+  user: UserRow,
+): { scope: 'user' | 'system'; limit: number; message: string } | null {
   const userLimit = Math.min(Number(user.max_monitors), LIMITS.maxMonitorsPerUser)
   if (countMonitorsForUser(ctx.db, user.id) >= userLimit) {
-    return `已达到账号监控项上限（${userLimit}）`
+    return {
+      scope: 'user',
+      limit: userLimit,
+      message: `已达到账号监控项上限（${userLimit}）`,
+    }
   }
   if (countAllMonitors(ctx.db) >= ctx.maxTotalMonitors) {
-    return `已达到系统监控项总上限（${ctx.maxTotalMonitors}）`
+    return {
+      scope: 'system',
+      limit: ctx.maxTotalMonitors,
+      message: `已达到系统监控项总上限（${ctx.maxTotalMonitors}）`,
+    }
   }
   return null
 }
@@ -99,7 +117,12 @@ export async function addMonitor(
   }
   if (resolved.kind === 'search') {
     if (resolved.results.length === 0) {
-      return { status: 'error', code: 'not_found', message: `未找到与「${resolved.query}」匹配的游戏` }
+      return {
+        status: 'error',
+        code: 'not_found',
+        message: `未找到与「${resolved.query}」匹配的游戏`,
+        query: resolved.query,
+      }
     }
     return { status: 'selection_required', query: resolved.query, results: resolved.results }
   }
@@ -110,8 +133,8 @@ export async function addMonitor(
     return { status: 'already_exists', monitor: existing }
   }
 
-  const quota = quotaMessage(ctx, user)
-  if (quota) return { status: 'quota_exceeded', message: quota }
+  const quota = quotaInfo(ctx, user)
+  if (quota) return { status: 'quota_exceeded', ...quota }
 
   let fetched: AppDetailsResult
   try {
@@ -205,7 +228,12 @@ export async function importDlcMonitors(
   }
   if (resolved.kind === 'search') {
     if (resolved.results.length === 0) {
-      return { status: 'error', code: 'not_found', message: `未找到与「${resolved.query}」匹配的游戏` }
+      return {
+        status: 'error',
+        code: 'not_found',
+        message: `未找到与「${resolved.query}」匹配的游戏`,
+        query: resolved.query,
+      }
     }
     return { status: 'selection_required', query: resolved.query, results: resolved.results }
   }
@@ -233,12 +261,18 @@ export async function importDlcMonitors(
   if (existingCount + ids.length > limit) {
     return {
       status: 'quota_exceeded',
+      scope: 'user',
+      limit,
+      current: existingCount,
+      maxImport: Math.max(0, limit - existingCount),
       message: `监控项配额不足：当前 ${existingCount}/${limit}，本次最多可导入 ${Math.max(0, limit - existingCount)} 个 DLC`,
     }
   }
   if (countAllMonitors(db) + ids.length > ctx.maxTotalMonitors) {
     return {
       status: 'quota_exceeded',
+      scope: 'system',
+      limit: ctx.maxTotalMonitors,
       message: `系统监控项总配额不足（上限 ${ctx.maxTotalMonitors}）`,
     }
   }

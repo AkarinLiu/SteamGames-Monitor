@@ -218,4 +218,27 @@ describe('InboundDispatcher', () => {
     expect(third.join(' ')).toContain('操作过于频繁')
     expect(fourth).toEqual([])
   })
+
+  it('机器人回复跟随账号 UI 语言', async () => {
+    const { updateUser } = await import('../db/repo/users')
+    updateUser(db, user.id, { uiLocale: 'en' })
+
+    const help = await dispatcher.handleInline(event({ text: '/help' }))
+    expect(help.join('\n')).toContain('Steam Sales Monitor commands')
+    expect(help.join('\n')).not.toContain('Steam 销售监控指令')
+
+    const unknown = await dispatcher.handleInline(
+      event({ platformMessageId: 'msg-en-2', text: '/nope' }),
+    )
+    expect(unknown.join(' ')).toContain('Unknown command /nope')
+
+    const denied = await dispatcher.handleInline(
+      event({
+        platformUserId: 'ou_viewer',
+        platformMessageId: 'msg-en-3',
+        text: '/add 1091500',
+      }),
+    )
+    expect(denied.join(' ')).toContain('Not authorized')
+  })
 })

@@ -15,6 +15,7 @@ import { createDelivery } from '../db/repo/deliveries'
 import { decryptConfig, botAad, SecretDecryptError } from '../notify/secrets'
 import { createBotAuthorizationRequest } from '../bots/authorization'
 import { logger } from '../lib/logger'
+import { botMessages, formatBotMessage as fmt } from '../i18n'
 import { normalizeCommandText } from './commands/parser'
 import { executeCommand, type CommandActor, type CommandServices } from './commands/executor'
 import type { InboundEvent } from './types'
@@ -110,7 +111,9 @@ export class InboundDispatcher {
 
   async runAsOwner(bot: BotAppRow, text: string): Promise<{ lines: string[]; result: string }> {
     const owner = findUserById(this.options.db, bot.user_id)
-    if (!owner) return { lines: ['机器人所属账号不存在。'], result: 'error' }
+    if (!owner) {
+      return { lines: [botMessages('zh-CN').ownerMissing], result: 'error' }
+    }
     const actor: CommandActor = {
       botAppId: bot.id,
       platform: bot.platform as BotPlatform,
@@ -196,6 +199,7 @@ export class InboundDispatcher {
     if (!owner || owner.status !== 'active') {
       return { lines: [], status: 'ignored', deliver: false }
     }
+    const messages = botMessages(owner.ui_locale)
 
     const normalized = normalizeCommandText(event.text)
     const isCommand = normalized.startsWith('/')
@@ -210,7 +214,7 @@ export class InboundDispatcher {
       if (error instanceof SecretDecryptError) {
         this.record(bot, event, 'help', {}, 'failed', error.message, started)
         return {
-          lines: ['机器人凭据无法解密，请管理员在后台重新填写配置。'],
+          lines: [messages.decryptFailed],
           status: 'failed',
           error: error.message,
           deliver: true,
@@ -240,7 +244,7 @@ export class InboundDispatcher {
       const notify = now - notifiedAt > windowMs
       if (notify) this.throttleNotified.set(key, now)
       return {
-        lines: notify ? ['操作过于频繁，请稍后再试（每分钟最多 10 条指令）。'] : [],
+        lines: notify ? [messages.throttled] : [],
         status: 'throttled',
         deliver: notify,
       }
@@ -249,7 +253,7 @@ export class InboundDispatcher {
     const role = this.resolveRole(bot, event.platformUserId)
     if (!role) {
       this.record(bot, event, 'denied', {}, 'denied', 'not in allowlist', started)
-      let lines = ['未授权，请联系机器人所有者将你的平台 ID 加入允许名单。']
+      let lines = [messages.unauthorized]
       try {
         const link = createBotAuthorizationRequest(this.options.db, {
           bot,
@@ -258,7 +262,7 @@ export class InboundDispatcher {
           chatId: event.chatId,
         })
         lines = [
-          `你还没有使用「${bot.name}」的权限。请将以下链接发送给机器人所有者；如果你是所有者，可直接在浏览器登录并批准（30 分钟内有效）：`,
+          fmt(messages.authorizePrompt, { bot: bot.name }),
           link.url,
         ]
       } catch (error) {

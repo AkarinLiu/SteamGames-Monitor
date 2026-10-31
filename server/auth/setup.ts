@@ -30,6 +30,7 @@ export async function completeSetup(
       region: input.region,
       language: input.language,
       timezone: input.timezone,
+      uiLocale: input.uiLocale,
       mustChangePassword: false,
       onboardedAt: now,
     })

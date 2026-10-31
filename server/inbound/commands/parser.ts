@@ -1,3 +1,9 @@
+import {
+  botMessages,
+  formatBotMessage as fmt,
+  type BotMessages,
+} from '../../i18n'
+
 export interface ParsedCommand {
   command: string
   args: string[]
@@ -57,17 +63,23 @@ export function normalizeCommandText(input: string): string {
     .trim()
 }
 
-export function parseCommand(input: string): ParseResult {
+export function parseCommand(
+  input: string,
+  messages: BotMessages = botMessages('zh-CN'),
+): ParseResult {
   const text = normalizeCommandText(input)
   if (!text.startsWith('/')) {
-    return { ok: false, error: '指令必须以 / 开头，发送 /help 查看用法。' }
+    return { ok: false, error: messages.missingSlash }
   }
   const tokens = tokenize(text.slice(1))
   const head = tokens.shift()
-  if (!head) return { ok: false, error: '缺少指令名称，发送 /help 查看用法。' }
+  if (!head) return { ok: false, error: messages.missingCommand }
   const command = head.split('@')[0]!.toLowerCase()
   if (!SUPPORTED.has(command)) {
-    return { ok: false, error: `未知指令 /${command}，发送 /help 查看可用指令。` }
+    return {
+      ok: false,
+      error: fmt(messages.unknownCommandWithName, { command }),
+    }
   }
 
   const args: string[] = []

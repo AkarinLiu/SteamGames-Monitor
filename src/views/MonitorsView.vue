@@ -295,6 +295,7 @@ onMounted(() => {
       />
       <select v-model="filters.status" class="select" :aria-label='$t("状态筛选")' @change="applyFilters">
         <option value="all">{{ $t("全部状态") }}</option>
+        <option value="delisting_soon">{{ $t("即将停售") }}</option>
         <option value="on_sale">{{ $t("促销中") }}</option>
         <option value="available">{{ $t("正常在售") }}</option>
         <option value="coming_soon">{{ $t("即将发售") }}</option>
