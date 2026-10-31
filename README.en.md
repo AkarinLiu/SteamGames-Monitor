@@ -70,13 +70,13 @@ In proxy environments you can use `HTTPS_PROXY`, `NODE_USE_ENV_PROXY=1`, and `NO
 
 ## Docker Compose deployment
 
-GitHub Actions publishes snapshot images (`dev`) on pushes to the `main` branch, and on stable version tags (e.g. `v1.1.0`) publishes a semantic version and points `latest` at that stable version:
+GitHub Actions publishes snapshot images (`dev`) on pushes to the `main` branch, and on stable version tags (e.g. `v1.1.1`) publishes a semantic version and points `latest` at that stable version:
 
 ```bash
 # Latest stable
 docker pull akarinliu2000/steamgames-monitor:latest
-# Current 1.1.0 stable
-docker pull akarinliu2000/steamgames-monitor:1.1.0
+# Current 1.1.1 stable
+docker pull akarinliu2000/steamgames-monitor:1.1.1
 # Latest snapshot from the main branch
 docker pull akarinliu2000/steamgames-monitor:dev
 ```
@@ -85,12 +85,12 @@ Images support `linux/amd64` and `linux/arm64`; Docker selects the right one for
 
 | Tag | Base image | Description |
 | --- | --- | --- |
-| `latest` / `1.1.0` / `1.1` | Debian slim (`node:24-bookworm-slim`) | Latest stable |
-| `latest-alpine` / `1.1.0-alpine` / `1.1-alpine` | Alpine (`node:24-alpine`) | Latest stable, Alpine |
+| `latest` / `1.1.1` / `1.1` | Debian slim (`node:24-bookworm-slim`) | Latest stable |
+| `latest-alpine` / `1.1.1-alpine` / `1.1-alpine` | Alpine (`node:24-alpine`) | Latest stable, Alpine |
 | `dev` | Debian slim | Latest snapshot from the `main` branch |
 | `dev-alpine` | Alpine | Latest Alpine snapshot from the `main` branch |
 
-`latest` only moves on non-prerelease tags (e.g. `v1.1.0`); tags with `-rc` / `-beta` do not overwrite `latest`. Regular commits to the `main` branch only update `dev` / `dev-alpine` and `sha-*` tags.
+`latest` only moves on non-prerelease tags (e.g. `v1.1.1`); tags with `-rc` / `-beta` do not overwrite `latest`. Regular commits to the `main` branch only update `dev` / `dev-alpine` and `sha-*` tags.
 
 ```bash
 docker pull akarinliu2000/steamgames-monitor:latest-alpine
@@ -145,7 +145,7 @@ Docker Hub: <https://hub.docker.com/r/akarinliu2000/steamgames-monitor> (`akarin
 `.github/workflows/dockerhub.yml` publishes a `dev` snapshot on pushes to the `main` branch, and on stable version tag pushes publishes a semantic version and updates `latest`:
 
 - The repository secrets must define `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` (a Docker Hub access token with Read & Write permission).
-- Current images: `docker.io/akarinliu2000/steamgames-monitor:latest`, `:1.1.0`, `:dev` (Debian), plus the corresponding `-alpine` variants, all multi-arch amd64/arm64.
+- Current images: `docker.io/akarinliu2000/steamgames-monitor:latest`, `:1.1.1`, `:dev` (Debian), plus the corresponding `-alpine` variants, all multi-arch amd64/arm64.
 - The Docker Hub repository is public and can be pulled anonymously.
 - To use an organization namespace, add the repository variable `DOCKERHUB_REPOSITORY` (e.g. `myorg/steamgames-monitor`).
 

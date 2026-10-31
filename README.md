@@ -70,13 +70,13 @@ pnpm start   # 需要先构建；由 Node 同时提供 API 与静态前端
 
 ## Docker Compose 部署
 
-GitHub Actions 在 `main` 分支推送时发布快照镜像（`dev`），在稳定版本 tag（例如 `v1.1.0`）推送时发布语义化版本并把 `latest` 指向该稳定版本：
+GitHub Actions 在 `main` 分支推送时发布快照镜像（`dev`），在稳定版本 tag（例如 `v1.1.1`）推送时发布语义化版本并把 `latest` 指向该稳定版本：
 
 ```bash
 # 最新稳定版
 docker pull akarinliu2000/steamgames-monitor:latest
-# 当前 1.1.0 稳定版
-docker pull akarinliu2000/steamgames-monitor:1.1.0
+# 当前 1.1.1 稳定版
+docker pull akarinliu2000/steamgames-monitor:1.1.1
 # main 分支最新快照
 docker pull akarinliu2000/steamgames-monitor:dev
 ```
@@ -85,12 +85,12 @@ docker pull akarinliu2000/steamgames-monitor:dev
 
 | 标签 | 基础镜像 | 说明 |
 | --- | --- | --- |
-| `latest` / `1.1.0` / `1.1` | Debian slim（`node:24-bookworm-slim`） | 最新稳定版 |
-| `latest-alpine` / `1.1.0-alpine` / `1.1-alpine` | Alpine（`node:24-alpine`） | 最新稳定版 Alpine |
+| `latest` / `1.1.1` / `1.1` | Debian slim（`node:24-bookworm-slim`） | 最新稳定版 |
+| `latest-alpine` / `1.1.1-alpine` / `1.1-alpine` | Alpine（`node:24-alpine`） | 最新稳定版 Alpine |
 | `dev` | Debian slim | `main` 分支最新快照 |
 | `dev-alpine` | Alpine | `main` 分支最新 Alpine 快照 |
 
-`latest` 只会在非预发布 tag（如 `v1.1.0`）上移动；带 `-rc` / `-beta` 的 tag 不会覆盖 `latest`。`main` 分支的普通提交只更新 `dev` / `dev-alpine` 和 `sha-*` 标签。
+`latest` 只会在非预发布 tag（如 `v1.1.1`）上移动；带 `-rc` / `-beta` 的 tag 不会覆盖 `latest`。`main` 分支的普通提交只更新 `dev` / `dev-alpine` 和 `sha-*` 标签。
 
 ```bash
 docker pull akarinliu2000/steamgames-monitor:latest-alpine
@@ -145,7 +145,7 @@ Docker Hub 地址：<https://hub.docker.com/r/akarinliu2000/steamgames-monitor>�
 `.github/workflows/dockerhub.yml` 会在 `main` 分支推送时发布 `dev` 快照，在稳定版本 tag 推送时发布语义化版本并更新 `latest`：
 
 - 仓库 Secrets 需要配置 `DOCKERHUB_USERNAME` 与 `DOCKERHUB_TOKEN`（Docker Hub Access Token，需 Read & Write 权限）。
-- 当前镜像：`docker.io/akarinliu2000/steamgames-monitor:latest`、`:1.1.0`、`:dev`（Debian），以及对应的 `-alpine` 版本，均为 amd64/arm64 多架构。
+- 当前镜像：`docker.io/akarinliu2000/steamgames-monitor:latest`、`:1.1.1`、`:dev`（Debian），以及对应的 `-alpine` 版本，均为 amd64/arm64 多架构。
 - Docker Hub 仓库已公开，可直接匿名拉取。
 - 如需使用组织命名空间，可添加仓库变量 `DOCKERHUB_REPOSITORY`（例如 `myorg/steamgames-monitor`）。
 

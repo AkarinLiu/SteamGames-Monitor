@@ -70,13 +70,13 @@ pnpm start   # 먼저 빌드해야 합니다. Node가 API와 정적 프런트엔
 
 ## Docker Compose 배포
 
-GitHub Actions는 `main` 브랜치에 푸시하면 스냅샷 이미지(`dev`)를 게시하고, 안정 버전 태그(예: `v1.1.0`)를 푸시하면 시맨틱 버전을 게시하며 `latest`를 해당 안정 버전으로 지정합니다:
+GitHub Actions는 `main` 브랜치에 푸시하면 스냅샷 이미지(`dev`)를 게시하고, 안정 버전 태그(예: `v1.1.1`)를 푸시하면 시맨틱 버전을 게시하며 `latest`를 해당 안정 버전으로 지정합니다:
 
 ```bash
 # 최신 안정 버전
 docker pull akarinliu2000/steamgames-monitor:latest
-# 현재 1.1.0 안정 버전
-docker pull akarinliu2000/steamgames-monitor:1.1.0
+# 현재 1.1.1 안정 버전
+docker pull akarinliu2000/steamgames-monitor:1.1.1
 # main 브랜치 최신 스냅샷
 docker pull akarinliu2000/steamgames-monitor:dev
 ```
@@ -85,12 +85,12 @@ docker pull akarinliu2000/steamgames-monitor:dev
 
 | 태그 | 기본 이미지 | 설명 |
 | --- | --- | --- |
-| `latest` / `1.1.0` / `1.1` | Debian slim(`node:24-bookworm-slim`) | 최신 안정 버전 |
-| `latest-alpine` / `1.1.0-alpine` / `1.1-alpine` | Alpine(`node:24-alpine`) | 최신 안정 버전 Alpine |
+| `latest` / `1.1.1` / `1.1` | Debian slim(`node:24-bookworm-slim`) | 최신 안정 버전 |
+| `latest-alpine` / `1.1.1-alpine` / `1.1-alpine` | Alpine(`node:24-alpine`) | 최신 안정 버전 Alpine |
 | `dev` | Debian slim | `main` 브랜치 최신 스냅샷 |
 | `dev-alpine` | Alpine | `main` 브랜치 최신 Alpine 스냅샷 |
 
-`latest`는 사전 릴리스가 아닌 태그(예: `v1.1.0`)에서만 이동합니다. `-rc` / `-beta`가 붙은 태그는 `latest`를 덮어쓰지 않습니다. `main` 브랜치의 일반 커밋은 `dev` / `dev-alpine`과 `sha-*` 태그만 갱신합니다.
+`latest`는 사전 릴리스가 아닌 태그(예: `v1.1.1`)에서만 이동합니다. `-rc` / `-beta`가 붙은 태그는 `latest`를 덮어쓰지 않습니다. `main` 브랜치의 일반 커밋은 `dev` / `dev-alpine`과 `sha-*` 태그만 갱신합니다.
 
 ```bash
 docker pull akarinliu2000/steamgames-monitor:latest-alpine
@@ -145,7 +145,7 @@ Docker Hub 주소: <https://hub.docker.com/r/akarinliu2000/steamgames-monitor>(`
 `.github/workflows/dockerhub.yml`은 `main` 브랜치에 푸시하면 `dev` 스냅샷을 게시하고, 안정 버전 태그를 푸시하면 시맨틱 버전을 게시하고 `latest`를 갱신합니다:
 
 - 리포지터리 Secrets에 `DOCKERHUB_USERNAME`과 `DOCKERHUB_TOKEN`(Docker Hub Access Token, Read & Write 권한 필요)을 구성해야 합니다.
-- 현재 이미지: `docker.io/akarinliu2000/steamgames-monitor:latest`, `:1.1.0`, `:dev`(Debian) 및 이에 대응하는 `-alpine` 버전이며, 모두 amd64/arm64 멀티 아키텍처입니다.
+- 현재 이미지: `docker.io/akarinliu2000/steamgames-monitor:latest`, `:1.1.1`, `:dev`(Debian) 및 이에 대응하는 `-alpine` 버전이며, 모두 amd64/arm64 멀티 아키텍처입니다.
 - Docker Hub 리포지터리는 공개되어 있어 익명으로 바로 가져올 수 있습니다.
 - 조직 네임스페이스를 사용하려면 리포지터리 변수 `DOCKERHUB_REPOSITORY`(예: `myorg/steamgames-monitor`)를 추가하면 됩니다.
 

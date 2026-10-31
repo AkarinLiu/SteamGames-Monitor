@@ -70,13 +70,13 @@ pnpm start   # требуется предварительная сборка; N
 
 ## Развёртывание через Docker Compose
 
-GitHub Actions публикует образ-снимок (`dev`) при пуше в ветку `main`, а при пуше тега стабильной версии (например, `v1.1.0`) — семантическую версию и переводит `latest` на эту стабильную версию:
+GitHub Actions публикует образ-снимок (`dev`) при пуше в ветку `main`, а при пуше тега стабильной версии (например, `v1.1.1`) — семантическую версию и переводит `latest` на эту стабильную версию:
 
 ```bash
 # последняя стабильная версия
 docker pull akarinliu2000/steamgames-monitor:latest
-# текущая стабильная версия 1.1.0
-docker pull akarinliu2000/steamgames-monitor:1.1.0
+# текущая стабильная версия 1.1.1
+docker pull akarinliu2000/steamgames-monitor:1.1.1
 # последний снимок ветки main
 docker pull akarinliu2000/steamgames-monitor:dev
 ```
@@ -85,12 +85,12 @@ docker pull akarinliu2000/steamgames-monitor:dev
 
 | Тег | Базовый образ | Описание |
 | --- | --- | --- |
-| `latest` / `1.1.0` / `1.1` | Debian slim (`node:24-bookworm-slim`) | Последняя стабильная версия |
-| `latest-alpine` / `1.1.0-alpine` / `1.1-alpine` | Alpine (`node:24-alpine`) | Последняя стабильная версия Alpine |
+| `latest` / `1.1.1` / `1.1` | Debian slim (`node:24-bookworm-slim`) | Последняя стабильная версия |
+| `latest-alpine` / `1.1.1-alpine` / `1.1-alpine` | Alpine (`node:24-alpine`) | Последняя стабильная версия Alpine |
 | `dev` | Debian slim | Последний снимок ветки `main` |
 | `dev-alpine` | Alpine | Последний Alpine-снимок ветки `main` |
 
-`latest` перемещается только на тегах без предварительного выпуска (например, `v1.1.0`); теги с `-rc` / `-beta` не перезаписывают `latest`. Обычные коммиты в ветку `main` обновляют только теги `dev` / `dev-alpine` и `sha-*`.
+`latest` перемещается только на тегах без предварительного выпуска (например, `v1.1.1`); теги с `-rc` / `-beta` не перезаписывают `latest`. Обычные коммиты в ветку `main` обновляют только теги `dev` / `dev-alpine` и `sha-*`.
 
 ```bash
 docker pull akarinliu2000/steamgames-monitor:latest-alpine
@@ -145,7 +145,7 @@ docker compose up -d --build
 Файл `.github/workflows/dockerhub.yml` публикует снимок `dev` при пуше в ветку `main`, а при пуше тега стабильной версии — семантическую версию и обновляет `latest`:
 
 - В Secrets репозитория необходимо настроить `DOCKERHUB_USERNAME` и `DOCKERHUB_TOKEN` (Docker Hub Access Token с правами Read & Write).
-- Текущие образы: `docker.io/akarinliu2000/steamgames-monitor:latest`, `:1.1.0`, `:dev` (Debian), а также соответствующие версии `-alpine`; все они мультиархитектурные amd64/arm64.
+- Текущие образы: `docker.io/akarinliu2000/steamgames-monitor:latest`, `:1.1.1`, `:dev` (Debian), а также соответствующие версии `-alpine`; все они мультиархитектурные amd64/arm64.
 - Репозиторий Docker Hub является публичным, образ можно загружать анонимно.
 - Если требуется пространство имён организации, добавьте переменную репозитория `DOCKERHUB_REPOSITORY` (например, `myorg/steamgames-monitor`).
 

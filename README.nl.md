@@ -70,13 +70,13 @@ In een proxyomgeving kunt u `HTTPS_PROXY`, `NODE_USE_ENV_PROXY=1` en `NO_PROXY` 
 
 ## Deployment met Docker Compose
 
-GitHub Actions publiceert bij een push naar de branch `main` een snapshot-image (`dev`) en bij een tag van een stabiele versie (bijvoorbeeld `v1.1.0`) een semantische versie, waarbij `latest` naar die stabiele versie wijst:
+GitHub Actions publiceert bij een push naar de branch `main` een snapshot-image (`dev`) en bij een tag van een stabiele versie (bijvoorbeeld `v1.1.1`) een semantische versie, waarbij `latest` naar die stabiele versie wijst:
 
 ```bash
 # Nieuwste stabiele versie
 docker pull akarinliu2000/steamgames-monitor:latest
-# Huidige stabiele versie 1.1.0
-docker pull akarinliu2000/steamgames-monitor:1.1.0
+# Huidige stabiele versie 1.1.1
+docker pull akarinliu2000/steamgames-monitor:1.1.1
 # Nieuwste snapshot van de branch main
 docker pull akarinliu2000/steamgames-monitor:dev
 ```
@@ -85,12 +85,12 @@ De images ondersteunen `linux/amd64` en `linux/arm64`; Docker kiest automatisch 
 
 | Tag | Basisimage | Beschrijving |
 | --- | --- | --- |
-| `latest` / `1.1.0` / `1.1` | Debian slim (`node:24-bookworm-slim`) | Nieuwste stabiele versie |
-| `latest-alpine` / `1.1.0-alpine` / `1.1-alpine` | Alpine (`node:24-alpine`) | Nieuwste stabiele Alpine-versie |
+| `latest` / `1.1.1` / `1.1` | Debian slim (`node:24-bookworm-slim`) | Nieuwste stabiele versie |
+| `latest-alpine` / `1.1.1-alpine` / `1.1-alpine` | Alpine (`node:24-alpine`) | Nieuwste stabiele Alpine-versie |
 | `dev` | Debian slim | Nieuwste snapshot van de branch `main` |
 | `dev-alpine` | Alpine | Nieuwste Alpine-snapshot van de branch `main` |
 
-`latest` wordt alleen verplaatst bij een tag die geen pre-release is (zoals `v1.1.0`); tags met `-rc` / `-beta` overschrijven `latest` niet. Gewone commits op de branch `main` werken alleen de tags `dev` / `dev-alpine` en `sha-*` bij.
+`latest` wordt alleen verplaatst bij een tag die geen pre-release is (zoals `v1.1.1`); tags met `-rc` / `-beta` overschrijven `latest` niet. Gewone commits op de branch `main` werken alleen de tags `dev` / `dev-alpine` en `sha-*` bij.
 
 ```bash
 docker pull akarinliu2000/steamgames-monitor:latest-alpine
@@ -145,7 +145,7 @@ Docker Hub-adres: <https://hub.docker.com/r/akarinliu2000/steamgames-monitor> (`
 `.github/workflows/dockerhub.yml` publiceert bij een push naar de branch `main` een `dev`-snapshot en bij een tag van een stabiele versie een semantische versie, en werkt `latest` bij:
 
 - In de repository-secrets moeten `DOCKERHUB_USERNAME` en `DOCKERHUB_TOKEN` worden ingesteld (Docker Hub Access Token met Read & Write-rechten).
-- Huidige images: `docker.io/akarinliu2000/steamgames-monitor:latest`, `:1.1.0`, `:dev` (Debian) en de bijbehorende `-alpine`-versies, allemaal als multi-architectuur amd64/arm64.
+- Huidige images: `docker.io/akarinliu2000/steamgames-monitor:latest`, `:1.1.1`, `:dev` (Debian) en de bijbehorende `-alpine`-versies, allemaal als multi-architectuur amd64/arm64.
 - De Docker Hub-repository is openbaar en kan anoniem worden gepulld.
 - Als u een organisatienamespace wilt gebruiken, kunt u de repositoryvariabele `DOCKERHUB_REPOSITORY` toevoegen (bijvoorbeeld `myorg/steamgames-monitor`).
 

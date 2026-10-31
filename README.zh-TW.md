@@ -70,13 +70,13 @@ pnpm start   # 需要先建置；由 Node 同時提供 API 與靜態前端
 
 ## Docker Compose 部署
 
-GitHub Actions 在 `main` 分支推送時發布快照映像（`dev`），在穩定版本標籤（例如 `v1.1.0`）推送時發布語意化版本並把 `latest` 指向該穩定版本：
+GitHub Actions 在 `main` 分支推送時發布快照映像（`dev`），在穩定版本標籤（例如 `v1.1.1`）推送時發布語意化版本並把 `latest` 指向該穩定版本：
 
 ```bash
 # 最新穩定版
 docker pull akarinliu2000/steamgames-monitor:latest
-# 目前 1.1.0 穩定版
-docker pull akarinliu2000/steamgames-monitor:1.1.0
+# 目前 1.1.1 穩定版
+docker pull akarinliu2000/steamgames-monitor:1.1.1
 # main 分支最新快照
 docker pull akarinliu2000/steamgames-monitor:dev
 ```
@@ -85,12 +85,12 @@ docker pull akarinliu2000/steamgames-monitor:dev
 
 | 標籤 | 基礎映像 | 說明 |
 | --- | --- | --- |
-| `latest` / `1.1.0` / `1.1` | Debian slim（`node:24-bookworm-slim`） | 最新穩定版 |
-| `latest-alpine` / `1.1.0-alpine` / `1.1-alpine` | Alpine（`node:24-alpine`） | 最新穩定版 Alpine |
+| `latest` / `1.1.1` / `1.1` | Debian slim（`node:24-bookworm-slim`） | 最新穩定版 |
+| `latest-alpine` / `1.1.1-alpine` / `1.1-alpine` | Alpine（`node:24-alpine`） | 最新穩定版 Alpine |
 | `dev` | Debian slim | `main` 分支最新快照 |
 | `dev-alpine` | Alpine | `main` 分支最新 Alpine 快照 |
 
-`latest` 只會在非預發布標籤（例如 `v1.1.0`）上移動；帶有 `-rc` / `-beta` 的標籤不會覆寫 `latest`。`main` 分支的一般提交只會更新 `dev` / `dev-alpine` 和 `sha-*` 標籤。
+`latest` 只會在非預發布標籤（例如 `v1.1.1`）上移動；帶有 `-rc` / `-beta` 的標籤不會覆寫 `latest`。`main` 分支的一般提交只會更新 `dev` / `dev-alpine` 和 `sha-*` 標籤。
 
 ```bash
 docker pull akarinliu2000/steamgames-monitor:latest-alpine
@@ -145,7 +145,7 @@ Docker Hub 位址：<https://hub.docker.com/r/akarinliu2000/steamgames-monitor>�
 `.github/workflows/dockerhub.yml` 會在 `main` 分支推送時發布 `dev` 快照，在穩定版本標籤推送時發布語意化版本並更新 `latest`：
 
 - 儲存庫 Secrets 需要設定 `DOCKERHUB_USERNAME` 與 `DOCKERHUB_TOKEN`（Docker Hub Access Token，需具備 Read & Write 權限）。
-- 目前映像：`docker.io/akarinliu2000/steamgames-monitor:latest`、`:1.1.0`、`:dev`（Debian），以及對應的 `-alpine` 版本，皆為 amd64/arm64 多架構。
+- 目前映像：`docker.io/akarinliu2000/steamgames-monitor:latest`、`:1.1.1`、`:dev`（Debian），以及對應的 `-alpine` 版本，皆為 amd64/arm64 多架構。
 - Docker Hub 儲存庫已公開，可直接匿名拉取。
 - 如需使用組織命名空間，可新增儲存庫變數 `DOCKERHUB_REPOSITORY`（例如 `myorg/steamgames-monitor`）。
 

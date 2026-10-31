@@ -70,13 +70,13 @@ pnpm start   # 事前にビルドが必要。API と静的フロントエンド�
 
 ## Docker Compose でのデプロイ
 
-GitHub Actions は `main` ブランチへのプッシュ時にスナップショットイメージ（`dev`）を公開し、安定版タグ（例：`v1.1.0`）のプッシュ時にセマンティックバージョンを公開して `latest` をその安定版に向けます：
+GitHub Actions は `main` ブランチへのプッシュ時にスナップショットイメージ（`dev`）を公開し、安定版タグ（例：`v1.1.1`）のプッシュ時にセマンティックバージョンを公開して `latest` をその安定版に向けます：
 
 ```bash
 # 最新の安定版
 docker pull akarinliu2000/steamgames-monitor:latest
-# 現在の 1.1.0 安定版
-docker pull akarinliu2000/steamgames-monitor:1.1.0
+# 現在の 1.1.1 安定版
+docker pull akarinliu2000/steamgames-monitor:1.1.1
 # main ブランチの最新スナップショット
 docker pull akarinliu2000/steamgames-monitor:dev
 ```
@@ -85,12 +85,12 @@ docker pull akarinliu2000/steamgames-monitor:dev
 
 | タグ | ベースイメージ | 説明 |
 | --- | --- | --- |
-| `latest` / `1.1.0` / `1.1` | Debian slim（`node:24-bookworm-slim`） | 最新の安定版 |
-| `latest-alpine` / `1.1.0-alpine` / `1.1-alpine` | Alpine（`node:24-alpine`） | 最新の安定版 Alpine |
+| `latest` / `1.1.1` / `1.1` | Debian slim（`node:24-bookworm-slim`） | 最新の安定版 |
+| `latest-alpine` / `1.1.1-alpine` / `1.1-alpine` | Alpine（`node:24-alpine`） | 最新の安定版 Alpine |
 | `dev` | Debian slim | `main` ブランチの最新スナップショット |
 | `dev-alpine` | Alpine | `main` ブランチの最新 Alpine スナップショット |
 
-`latest` は非プレリリースタグ（例：`v1.1.0`）でのみ移動します。`-rc` / `-beta` を含むタグは `latest` を上書きしません。`main` ブランチの通常のコミットは `dev` / `dev-alpine` と `sha-*` タグのみを更新します。
+`latest` は非プレリリースタグ（例：`v1.1.1`）でのみ移動します。`-rc` / `-beta` を含むタグは `latest` を上書きしません。`main` ブランチの通常のコミットは `dev` / `dev-alpine` と `sha-*` タグのみを更新します。
 
 ```bash
 docker pull akarinliu2000/steamgames-monitor:latest-alpine
@@ -145,7 +145,7 @@ Docker Hub のアドレス：<https://hub.docker.com/r/akarinliu2000/steamgames-
 `.github/workflows/dockerhub.yml` は `main` ブランチへのプッシュ時に `dev` スナップショットを公開し、安定版タグのプッシュ時にセマンティックバージョンを公開して `latest` を更新します：
 
 - リポジトリの Secrets に `DOCKERHUB_USERNAME` と `DOCKERHUB_TOKEN`（Docker Hub Access Token、Read & Write 権限が必要）を設定する必要があります。
-- 現在のイメージ：`docker.io/akarinliu2000/steamgames-monitor:latest`、`:1.1.0`、`:dev`（Debian）、および対応する `-alpine` バージョン。いずれも amd64/arm64 のマルチアーキテクチャです。
+- 現在のイメージ：`docker.io/akarinliu2000/steamgames-monitor:latest`、`:1.1.1`、`:dev`（Debian）、および対応する `-alpine` バージョン。いずれも amd64/arm64 のマルチアーキテクチャです。
 - Docker Hub リポジトリは公開済みで、匿名のまま直接プルできます。
 - 組織の名前空間を使用する場合は、リポジトリ変数 `DOCKERHUB_REPOSITORY`（例：`myorg/steamgames-monitor`）を追加できます。
 

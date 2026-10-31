@@ -70,13 +70,13 @@ pnpm start   # 먼저 건설해야 함; Node가 API와 정적전단을 동시에
 
 ## Docker Compose전개
 
-GitHub Actions는 `main`분지에 push할 때 스냅샷이미지(`dev`)를 발행하고, 안정버전태그(례를 들면 `v1.1.0`)에 push할 때 의미화된 버전을 발행하며 `latest`를 해당 안정버전에 돌립니다.
+GitHub Actions는 `main`분지에 push할 때 스냅샷이미지(`dev`)를 발행하고, 안정버전태그(례를 들면 `v1.1.1`)에 push할 때 의미화된 버전을 발행하며 `latest`를 해당 안정버전에 돌립니다.
 
 ```bash
 # 최신안정판
 docker pull akarinliu2000/steamgames-monitor:latest
-# 현재 1.1.0안정판
-docker pull akarinliu2000/steamgames-monitor:1.1.0
+# 현재 1.1.1안정판
+docker pull akarinliu2000/steamgames-monitor:1.1.1
 # main분지 최신스냅샷
 docker pull akarinliu2000/steamgames-monitor:dev
 ```
@@ -85,12 +85,12 @@ docker pull akarinliu2000/steamgames-monitor:dev
 
 | 태그 | 기초이미지 | 설명 |
 | --- | --- | --- |
-| `latest` / `1.1.0` / `1.1` | Debian slim(`node:24-bookworm-slim`) | 최신안정판 |
-| `latest-alpine` / `1.1.0-alpine` / `1.1-alpine` | Alpine(`node:24-alpine`) | 최신안정판 Alpine |
+| `latest` / `1.1.1` / `1.1` | Debian slim(`node:24-bookworm-slim`) | 최신안정판 |
+| `latest-alpine` / `1.1.1-alpine` / `1.1-alpine` | Alpine(`node:24-alpine`) | 최신안정판 Alpine |
 | `dev` | Debian slim | `main`분지 최신스냅샷 |
 | `dev-alpine` | Alpine | `main`분지 최신 Alpine스냅샷 |
 
-`latest`는 예비발행이 아닌 태그(례를 들면 `v1.1.0`)에서만 이동하며, `-rc` / `-beta`가 붙은 태그는 `latest`를 덮어쓰지 않습니다. `main`분지의 일반커밋은 `dev` / `dev-alpine`과 `sha-*`태그만 갱신합니다.
+`latest`는 예비발행이 아닌 태그(례를 들면 `v1.1.1`)에서만 이동하며, `-rc` / `-beta`가 붙은 태그는 `latest`를 덮어쓰지 않습니다. `main`분지의 일반커밋은 `dev` / `dev-alpine`과 `sha-*`태그만 갱신합니다.
 
 ```bash
 docker pull akarinliu2000/steamgames-monitor:latest-alpine
@@ -145,7 +145,7 @@ Docker Hub주소: <https://hub.docker.com/r/akarinliu2000/steamgames-monitor>(`a
 `.github/workflows/dockerhub.yml`은 `main`분지에 push할 때 `dev`스냅샷을 발행하고, 안정버전태그에 push할 때 의미화된 버전을 발행하며 `latest`를 갱신합니다.
 
 - 창고 Secrets에 `DOCKERHUB_USERNAME`과 `DOCKERHUB_TOKEN`(Docker Hub Access Token, Read & Write권한 필요)을 설정해야 합니다.
-- 현재이미지: `docker.io/akarinliu2000/steamgames-monitor:latest`, `:1.1.0`, `:dev`(Debian) 및 그에 대응하는 `-alpine`판이며, 모두 amd64/arm64다중구조입니다.
+- 현재이미지: `docker.io/akarinliu2000/steamgames-monitor:latest`, `:1.1.1`, `:dev`(Debian) 및 그에 대응하는 `-alpine`판이며, 모두 amd64/arm64다중구조입니다.
 - Docker Hub창고는 이미 공개되여있어 익명으로 직접 내리적재할수 있습니다.
 - 조직네임스페히스를 리용하려면 창고변수 `DOCKERHUB_REPOSITORY`를 추가할수 있습니다(례를 들면 `myorg/steamgames-monitor`).
 
