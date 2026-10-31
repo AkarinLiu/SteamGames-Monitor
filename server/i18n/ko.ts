@@ -128,6 +128,43 @@ export const ko: BotMessages = {
   eventsEmpty: '아직 이벤트가 없습니다.',
   eventsHeader: '최근 이벤트:',
 
+  appName: 'Steam 모니터',
+  notificationTitle: '[{label}] {name}',
+  notificationFooter: '{app} · {time}',
+  notificationViewOnSteam: 'Steam에서 보기',
+  notificationEntry: '항목: {name}(appid {appid})',
+  notificationRegion: '지역: {region}',
+  notificationReleased: '"{name}"이(가) 정식 출시되었습니다.',
+  notificationReleaseDate: '출시일: {date}',
+  notificationCurrentPrice: '현재 가격: {price}',
+  notificationThresholdReached: '모니터링 기준 {threshold}%에 도달했습니다',
+  notificationDiscountChange: '할인 변화: {old}% → {new}%',
+  notificationPriceChange: '가격 변화: {old} → {new}',
+  notificationSaleEnded: '할인이 종료되어 정가로 돌아갔습니다.',
+  notificationSaleEndedWithPrice: '할인이 종료되어 정가 {price}(으)로 돌아갔습니다.',
+  notificationPreviousDiscount: '이전 할인: {discount}%',
+  notificationBecameFree: '이 항목은 이제 무료입니다.',
+  notificationBecamePaid: '이 항목은 무료에서 유료로 변경되었습니다.',
+  notificationBecamePaidWithPrice: '이 항목은 무료에서 유료로 변경되었습니다: {price}.',
+  notificationBasePriceChange: '정가 변화: {old} → {new}',
+  notificationSteamNews: 'Steam 소식: "{title}"',
+  notificationMatchedKeyword: '일치한 키워드: {keyword}',
+  notificationDelistingHint:
+    '뉴스 키워드에 기반한 휴리스틱 경고입니다. 판매 중지 예정인지 직접 확인하세요.',
+  notificationNewsLink: '뉴스 링크: {url}',
+  notificationDelistedConfirmed:
+    '연속 2회 검사에서 이 항목을 상점에서 구매할 수 없음을 확인했습니다.',
+  notificationRestoredFirst: '이 항목은 이제 지역 {region}에서 구매할 수 있습니다.',
+  notificationRestored: '이 항목은 다시 구매 가능합니다(지역 {region}).',
+  notificationCheckFailed: '연속 {count}회 검사 실패({code}).',
+  notificationAutoPaused:
+    '이 모니터링이 자동으로 일시 중지되었습니다. 확인 후 수동으로 재개하세요.',
+  notificationSteamNewsFallback: 'Steam 소식',
+  notificationTestTitle: '[테스트] Steam 모니터',
+  notificationTestChannelOk: '알림 채널 "{channel}"이(가) 성공적으로 구성되었습니다.',
+  notificationTestHint:
+    '이 메시지를 받았다면 이 채널에서 모니터링 알림을 받을 수 있습니다.',
+
   ownerMissing: '봇 소유자 계정이 존재하지 않습니다.',
   decryptFailed:
     '봇 자격 증명을 복호화할 수 없습니다. 관리자에게 설정을 다시 입력하도록 요청하세요.',

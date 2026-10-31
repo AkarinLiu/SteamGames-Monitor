@@ -123,6 +123,43 @@ export const en: BotMessages = {
   eventsEmpty: 'No events yet.',
   eventsHeader: 'Recent events:',
 
+  appName: 'Steam Monitor',
+  notificationTitle: '[{label}] {name}',
+  notificationFooter: '{app} · {time}',
+  notificationViewOnSteam: 'View on Steam',
+  notificationEntry: 'Item: {name} (appid {appid})',
+  notificationRegion: 'Region: {region}',
+  notificationReleased: '"{name}" has been released.',
+  notificationReleaseDate: 'Release date: {date}',
+  notificationCurrentPrice: 'Current price: {price}',
+  notificationThresholdReached: 'Monitor threshold reached: {threshold}%',
+  notificationDiscountChange: 'Discount change: {old}% → {new}%',
+  notificationPriceChange: 'Price change: {old} → {new}',
+  notificationSaleEnded: 'Sale ended; price restored to regular.',
+  notificationSaleEndedWithPrice: 'Sale ended; price restored to {price}.',
+  notificationPreviousDiscount: 'Previous discount: {discount}%',
+  notificationBecameFree: 'This item is now free.',
+  notificationBecamePaid: 'This item changed from free to paid.',
+  notificationBecamePaidWithPrice: 'This item changed from free to paid: {price}.',
+  notificationBasePriceChange: 'Base price change: {old} → {new}',
+  notificationSteamNews: 'Steam news: "{title}"',
+  notificationMatchedKeyword: 'Matched keyword: {keyword}',
+  notificationDelistingHint:
+    'This is a heuristic alert based on news keywords. Please confirm manually whether the item will be delisted.',
+  notificationNewsLink: 'News link: {url}',
+  notificationDelistedConfirmed:
+    'Two consecutive checks confirmed that this item cannot be purchased in the store.',
+  notificationRestoredFirst: 'This item can now be purchased in region {region}.',
+  notificationRestored: 'This item is purchasable again (region {region}).',
+  notificationCheckFailed: '{count} consecutive check failures ({code}).',
+  notificationAutoPaused:
+    'This monitor was paused automatically; check it and resume manually.',
+  notificationSteamNewsFallback: 'Steam news',
+  notificationTestTitle: '[Test] Steam Monitor',
+  notificationTestChannelOk: 'Notification channel "{channel}" is configured successfully.',
+  notificationTestHint:
+    'If you received this message, this channel can receive monitor notifications.',
+
   ownerMissing: 'The bot owner account does not exist.',
   decryptFailed:
     'The bot credentials cannot be decrypted. Ask an administrator to re-enter the configuration.',

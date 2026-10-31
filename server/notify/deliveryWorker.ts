@@ -174,7 +174,7 @@ export class DeliveryWorker {
       let message: RenderedMessage
       if (row.kind === 'test') {
         const user = findUserById(this.db, row.user_id)
-        message = renderTestMessage(bot.name, user?.timezone ?? null)
+        message = renderTestMessage(bot.name, user?.timezone ?? null, user?.ui_locale)
       } else {
         const event = this.loadEvent(row.event_id)
         if (!event) {
@@ -185,7 +185,7 @@ export class DeliveryWorker {
           return { ok: false, httpStatus: null, error: '监控项不存在', permanent: true }
         }
         const user = findUserById(this.db, row.user_id)
-        message = renderEventMessage(event, monitor, user?.timezone ?? null)
+        message = renderEventMessage(event, monitor, user?.timezone ?? null, user?.ui_locale)
       }
 
       return this.options.sendBotEvent(row, bot, message)
@@ -207,7 +207,7 @@ export class DeliveryWorker {
     let message: RenderedMessage
     if (row.kind === 'test') {
       const user = findUserById(this.db, row.user_id)
-      message = renderTestMessage(channel.name, user?.timezone ?? null)
+      message = renderTestMessage(channel.name, user?.timezone ?? null, user?.ui_locale)
     } else {
       const event = this.loadEvent(row.event_id)
       if (!event) {
@@ -218,7 +218,7 @@ export class DeliveryWorker {
         return { ok: false, httpStatus: null, error: '监控项不存在', permanent: true }
       }
       const user = findUserById(this.db, row.user_id)
-      message = renderEventMessage(event, monitor, user?.timezone ?? null)
+      message = renderEventMessage(event, monitor, user?.timezone ?? null, user?.ui_locale)
     }
 
     let config: ChannelConfig

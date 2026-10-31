@@ -602,6 +602,42 @@ test.describe.serial('Steam 销售监控端到端', () => {
     const botReplyBody = (await botReply.json()) as { lines: string[] }
     expect(botReplyBody.lines.join('\n')).toContain('Steam Sales Monitor commands')
 
+    const webhookChannel = await page.request.post('/api/channels', {
+      data: {
+        name: 'E2E English WebHook',
+        type: 'webhook',
+        enabled: true,
+        eventTypes: [],
+        config: { webhookUrl: `${MOCK}/hooks/en-webhook` },
+      },
+    })
+    expect(webhookChannel.status()).toBe(201)
+    const webhookChannelId = ((await webhookChannel.json()) as { channel: { id: number } })
+      .channel.id
+    const webhookTest = await page.request.post(`/api/channels/${webhookChannelId}/test`, {
+      data: {},
+    })
+    expect(webhookTest.ok()).toBeTruthy()
+    await expect
+      .poll(
+        async () => {
+          const { requests } = await mockRequests(page.request)
+          return requests.filter((item) => item.path === '/hooks/en-webhook').length
+        },
+        { timeout: 30_000 },
+      )
+      .toBeGreaterThan(0)
+    const { requests: englishHookRequests } = await mockRequests(page.request)
+    const englishHook = englishHookRequests.find((item) => item.path === '/hooks/en-webhook')
+    expect(englishHook?.body).toMatchObject({
+      kind: 'test',
+      title: '[Test] Steam Monitor',
+    })
+    const englishHookBody = englishHook?.body as { text?: string } | undefined
+    expect(englishHookBody?.text).toContain(
+      'Notification channel "E2E English WebHook" is configured successfully.',
+    )
+
     for (const locale of ['de', 'fr', 'it', 'ja', 'ko', 'ko-KP', 'nl', 'ru', 'zh-TW']) {
       await page.getByLabel('UI locale').selectOption(locale)
       await expect(page.locator('h1')).not.toHaveText('指令机器人')

@@ -129,6 +129,43 @@ export const koKP: BotMessages = {
   eventsEmpty: '아직 사건이 없습니다.',
   eventsHeader: '최근 사건:',
 
+  appName: 'Steam 감시',
+  notificationTitle: '【{label}】{name}',
+  notificationFooter: '{app} · {time}',
+  notificationViewOnSteam: 'Steam에서 보기',
+  notificationEntry: '항목: {name}(appid {appid})',
+  notificationRegion: '지역: {region}',
+  notificationReleased: '"{name}"이(가) 정식으로 발매되였습니다.',
+  notificationReleaseDate: '발매일: {date}',
+  notificationCurrentPrice: '현재 가격: {price}',
+  notificationThresholdReached: '감시기준 {threshold}%에 도달했습니다',
+  notificationDiscountChange: '할인 변화: {old}% → {new}%',
+  notificationPriceChange: '가격 변화: {old} → {new}',
+  notificationSaleEnded: '할인이 종료되여 원가로 돌아갔습니다.',
+  notificationSaleEndedWithPrice: '할인이 종료되여 원가 {price}(으)로 돌아갔습니다.',
+  notificationPreviousDiscount: '이전 할인: {discount}%',
+  notificationBecameFree: '이 항목은 이제 무료입니다.',
+  notificationBecamePaid: '이 항목은 무료에서 유료로 변경되였습니다.',
+  notificationBecamePaidWithPrice: '이 항목은 무료에서 유료로 변경되였습니다: {price}.',
+  notificationBasePriceChange: '원가 변화: {old} → {new}',
+  notificationSteamNews: 'Steam 소식: "{title}"',
+  notificationMatchedKeyword: '일치한 핵심단어: {keyword}',
+  notificationDelistingHint:
+    '소식 핵심단어에 기반한 발견법 경보입니다. 판매중지 예정인지 사람이 직접 확인하세요.',
+  notificationNewsLink: '소식 련결: {url}',
+  notificationDelistedConfirmed:
+    '련속 2회 검사에서 이 항목을 상점에서 구매할 수 없음을 확인했습니다.',
+  notificationRestoredFirst: '이 항목은 이제 지역 {region}에서 구매할 수 있습니다.',
+  notificationRestored: '이 항목은 다시 구매 가능합니다(지역 {region}).',
+  notificationCheckFailed: '련속 {count}회 검사 실패({code}).',
+  notificationAutoPaused:
+    '이 감시항목이 자동으로 일시중지되였습니다. 확인 후 수동으로 재개하세요.',
+  notificationSteamNewsFallback: 'Steam 소식',
+  notificationTestTitle: '【시험통지】Steam 감시',
+  notificationTestChannelOk: '통지경로 "{channel}"이(가) 성공적으로 설정되였습니다.',
+  notificationTestHint:
+    '이 메시지를 받았다면 이 경로에서 감시통지를 받을 수 있습니다.',
+
   ownerMissing: '봇 소유자 계정이 존재하지 않습니다.',
   decryptFailed:
     '봇 인증자료를 복호화할 수 없습니다. 관리자에게 설정을 다시 입력하도록 요청하세요.',

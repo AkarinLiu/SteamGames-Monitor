@@ -133,6 +133,43 @@ export const ru: BotMessages = {
   eventsEmpty: 'Событий пока нет.',
   eventsHeader: 'Последние события:',
 
+  appName: 'Монитор Steam',
+  notificationTitle: '[{label}] {name}',
+  notificationFooter: '{app} · {time}',
+  notificationViewOnSteam: 'Открыть в Steam',
+  notificationEntry: 'Элемент: {name} (appid {appid})',
+  notificationRegion: 'Регион: {region}',
+  notificationReleased: '«{name}» официально вышла.',
+  notificationReleaseDate: 'Дата выхода: {date}',
+  notificationCurrentPrice: 'Текущая цена: {price}',
+  notificationThresholdReached: 'Достигнут порог мониторинга: {threshold}%',
+  notificationDiscountChange: 'Изменение скидки: {old}% → {new}%',
+  notificationPriceChange: 'Изменение цены: {old} → {new}',
+  notificationSaleEnded: 'Скидка завершена; цена вернулась к обычной.',
+  notificationSaleEndedWithPrice: 'Скидка завершена; цена вернулась к {price}.',
+  notificationPreviousDiscount: 'Предыдущая скидка: {discount}%',
+  notificationBecameFree: 'Этот товар теперь бесплатный.',
+  notificationBecamePaid: 'Этот товар стал платным.',
+  notificationBecamePaidWithPrice: 'Этот товар стал платным: {price}.',
+  notificationBasePriceChange: 'Изменение базовой цены: {old} → {new}',
+  notificationSteamNews: 'Новость Steam: «{title}»',
+  notificationMatchedKeyword: 'Совпавшее ключевое слово: {keyword}',
+  notificationDelistingHint:
+    'Это эвристическое предупреждение на основе ключевых слов новости. Проверьте вручную, будет ли товар снят с продажи.',
+  notificationNewsLink: 'Ссылка на новость: {url}',
+  notificationDelistedConfirmed:
+    'Две проверки подряд подтвердили, что этот товар нельзя купить в магазине.',
+  notificationRestoredFirst: 'Этот товар теперь можно купить в регионе {region}.',
+  notificationRestored: 'Этот товар снова доступен для покупки (регион {region}).',
+  notificationCheckFailed: 'Неудачных проверок подряд: {count} ({code}).',
+  notificationAutoPaused:
+    'Этот мониторинг приостановлен автоматически; проверьте его и возобновите вручную.',
+  notificationSteamNewsFallback: 'Новость Steam',
+  notificationTestTitle: '[Тест] Монитор Steam',
+  notificationTestChannelOk: 'Канал уведомлений «{channel}» успешно настроен.',
+  notificationTestHint:
+    'Если вы получили это сообщение, канал может принимать уведомления мониторинга.',
+
   ownerMissing: 'Аккаунт владельца бота не существует.',
   decryptFailed:
     'Не удаётся расшифровать учётные данные бота. Попросите администратора повторно ввести конфигурацию.',

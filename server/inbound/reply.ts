@@ -3,10 +3,12 @@ import { formatDingtalkMarkdown, splitReply } from './commands/format'
 import type { DeliveryRow } from '../db/rows'
 import type { Db } from '../db/database'
 import { findBotByIdInternal } from '../db/repo/bots'
+import { findUserById } from '../db/repo/users'
 import { decryptConfig, botAad, SecretDecryptError } from '../notify/secrets'
 import { assertSafeOutboundUrl } from '../notify/urlGuard'
 import type { SendResult } from '../notify/types'
 import { safeJsonParse } from '../../shared/utils'
+import { botMessages } from '../i18n'
 import type {
   BotConfig,
   DingtalkReplyTarget,
@@ -161,6 +163,7 @@ export async function sendFeishuChatText(
 async function sendDingtalkReply(
   target: DingtalkReplyTarget,
   text: string,
+  title: string,
 ): Promise<SendResult> {
   if (!target.sessionWebhook) return failure('钉钉会话 Webhook 缺失', true)
   if (target.expiresAt && target.expiresAt < Date.now() + 5_000) {
@@ -173,7 +176,7 @@ async function sendDingtalkReply(
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
         msgtype: 'markdown',
-        markdown: { title: 'Steam 监控', text: chunk },
+        markdown: { title, text: chunk },
         at: target.userId ? { atUserIds: [target.userId] } : undefined,
       }),
       signal: AbortSignal.timeout(15_000),
@@ -208,6 +211,8 @@ export async function sendCommandDelivery(
   const payload = safeJsonParse<{ text?: string }>(delivery.payload_json, {}) ?? {}
   const text = payload.text ?? ''
   if (!text) return failure('指令回复内容为空', true)
+  const owner = findUserById(db, bot.user_id)
+  const title = botMessages(owner?.ui_locale).appName
 
   if (target.type === 'wecom') {
     try {
@@ -237,7 +242,7 @@ export async function sendCommandDelivery(
       )
     }
     if (target.type === 'dingtalk') {
-      return await sendDingtalkReply(target, text)
+      return await sendDingtalkReply(target, text, title)
     }
     return failure(`未知回复平台：${(target as { type?: string }).type ?? 'unknown'}`, true)
   } catch (error) {

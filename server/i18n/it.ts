@@ -132,6 +132,43 @@ export const it: BotMessages = {
   eventsEmpty: 'Nessun evento.',
   eventsHeader: 'Eventi recenti:',
 
+  appName: 'Steam Monitor',
+  notificationTitle: '[{label}] {name}',
+  notificationFooter: '{app} · {time}',
+  notificationViewOnSteam: 'Apri su Steam',
+  notificationEntry: 'Elemento: {name} (appid {appid})',
+  notificationRegion: 'Regione: {region}',
+  notificationReleased: '"{name}" è stato pubblicato.',
+  notificationReleaseDate: 'Data di uscita: {date}',
+  notificationCurrentPrice: 'Prezzo attuale: {price}',
+  notificationThresholdReached: 'Soglia di monitoraggio raggiunta: {threshold}%',
+  notificationDiscountChange: 'Variazione sconto: {old}% → {new}%',
+  notificationPriceChange: 'Variazione prezzo: {old} → {new}',
+  notificationSaleEnded: 'Promozione terminata; prezzo tornato normale.',
+  notificationSaleEndedWithPrice: 'Promozione terminata; prezzo tornato a {price}.',
+  notificationPreviousDiscount: 'Sconto precedente: {discount}%',
+  notificationBecameFree: 'Questo elemento ora è gratuito.',
+  notificationBecamePaid: 'Questo elemento non è più gratuito.',
+  notificationBecamePaidWithPrice: 'Questo elemento non è più gratuito: {price}.',
+  notificationBasePriceChange: 'Variazione prezzo base: {old} → {new}',
+  notificationSteamNews: 'Notizia Steam: "{title}"',
+  notificationMatchedKeyword: 'Parola chiave rilevata: {keyword}',
+  notificationDelistingHint:
+    'Questo è un avviso euristico basato su parole chiave delle notizie. Verifica manualmente se l’elemento verrà ritirato.',
+  notificationNewsLink: 'Link della notizia: {url}',
+  notificationDelistedConfirmed:
+    'Due controlli consecutivi hanno confermato che questo elemento non è acquistabile nello store.',
+  notificationRestoredFirst: 'Questo elemento ora è acquistabile nella regione {region}.',
+  notificationRestored: 'Questo elemento è di nuovo acquistabile (regione {region}).',
+  notificationCheckFailed: '{count} controlli consecutivi non riusciti ({code}).',
+  notificationAutoPaused:
+    'Questo monitoraggio è stato sospeso automaticamente; controllalo e riprendilo manualmente.',
+  notificationSteamNewsFallback: 'Notizia Steam',
+  notificationTestTitle: '[Test] Steam Monitor',
+  notificationTestChannelOk: 'Canale di notifica "{channel}" configurato correttamente.',
+  notificationTestHint:
+    'Se hai ricevuto questo messaggio, il canale può ricevere le notifiche di monitoraggio.',
+
   ownerMissing: 'L’account proprietario del bot non esiste.',
   decryptFailed:
     'Impossibile decifrare le credenziali del bot. Chiedi a un amministratore di reinserire la configurazione.',

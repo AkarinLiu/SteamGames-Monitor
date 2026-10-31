@@ -236,7 +236,7 @@ export function channelRoutes(runtime: Runtime): Hono<AppBindings> {
     let result: { ok: boolean; httpStatus: number | null; error?: string }
     try {
       const config = decryptChannelConfig(row)
-      const message = renderTestMessage(row.name, user.timezone)
+      const message = renderTestMessage(row.name, user.timezone, user.ui_locale)
       result = await sendByChannel(row.type as ChannelType, config, message)
     } catch (error) {
       result = {

@@ -130,6 +130,43 @@ export const ja: BotMessages = {
   eventsEmpty: 'イベントはまだありません。',
   eventsHeader: '最近のイベント：',
 
+  appName: 'Steam 監視',
+  notificationTitle: '【{label}】{name}',
+  notificationFooter: '{app} · {time}',
+  notificationViewOnSteam: 'Steam で見る',
+  notificationEntry: '項目：{name}（appid {appid}）',
+  notificationRegion: '地域：{region}',
+  notificationReleased: '「{name}」が正式に発売されました。',
+  notificationReleaseDate: '発売日：{date}',
+  notificationCurrentPrice: '現在の価格：{price}',
+  notificationThresholdReached: '監視しきい値 {threshold}% に達しました',
+  notificationDiscountChange: '割引の変化：{old}% → {new}%',
+  notificationPriceChange: '価格の変化：{old} → {new}',
+  notificationSaleEnded: 'セール終了、通常価格に戻りました。',
+  notificationSaleEndedWithPrice: 'セール終了、通常価格 {price} に戻りました。',
+  notificationPreviousDiscount: '以前の割引：{discount}%',
+  notificationBecameFree: 'この商品は無料になりました。',
+  notificationBecamePaid: 'この商品は無料から有料になりました。',
+  notificationBecamePaidWithPrice: 'この商品は無料から有料になりました：{price}。',
+  notificationBasePriceChange: '通常価格の変化：{old} → {new}',
+  notificationSteamNews: 'Steam ニュース：「{title}」',
+  notificationMatchedKeyword: '一致したキーワード：{keyword}',
+  notificationDelistingHint:
+    'これはニュースのキーワードに基づくヒューリスティックな警告です。販売終了予定かどうかを手動で確認してください。',
+  notificationNewsLink: 'ニュースリンク：{url}',
+  notificationDelistedConfirmed:
+    '2 回連続のチェックで、この商品がストアで購入できないことを確認しました。',
+  notificationRestoredFirst: 'この商品は地域 {region} で購入できるようになりました。',
+  notificationRestored: 'この商品は再び購入可能になりました（地域 {region}）。',
+  notificationCheckFailed: '{count} 回連続でチェックに失敗しました（{code}）。',
+  notificationAutoPaused:
+    'この監視は自動的に一時停止されました。確認後に手動で再開してください。',
+  notificationSteamNewsFallback: 'Steam ニュース',
+  notificationTestTitle: '【テスト通知】Steam 監視',
+  notificationTestChannelOk: '通知チャネル「{channel}」の設定に成功しました。',
+  notificationTestHint:
+    'このメッセージを受信できていれば、このチャネルは監視通知を受信できます。',
+
   ownerMissing: 'ボットの所有者アカウントが存在しません。',
   decryptFailed:
     'ボットの認証情報を復号できません。管理者に設定の再入力を依頼してください。',

@@ -1,4 +1,4 @@
-import type { EventType, MonitorEvent } from '../../../shared/types'
+import type { MonitorEvent } from '../../../shared/types'
 import {
   formatDateTime,
   truncateUtf8,
@@ -6,7 +6,7 @@ import {
 } from '../../../shared/utils'
 import type { MonitorRow } from '../../db/rows'
 import type { BotMessages } from '../../i18n'
-import { formatBotMessage as fmt } from '../../i18n'
+import { eventLabel, formatBotMessage as fmt } from '../../i18n'
 
 export function monitorStatusLabel(monitor: MonitorRow, messages: BotMessages): string {
   if (monitor.enabled !== 1) return messages.statusPaused
@@ -84,23 +84,6 @@ export function formatMonitorDetail(
   if (monitor.notes) lines.push(fmt(messages.detailNotes, { notes: monitor.notes }))
   lines.push(fmt(messages.detailStore, { url: monitor.store_url }))
   return lines.join('\n')
-}
-
-const EVENT_LABEL_KEYS: Record<EventType, keyof BotMessages> = {
-  release: 'eventRelease',
-  sale_start: 'eventSaleStart',
-  sale_change: 'eventSaleChange',
-  sale_end: 'eventSaleEnd',
-  price_change: 'eventPriceChange',
-  delisting_warning: 'eventDelistingWarning',
-  delisted: 'eventDelisted',
-  restored: 'eventRestored',
-  check_error: 'eventCheckError',
-}
-
-export function eventLabel(type: string, messages: BotMessages): string {
-  const key = EVENT_LABEL_KEYS[type as EventType]
-  return key ? messages[key] : type
 }
 
 export function formatEventLine(

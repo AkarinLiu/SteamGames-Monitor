@@ -1,6 +1,12 @@
 import type { EventSeverity, EventType, MonitorEvent } from '../../shared/types'
 import { escapeHtml, formatDateTime, formatPriceLine } from '../../shared/utils'
 import type { MonitorRow } from '../db/rows'
+import {
+  botMessages,
+  eventLabel,
+  formatBotMessage as fmt,
+  type BotMessages,
+} from '../i18n'
 import type { FeishuCard, RenderedMessage, WebhookPayload } from './types'
 
 function asString(value: unknown): string | null {
@@ -17,32 +23,18 @@ const FEISHU_TEMPLATES: Record<EventSeverity, string> = {
   critical: 'red',
 }
 
-function eventTitle(type: EventType, name: string): string {
-  switch (type) {
-    case 'release':
-      return `【发售】${name}`
-    case 'sale_start':
-      return `【促销开始】${name}`
-    case 'sale_change':
-      return `【促销变化】${name}`
-    case 'sale_end':
-      return `【促销结束】${name}`
-    case 'price_change':
-      return `【价格变动】${name}`
-    case 'delisting_warning':
-      return `【下架预警·启发式】${name}`
-    case 'delisted':
-      return `【已下架 / 不可购买】${name}`
-    case 'restored':
-      return `【恢复可售】${name}`
-    case 'check_error':
-      return `【检查异常】${name}`
-    default:
-      return `【${String(type)}】${name}`
-  }
+function eventTitle(type: EventType, name: string, messages: BotMessages): string {
+  return fmt(messages.notificationTitle, {
+    label: eventLabel(type, messages),
+    name,
+  })
 }
 
-function buildEventLines(event: MonitorEvent, monitor: MonitorRow): string[] {
+function buildEventLines(
+  event: MonitorEvent,
+  monitor: MonitorRow,
+  messages: BotMessages,
+): string[] {
   const p = event.payload
   const name = asString(p.name) ?? monitor.name
   const region = asString(p.region) ?? monitor.region
@@ -50,9 +42,9 @@ function buildEventLines(event: MonitorEvent, monitor: MonitorRow): string[] {
 
   switch (event.type) {
     case 'release': {
-      lines.push(`「${name}」已正式发售。`)
+      lines.push(fmt(messages.notificationReleased, { name }))
       const dateText = asString(p.releaseDateText)
-      if (dateText) lines.push(`发售日期：${dateText}`)
+      if (dateText) lines.push(fmt(messages.notificationReleaseDate, { date: dateText }))
       break
     }
     case 'sale_start': {
@@ -60,8 +52,14 @@ function buildEventLines(event: MonitorEvent, monitor: MonitorRow): string[] {
       const final = asString(p.priceFinalFormatted)
       const discount = asNumber(p.discountPercent) ?? 0
       const threshold = asNumber(p.threshold)
-      lines.push(`当前价格：${formatPriceLine(initial, final, discount)}`)
-      if (threshold !== null) lines.push(`已达到监控阈值 ${threshold}%`)
+      lines.push(
+        fmt(messages.notificationCurrentPrice, {
+          price: formatPriceLine(initial, final, discount),
+        }),
+      )
+      if (threshold !== null) {
+        lines.push(fmt(messages.notificationThresholdReached, { threshold }))
+      }
       break
     }
     case 'sale_change': {
@@ -69,15 +67,28 @@ function buildEventLines(event: MonitorEvent, monitor: MonitorRow): string[] {
       const discount = asNumber(p.discountPercent) ?? 0
       const oldFinal = asString(p.oldPriceFinalFormatted)
       const final = asString(p.priceFinalFormatted)
-      lines.push(`折扣变化：${oldDiscount}% → ${discount}%`)
-      if (oldFinal && final) lines.push(`价格变化：${oldFinal} → ${final}`)
+      lines.push(
+        fmt(messages.notificationDiscountChange, {
+          old: oldDiscount,
+          new: discount,
+        }),
+      )
+      if (oldFinal && final) {
+        lines.push(fmt(messages.notificationPriceChange, { old: oldFinal, new: final }))
+      }
       break
     }
     case 'sale_end': {
       const initial = asString(p.priceInitialFormatted)
       const oldDiscount = asNumber(p.oldDiscountPercent)
-      lines.push(`促销结束，恢复原价${initial ? `：${initial}` : ''}`)
-      if (oldDiscount) lines.push(`此前折扣 ${oldDiscount}%`)
+      lines.push(
+        initial
+          ? fmt(messages.notificationSaleEndedWithPrice, { price: initial })
+          : messages.notificationSaleEnded,
+      )
+      if (oldDiscount) {
+        lines.push(fmt(messages.notificationPreviousDiscount, { discount: oldDiscount }))
+      }
       break
     }
     case 'price_change': {
@@ -86,69 +97,100 @@ function buildEventLines(event: MonitorEvent, monitor: MonitorRow): string[] {
       const oldFree = p.oldIsFree === true
       const free = p.isFree === true
       if (oldFree !== free) {
-        lines.push(free ? '该商品已变为免费。' : `该商品已从免费转为付费${initial ? `：${initial}` : ''}。`)
+        if (free) {
+          lines.push(messages.notificationBecameFree)
+        } else if (initial) {
+          lines.push(fmt(messages.notificationBecamePaidWithPrice, { price: initial }))
+        } else {
+          lines.push(messages.notificationBecamePaid)
+        }
       } else {
-        lines.push(`原价变化：${oldInitial ?? '—'} → ${initial ?? '—'}`)
+        lines.push(
+          fmt(messages.notificationBasePriceChange, {
+            old: oldInitial ?? '—',
+            new: initial ?? '—',
+          }),
+        )
       }
       break
     }
     case 'delisting_warning': {
-      const newsTitle = asString(p.title) ?? 'Steam 新闻'
+      const newsTitle = asString(p.title) ?? messages.notificationSteamNewsFallback
       const keyword = asString(p.matchedKeyword)
       const newsUrl = asString(p.url)
-      lines.push(`Steam 新闻：「${newsTitle}」`)
-      if (keyword) lines.push(`命中关键词：${keyword}`)
-      lines.push('这是基于新闻关键词的启发式预警，请人工确认是否即将下架。')
-      if (newsUrl) lines.push(`新闻链接：${newsUrl}`)
+      lines.push(fmt(messages.notificationSteamNews, { title: newsTitle }))
+      if (keyword) lines.push(fmt(messages.notificationMatchedKeyword, { keyword }))
+      lines.push(messages.notificationDelistingHint)
+      if (newsUrl) lines.push(fmt(messages.notificationNewsLink, { url: newsUrl }))
       break
     }
     case 'delisted': {
-      lines.push('连续 2 次检查确认该商品在商店中无法购买。')
-      lines.push(`区域：${region}`)
+      lines.push(messages.notificationDelistedConfirmed)
+      lines.push(fmt(messages.notificationRegion, { region }))
       break
     }
     case 'restored': {
-      if (p.firstAvailable === true) {
-        lines.push(`该商品现在可以在区域 ${region} 购买。`)
-      } else {
-        lines.push(`该商品已恢复可购买（区域 ${region}）。`)
-      }
+      lines.push(
+        p.firstAvailable === true
+          ? fmt(messages.notificationRestoredFirst, { region })
+          : fmt(messages.notificationRestored, { region }),
+      )
       const final = asString(p.priceFinalFormatted)
       const discount = asNumber(p.discountPercent) ?? 0
-      if (final) lines.push(`当前价格：${formatPriceLine(null, final, discount)}`)
+      if (final) {
+        lines.push(
+          fmt(messages.notificationCurrentPrice, {
+            price: formatPriceLine(null, final, discount),
+          }),
+        )
+      }
       break
     }
     case 'check_error': {
       const failures = asNumber(p.consecutiveFailures) ?? 0
       const code = asString(p.errorCode) ?? 'unknown'
-      lines.push(`连续 ${failures} 次检查失败（${code}）。`)
-      if (p.autoPaused === true) lines.push('已自动暂停该监控项，请检查后手动恢复。')
+      lines.push(fmt(messages.notificationCheckFailed, { count: failures, code }))
+      if (p.autoPaused === true) lines.push(messages.notificationAutoPaused)
       break
     }
     default:
       break
   }
 
-  lines.push(`条目：${name}（appid ${monitor.appid}）`)
-  lines.push(`区域：${region}`)
+  lines.push(
+    fmt(messages.notificationEntry, {
+      name,
+      appid: monitor.appid,
+    }),
+  )
+  lines.push(fmt(messages.notificationRegion, { region }))
   return lines
 }
 
-function buildFooter(event: MonitorEvent, timezone: string | null): string {
-  return `Steam 监控 · ${formatDateTime(event.createdAt, timezone)}`
+function buildFooter(
+  event: MonitorEvent,
+  timezone: string | null,
+  messages: BotMessages,
+): string {
+  return fmt(messages.notificationFooter, {
+    app: messages.appName,
+    time: formatDateTime(event.createdAt, timezone),
+  })
 }
 
 export function renderEventMessage(
   event: MonitorEvent,
   monitor: MonitorRow,
   timezone: string | null,
+  locale: string | null | undefined = 'zh-CN',
 ): RenderedMessage {
+  const messages = botMessages(locale)
   const name = asString(event.payload.name) ?? monitor.name
   const storeUrl = asString(event.payload.storeUrl) ?? monitor.store_url
-  const title = eventTitle(event.type, name)
-  const lines = buildEventLines(event, monitor)
-  const footer = buildFooter(event, timezone)
-  const markdown = `**${title}**\n${lines.join('\n')}\n[在 Steam 查看](${storeUrl})\n${footer}`
+  const title = eventTitle(event.type, name, messages)
+  const lines = buildEventLines(event, monitor, messages)
+  const footer = buildFooter(event, timezone, messages)
+  const markdown = `**${title}**\n${lines.join('\n')}\n[${messages.notificationViewOnSteam}](${storeUrl})\n${footer}`
   const text = `${title}\n${lines.join('\n')}\n${storeUrl}\n${footer}`
 
   const htmlLines = lines.map((line) => `<p style="margin:4px 0">${escapeHtml(line)}</p>`).join('')
@@ -159,7 +201,7 @@ export function renderEventMessage(
     </div>
     <div style="padding:16px 20px;font-size:14px;line-height:1.6">${htmlLines}
       <p style="margin:16px 0">
-        <a href="${escapeHtml(storeUrl)}" style="display:inline-block;background:#66c0f4;color:#171a21;padding:8px 16px;border-radius:4px;text-decoration:none;font-weight:600">在 Steam 查看</a>
+        <a href="${escapeHtml(storeUrl)}" style="display:inline-block;background:#66c0f4;color:#171a21;padding:8px 16px;border-radius:4px;text-decoration:none;font-weight:600">${escapeHtml(messages.notificationViewOnSteam)}</a>
       </p>
       <p style="margin:12px 0 0;color:#8f98a0;font-size:12px">${escapeHtml(footer)}</p>
     </div>
@@ -179,7 +221,7 @@ export function renderEventMessage(
         actions: [
           {
             tag: 'button',
-            text: { tag: 'plain_text', content: '在 Steam 查看' },
+            text: { tag: 'plain_text', content: messages.notificationViewOnSteam },
             url: storeUrl,
             type: 'default',
           },
@@ -227,12 +269,14 @@ export function renderEventMessage(
 export function renderTestMessage(
   channelName: string,
   timezone: string | null,
+  locale: string | null | undefined = 'zh-CN',
 ): RenderedMessage {
+  const messages = botMessages(locale)
   const now = Date.now()
-  const title = '【测试通知】Steam 监控'
+  const title = messages.notificationTestTitle
   const lines = [
-    `通知渠道「${channelName}」配置成功。`,
-    '如果你收到这条消息，说明此渠道可以正常接收监控通知。',
+    fmt(messages.notificationTestChannelOk, { channel: channelName }),
+    messages.notificationTestHint,
     buildFooter(
       {
         id: 0,
@@ -245,6 +289,7 @@ export function renderTestMessage(
         createdAt: now,
       },
       timezone,
+      messages,
     ),
   ]
   const markdown = `**${title}**\n${lines.join('\n')}`

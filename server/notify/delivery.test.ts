@@ -256,6 +256,28 @@ describe('notification delivery', () => {
     expect(signature).toBe(expected)
   })
 
+  it('renders event notifications in the owner UI language', async () => {
+    const { user, event } = await seed()
+    const { updateUser } = await import('../db/repo/users')
+    updateUser(db!, user.id, { uiLocale: 'en' })
+    await addWebhookChannel(user.id)
+    const { enqueueEventDeliveries } = await import('./dispatcher')
+    const { DeliveryWorker } = await import('./deliveryWorker')
+
+    expect(enqueueEventDeliveries(db!, event)).toBe(1)
+    const worker = new DeliveryWorker(db!)
+    expect(await worker.tick()).toBe(1)
+
+    const request = received[0]!
+    expect(request.body).toMatchObject({
+      kind: 'event',
+      title: '[Sale started] 赛博朋克 2077',
+    })
+    const text = request.body.text as string
+    expect(text).toContain('Current price:')
+    expect(text).toContain('Item: 赛博朋克 2077 (appid 1091500)')
+  })
+
   it('retries after a transient failure and succeeds', async () => {
     const { user, event } = await seed()
     await addChannel(user.id)

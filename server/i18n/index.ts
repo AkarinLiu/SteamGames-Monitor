@@ -1,4 +1,5 @@
 import { resolveUiLocale, type UiLocale } from '../../shared/i18n'
+import type { EventType } from '../../shared/types'
 import { de } from './de'
 import { en } from './en'
 import { fr } from './fr'
@@ -39,4 +40,21 @@ export function formatBotMessage(
   return template.replace(/\{(\w+)\}/g, (match, key: string) =>
     key in params ? String(params[key]) : match,
   )
+}
+
+const EVENT_LABEL_KEYS: Record<EventType, keyof BotMessages> = {
+  release: 'eventRelease',
+  sale_start: 'eventSaleStart',
+  sale_change: 'eventSaleChange',
+  sale_end: 'eventSaleEnd',
+  price_change: 'eventPriceChange',
+  delisting_warning: 'eventDelistingWarning',
+  delisted: 'eventDelisted',
+  restored: 'eventRestored',
+  check_error: 'eventCheckError',
+}
+
+export function eventLabel(type: string, messages: BotMessages): string {
+  const key = EVENT_LABEL_KEYS[type as EventType]
+  return key ? messages[key] : type
 }

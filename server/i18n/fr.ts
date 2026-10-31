@@ -132,6 +132,44 @@ export const fr: BotMessages = {
   eventsEmpty: 'Aucun événement pour l’instant.',
   eventsHeader: 'Événements récents :',
 
+  appName: 'Steam Monitor',
+  notificationTitle: '[{label}] {name}',
+  notificationFooter: '{app} · {time}',
+  notificationViewOnSteam: 'Voir sur Steam',
+  notificationEntry: 'Élément : {name} (appid {appid})',
+  notificationRegion: 'Région : {region}',
+  notificationReleased: '« {name} » est officiellement sorti.',
+  notificationReleaseDate: 'Date de sortie : {date}',
+  notificationCurrentPrice: 'Prix actuel : {price}',
+  notificationThresholdReached: 'Seuil de suivi atteint : {threshold} %',
+  notificationDiscountChange: 'Variation de réduction : {old} % → {new} %',
+  notificationPriceChange: 'Variation de prix : {old} → {new}',
+  notificationSaleEnded: 'Promotion terminée ; prix revenu à la normale.',
+  notificationSaleEndedWithPrice: 'Promotion terminée ; prix revenu à {price}.',
+  notificationPreviousDiscount: 'Réduction précédente : {discount} %',
+  notificationBecameFree: 'Cet élément est désormais gratuit.',
+  notificationBecamePaid: 'Cet élément est passé de gratuit à payant.',
+  notificationBecamePaidWithPrice: 'Cet élément est passé de gratuit à payant : {price}.',
+  notificationBasePriceChange: 'Variation du prix de base : {old} → {new}',
+  notificationSteamNews: 'Actualité Steam : « {title} »',
+  notificationMatchedKeyword: 'Mot-clé détecté : {keyword}',
+  notificationDelistingHint:
+    'Il s’agit d’une alerte heuristique basée sur des mots-clés d’actualité. Vérifiez manuellement si l’élément va être retiré.',
+  notificationNewsLink: 'Lien de l’actualité : {url}',
+  notificationDelistedConfirmed:
+    'Deux vérifications consécutives ont confirmé que cet élément n’est pas achetable dans la boutique.',
+  notificationRestoredFirst: 'Cet élément est désormais achetable dans la région {region}.',
+  notificationRestored: 'Cet élément est de nouveau achetable (région {region}).',
+  notificationCheckFailed: '{count} échecs de vérification consécutifs ({code}).',
+  notificationAutoPaused:
+    'Ce suivi a été suspendu automatiquement ; vérifiez-le puis reprenez-le manuellement.',
+  notificationSteamNewsFallback: 'Actualité Steam',
+  notificationTestTitle: '[Test] Steam Monitor',
+  notificationTestChannelOk:
+    'Le canal de notification « {channel} » est configuré avec succès.',
+  notificationTestHint:
+    'Si vous avez reçu ce message, ce canal peut recevoir les notifications de suivi.',
+
   ownerMissing: 'Le compte propriétaire du bot n’existe pas.',
   decryptFailed:
     'Les identifiants du bot ne peuvent pas être déchiffrés. Demandez à un administrateur de saisir à nouveau la configuration.',

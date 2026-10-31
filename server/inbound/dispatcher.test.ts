@@ -232,10 +232,27 @@ describe('InboundDispatcher', () => {
     )
     expect(unknown.join(' ')).toContain('Unknown command /nope')
 
+    const { createMonitor } = await import('../db/repo/monitors')
+    createMonitor(db, {
+      userId: user.id,
+      appid: 123,
+      kind: 'game',
+      name: 'English Monitor',
+      storeUrl: 'https://store.steampowered.com/app/123/',
+      region: 'cn',
+      language: 'schinese',
+      nextCheckAt: Date.now() + 60_000,
+    })
+    const listed = await dispatcher.handleInline(
+      event({ platformMessageId: 'msg-en-3', text: '/list --all' }),
+    )
+    expect(listed.join('\n')).toContain('Monitors (page 1, 1 total):')
+    expect(listed.join('\n')).toContain('English Monitor')
+
     const denied = await dispatcher.handleInline(
       event({
         platformUserId: 'ou_viewer',
-        platformMessageId: 'msg-en-3',
+        platformMessageId: 'msg-en-4',
         text: '/add 1091500',
       }),
     )

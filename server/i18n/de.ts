@@ -129,6 +129,44 @@ export const de: BotMessages = {
   eventsEmpty: 'Noch keine Ereignisse.',
   eventsHeader: 'Letzte Ereignisse:',
 
+  appName: 'Steam-Monitor',
+  notificationTitle: '[{label}] {name}',
+  notificationFooter: '{app} · {time}',
+  notificationViewOnSteam: 'Auf Steam ansehen',
+  notificationEntry: 'Eintrag: {name} (AppID {appid})',
+  notificationRegion: 'Region: {region}',
+  notificationReleased: '"{name}" wurde veröffentlicht.',
+  notificationReleaseDate: 'Veröffentlichungsdatum: {date}',
+  notificationCurrentPrice: 'Aktueller Preis: {price}',
+  notificationThresholdReached: 'Überwachungsschwelle erreicht: {threshold}%',
+  notificationDiscountChange: 'Rabattänderung: {old}% → {new}%',
+  notificationPriceChange: 'Preisänderung: {old} → {new}',
+  notificationSaleEnded: 'Angebot beendet; Preis wieder regulär.',
+  notificationSaleEndedWithPrice: 'Angebot beendet; Preis wieder {price}.',
+  notificationPreviousDiscount: 'Vorheriger Rabatt: {discount}%',
+  notificationBecameFree: 'Dieser Artikel ist jetzt kostenlos.',
+  notificationBecamePaid: 'Dieser Artikel ist jetzt kostenpflichtig.',
+  notificationBecamePaidWithPrice: 'Dieser Artikel ist jetzt kostenpflichtig: {price}.',
+  notificationBasePriceChange: 'Grundpreisänderung: {old} → {new}',
+  notificationSteamNews: 'Steam-News: "{title}"',
+  notificationMatchedKeyword: 'Treffer-Schlüsselwort: {keyword}',
+  notificationDelistingHint:
+    'Dies ist eine heuristische Warnung auf Basis von News-Schlüsselwörtern. Bitte manuell prüfen, ob der Artikel demnächst delistet wird.',
+  notificationNewsLink: 'News-Link: {url}',
+  notificationDelistedConfirmed:
+    'Zwei aufeinanderfolgende Prüfungen bestätigten, dass dieser Artikel im Shop nicht kaufbar ist.',
+  notificationRestoredFirst: 'Dieser Artikel kann jetzt in Region {region} gekauft werden.',
+  notificationRestored: 'Dieser Artikel ist wieder kaufbar (Region {region}).',
+  notificationCheckFailed: '{count} aufeinanderfolgende Prüfungen fehlgeschlagen ({code}).',
+  notificationAutoPaused:
+    'Dieser Monitor wurde automatisch pausiert; bitte prüfen und manuell fortsetzen.',
+  notificationSteamNewsFallback: 'Steam-News',
+  notificationTestTitle: '[Test] Steam-Monitor',
+  notificationTestChannelOk:
+    'Benachrichtigungskanal "{channel}" wurde erfolgreich konfiguriert.',
+  notificationTestHint:
+    'Wenn du diese Nachricht erhalten hast, kann dieser Kanal Monitorbenachrichtigungen empfangen.',
+
   ownerMissing: 'Das Besitzerkonto des Bots existiert nicht.',
   decryptFailed:
     'Die Bot-Zugangsdaten können nicht entschlüsselt werden. Bitte einen Administrator die Konfiguration erneut eingeben lassen.',

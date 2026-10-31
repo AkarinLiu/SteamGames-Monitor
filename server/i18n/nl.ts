@@ -132,6 +132,44 @@ export const nl: BotMessages = {
   eventsEmpty: 'Nog geen gebeurtenissen.',
   eventsHeader: 'Recente gebeurtenissen:',
 
+  appName: 'Steam-monitor',
+  notificationTitle: '[{label}] {name}',
+  notificationFooter: '{app} · {time}',
+  notificationViewOnSteam: 'Bekijk op Steam',
+  notificationEntry: 'Item: {name} (appid {appid})',
+  notificationRegion: 'Regio: {region}',
+  notificationReleased: '"{name}" is uitgebracht.',
+  notificationReleaseDate: 'Releasedatum: {date}',
+  notificationCurrentPrice: 'Huidige prijs: {price}',
+  notificationThresholdReached: 'Monitoringsdrempel bereikt: {threshold}%',
+  notificationDiscountChange: 'Kortingswijziging: {old}% → {new}%',
+  notificationPriceChange: 'Prijsverandering: {old} → {new}',
+  notificationSaleEnded: 'Aanbieding beëindigd; prijs terug naar normaal.',
+  notificationSaleEndedWithPrice: 'Aanbieding beëindigd; prijs terug naar {price}.',
+  notificationPreviousDiscount: 'Vorige korting: {discount}%',
+  notificationBecameFree: 'Dit item is nu gratis.',
+  notificationBecamePaid: 'Dit item is van gratis naar betaald gegaan.',
+  notificationBecamePaidWithPrice: 'Dit item is van gratis naar betaald gegaan: {price}.',
+  notificationBasePriceChange: 'Wijziging basisprijs: {old} → {new}',
+  notificationSteamNews: 'Steam-nieuws: "{title}"',
+  notificationMatchedKeyword: 'Gevonden trefwoord: {keyword}',
+  notificationDelistingHint:
+    'Dit is een heuristische waarschuwing op basis van nieuwsberichten. Controleer handmatig of het item binnenkort uit verkoop gaat.',
+  notificationNewsLink: 'Nieuwsbericht: {url}',
+  notificationDelistedConfirmed:
+    'Twee opeenvolgende controles bevestigden dat dit item niet te koop is in de winkel.',
+  notificationRestoredFirst: 'Dit item is nu te koop in regio {region}.',
+  notificationRestored: 'Dit item is weer te koop (regio {region}).',
+  notificationCheckFailed: '{count} opeenvolgende mislukte controles ({code}).',
+  notificationAutoPaused:
+    'Deze monitor is automatisch gepauzeerd; controleer hem en hervat handmatig.',
+  notificationSteamNewsFallback: 'Steam-nieuws',
+  notificationTestTitle: '[Test] Steam-monitor',
+  notificationTestChannelOk:
+    'Notificatiekanaal "{channel}" is succesvol geconfigureerd.',
+  notificationTestHint:
+    'Als je dit bericht hebt ontvangen, kan dit kanaal monitoringsmeldingen ontvangen.',
+
   ownerMissing: 'Het eigenaarsaccount van de bot bestaat niet.',
   decryptFailed:
     'De inloggegevens van de bot kunnen niet worden ontsleuteld. Laat een beheerder de configuratie opnieuw invoeren.',
