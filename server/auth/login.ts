@@ -3,6 +3,7 @@ import type { LoginInput } from '../../shared/schemas'
 import type { Db } from '../db/database'
 import { findUserByUsername, findUserById, touchLastLogin } from '../db/repo/users'
 import { writeAudit } from '../db/repo/audit'
+import { writeLoginLog } from '../db/repo/loginLogs'
 import type { UserRow } from '../db/rows'
 import { tooManyRequests, unauthorized } from '../lib/errors'
 import { verifyPassword } from './password'
@@ -50,11 +51,24 @@ export class LoginService {
     if (!row || !valid || row.status !== 'active') {
       this.accountLimiter.hit(accountKey)
       this.ipLimiter.hit(ipKey)
+      const reason = !row
+        ? 'user_not_found'
+        : !valid
+          ? 'password_wrong'
+          : 'user_disabled'
+      writeLoginLog(db, {
+        userId: row?.id ?? null,
+        username: input.username,
+        ip,
+        userAgent,
+        success: false,
+        reason,
+      })
       writeAudit(db, {
         actorUserId: row?.id ?? null,
         action: 'auth.login_failed',
         target: row ? `user:${row.id}` : null,
-        detail: { username: input.username },
+        detail: { username: input.username, reason },
         ip,
       })
       throw unauthorized('用户名或密码错误')
@@ -62,6 +76,13 @@ export class LoginService {
 
     this.accountLimiter.reset(accountKey)
     touchLastLogin(db, row.id)
+    writeLoginLog(db, {
+      userId: row.id,
+      username: row.username,
+      ip,
+      userAgent,
+      success: true,
+    })
     const session = issueSession(db, row.id, ip, userAgent)
     writeAudit(db, {
       actorUserId: row.id,

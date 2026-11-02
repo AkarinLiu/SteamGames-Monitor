@@ -4,6 +4,7 @@ import {
   ResetPasswordSchema,
   UpdateAdminSettingsSchema,
   UpdateUserSchema,
+  BatchUserActionSchema,
 } from '../../../shared/schemas'
 import { LIMITS } from '../../../shared/constants'
 import type { AppBindings } from '../context'
@@ -21,9 +22,16 @@ import {
   publicUser,
   updateUser,
   setUserPasswordHash,
+  setUserStatus,
 } from '../../db/repo/users'
 import { deleteUserSessions } from '../../db/repo/sessions'
-import { writeAudit } from '../../db/repo/audit'
+import {
+  writeAudit,
+  listAuditLogsFiltered,
+  distinctAuditActions,
+  distinctAuditActors,
+} from '../../db/repo/audit'
+import { listLoginLogs } from '../../db/repo/loginLogs'
 import { hashPassword, generateTemporaryPassword } from '../../auth/password'
 import { conflict, notFound } from '../../lib/errors'
 import { isUniqueViolation } from '../../db/database'
@@ -190,6 +198,103 @@ export function adminRoutes(runtime: Runtime): Hono<AppBindings> {
     return c.json({ ok: true })
   })
 
+  router.post('/users/batch', async (c) => {
+    const actor = c.get('user') as UserRow
+    const input = await parseJson(c, BatchUserActionSchema)
+    const succeeded: number[] = []
+    const failed: Array<{ id: number; reason: string }> = []
+
+    for (const id of input.ids) {
+      const target = findUserById(db, id)
+      if (!target) {
+        failed.push({ id, reason: '用户不存在' })
+        continue
+      }
+      try {
+        db.transaction(() => {
+          if (input.action === 'enable') {
+            setUserStatus(db, target.id, 'active')
+            writeAudit(db, {
+              actorUserId: actor.id,
+              action: 'admin.user_update',
+              target: `user:${target.id}`,
+              detail: { status: 'active', batch: true },
+              ip: getClientIp(c),
+            })
+          } else if (input.action === 'disable') {
+            if (target.id === actor.id) throw conflict('不能禁用当前登录的管理员账号')
+            if (
+              target.role === 'admin' &&
+              countOtherActiveAdmins(db, target.id) === 0
+            ) {
+              throw conflict('必须保留至少一个启用的管理员')
+            }
+            setUserStatus(db, target.id, 'disabled')
+            deleteUserSessions(db, target.id)
+            writeAudit(db, {
+              actorUserId: actor.id,
+              action: 'admin.user_update',
+              target: `user:${target.id}`,
+              detail: { status: 'disabled', batch: true },
+              ip: getClientIp(c),
+            })
+          } else if (input.action === 'force_change_password') {
+            setUserPasswordHash(db, target.id, target.password_hash, true)
+            deleteUserSessions(db, target.id)
+            writeAudit(db, {
+              actorUserId: actor.id,
+              action: 'admin.user_reset_password',
+              target: `user:${target.id}`,
+              detail: { batch: true, keptPassword: true },
+              ip: getClientIp(c),
+            })
+          } else if (input.action === 'set_max_monitors') {
+            updateUser(db, target.id, { maxMonitors: input.maxMonitors })
+            writeAudit(db, {
+              actorUserId: actor.id,
+              action: 'admin.user_update',
+              target: `user:${target.id}`,
+              detail: { maxMonitors: input.maxMonitors, batch: true },
+              ip: getClientIp(c),
+            })
+          } else if (input.action === 'delete') {
+            if (target.id === actor.id) throw conflict('不能删除当前登录的账号')
+            if (target.role === 'admin' && countActiveAdmins(db) <= 1) {
+              throw conflict('必须保留至少一个启用的管理员')
+            }
+            writeAudit(db, {
+              actorUserId: actor.id,
+              action: 'admin.user_delete',
+              target: `user:${target.id}`,
+              detail: { username: target.username, batch: true },
+              ip: getClientIp(c),
+            })
+            deleteUser(db, target.id)
+          }
+        })
+        succeeded.push(target.id)
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err)
+        failed.push({ id: target.id, reason: message })
+      }
+    }
+
+    writeAudit(db, {
+      actorUserId: actor.id,
+      action: 'admin.batch',
+      target: `action:${input.action}`,
+      detail: {
+        action: input.action,
+        ids: input.ids,
+        succeeded,
+        failed,
+      },
+      ip: getClientIp(c),
+    })
+
+    return c.json({ succeeded, failed })
+  })
+
   router.get('/settings', (c) => {
     return c.json({ settings: getSystemSettings(db, env.MAX_TOTAL_MONITORS) })
   })
@@ -266,6 +371,101 @@ export function adminRoutes(runtime: Runtime): Hono<AppBindings> {
       })
     })
     return c.json({ settings: getSystemSettings(db, env.MAX_TOTAL_MONITORS) })
+  })
+
+  router.get('/audit', (c) => {
+    const query = c.req.query()
+    const actions = query.actions
+      ? String(query.actions)
+          .split(',')
+          .map((item) => item.trim())
+          .filter(Boolean)
+      : undefined
+    const actorUserId = query.actorUserId ? Number(query.actorUserId) : undefined
+    const since = query.since ? Number(query.since) : undefined
+    const until = query.until ? Number(query.until) : undefined
+    const offset = query.offset ? Number(query.offset) : undefined
+    const limit = query.limit ? Number(query.limit) : undefined
+    const target = query.target ? String(query.target) : undefined
+
+    if (actorUserId !== undefined && Number.isNaN(actorUserId)) {
+      throw conflict('actorUserId 必须是数字')
+    }
+    const page = listAuditLogsFiltered(db, {
+      actorUserId: Number.isNaN(actorUserId as number) ? undefined : actorUserId,
+      actions,
+      target,
+      since: Number.isNaN(since as number) ? undefined : since,
+      until: Number.isNaN(until as number) ? undefined : until,
+      offset,
+      limit,
+    })
+    return c.json(page)
+  })
+
+  router.get('/audit/facets', (c) => {
+    void c
+    return c.json({
+      actions: distinctAuditActions(db),
+      actors: distinctAuditActors(db),
+    })
+  })
+
+  router.get('/logins', (c) => {
+    const query = c.req.query()
+    const userId = query.userId ? Number(query.userId) : undefined
+    const since = query.since ? Number(query.since) : undefined
+    const until = query.until ? Number(query.until) : undefined
+    const offset = query.offset ? Number(query.offset) : undefined
+    const limit = query.limit ? Number(query.limit) : undefined
+    const successParam = query.success
+    const success =
+      successParam === '1' || successParam === 'true'
+        ? true
+        : successParam === '0' || successParam === 'false'
+          ? false
+          : undefined
+
+    if (userId !== undefined && Number.isNaN(userId)) {
+      throw conflict('userId 必须是数字')
+    }
+    return c.json(
+      listLoginLogs(db, {
+        userId: Number.isNaN(userId as number) ? undefined : userId,
+        since: Number.isNaN(since as number) ? undefined : since,
+        until: Number.isNaN(until as number) ? undefined : until,
+        success,
+        offset,
+        limit,
+      }),
+    )
+  })
+
+  router.get('/users/:id/logins', (c) => {
+    const id = parseIdParam(c)
+    ensureTarget(db, id)
+    const query = c.req.query()
+    const since = query.since ? Number(query.since) : undefined
+    const until = query.until ? Number(query.until) : undefined
+    const offset = query.offset ? Number(query.offset) : undefined
+    const limit = query.limit ? Number(query.limit) : undefined
+    const successParam = query.success
+    const success =
+      successParam === '1' || successParam === 'true'
+        ? true
+        : successParam === '0' || successParam === 'false'
+          ? false
+          : undefined
+    return c.json(
+      listLoginLogs(db, {
+        userId: id,
+        since: Number.isNaN(since as number) ? undefined : since,
+        until: Number.isNaN(until as number) ? undefined : until,
+        success,
+        offset,
+        limit,
+      }),
+    )
   })
 
   return router

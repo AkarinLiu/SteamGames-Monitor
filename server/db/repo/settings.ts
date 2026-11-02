@@ -18,6 +18,7 @@ export const DEFAULT_RETENTION: RetentionSettings = {
   inboundDays: 30,
   logsDays: 180,
   newsSeenDays: 180,
+  loginLogsDays: 90,
 }
 
 export function getSetting<T>(db: Db, key: string, fallback: T): T {

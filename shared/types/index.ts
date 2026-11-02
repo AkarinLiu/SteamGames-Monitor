@@ -332,6 +332,7 @@ export interface RetentionSettings {
   inboundDays: number
   logsDays: number
   newsSeenDays: number
+  loginLogsDays: number
 }
 
 export interface SystemSettings {

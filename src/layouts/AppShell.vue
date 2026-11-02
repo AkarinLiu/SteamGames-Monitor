@@ -56,6 +56,7 @@ async function logout(): Promise<void> {
       <template v-if="session.isAdmin">
         <div class="nav-section">{{ $t("管理") }}</div>
         <RouterLink :to="{ name: 'admin-users' }" class="nav-link" :class="{ active: navActive('admin-users') }" active-class="" exact-active-class="">{{ $t("用户管理") }}</RouterLink>
+        <RouterLink :to="{ name: 'admin-audit' }" class="nav-link" :class="{ active: navActive('admin-audit') }" active-class="" exact-active-class="">{{ $t("审计日志") }}</RouterLink>
         <RouterLink :to="{ name: 'admin-system' }" class="nav-link" :class="{ active: navActive('admin-system') }" active-class="" exact-active-class="">{{ $t("系统状态") }}</RouterLink>
       </template>
 

@@ -69,6 +69,22 @@ export const useAdminStore = defineStore('admin', () => {
     await fetchUsers()
   }
 
+  async function batchUsers(
+    input:
+      | { action: 'enable'; ids: number[] }
+      | { action: 'disable'; ids: number[] }
+      | { action: 'force_change_password'; ids: number[] }
+      | { action: 'set_max_monitors'; ids: number[]; maxMonitors: number }
+      | { action: 'delete'; ids: number[] },
+  ): Promise<{ succeeded: number[]; failed: Array<{ id: number; reason: string }> }> {
+    const result = await api.post<{
+      succeeded: number[]
+      failed: Array<{ id: number; reason: string }>
+    }>('/admin/users/batch', input)
+    await fetchUsers()
+    return result
+  }
+
   async function fetchSettings(): Promise<void> {
     const result = await api.get<{ settings: SystemSettings }>('/admin/settings')
     settings.value = result.settings
@@ -93,6 +109,7 @@ export const useAdminStore = defineStore('admin', () => {
     updateUser,
     resetPassword,
     deleteUser,
+    batchUsers,
     fetchSettings,
     updateSettings,
     fetchHealth,

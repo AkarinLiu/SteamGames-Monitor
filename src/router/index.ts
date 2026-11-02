@@ -97,6 +97,12 @@ const router = createRouter({
           meta: { title: '用户管理', subtitle: '账号、角色与配额', admin: true },
         },
         {
+          path: 'admin/audit',
+          name: 'admin-audit',
+          component: () => import('../views/AuditLogView.vue'),
+          meta: { title: '审计日志', subtitle: '管理员操作记录', admin: true },
+        },
+        {
           path: 'admin/system',
           name: 'admin-system',
           component: () => import('../views/AdminSystemView.vue'),

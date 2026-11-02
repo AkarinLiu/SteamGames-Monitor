@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { t, tf } from '@/i18n'
 
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import type { AdminUserSummary, Role, UserStatus } from '@shared/types'
 import {
   LANGUAGE_OPTIONS,
@@ -19,7 +20,10 @@ import Modal from '@/components/Modal.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import ErrorBanner from '@/components/ErrorBanner.vue'
 import CopyButton from '@/components/CopyButton.vue'
+import UserDetailDrawer from '@/components/UserDetailDrawer.vue'
 
+const route = useRoute()
+const router = useRouter()
 const store = useAdminStore()
 const session = useSessionStore()
 const toast = useToastStore()
@@ -56,6 +60,117 @@ const deleteBusy = ref(false)
 const resetTarget = ref<AdminUserSummary | null>(null)
 const resetBusy = ref(false)
 const resetResult = ref<{ user: AdminUserSummary; password: string } | null>(null)
+const detailTarget = ref<AdminUserSummary | null>(null)
+
+const selectedIds = ref<Set<number>>(new Set())
+const batchBusy = ref(false)
+const batchMaxMonitors = ref<number>(LIMITS.maxMonitorsPerUser)
+
+const search = ref('')
+const filterRole = ref<'' | Role>('')
+const filterStatus = ref<'' | UserStatus>('')
+const filterMustChange = ref<'all' | 'yes' | 'no'>('all')
+const filterOnboarded = ref<'all' | 'yes' | 'no'>('all')
+
+function syncFiltersFromQuery(): void {
+  const q = route.query
+  search.value = typeof q.q === 'string' ? q.q : ''
+  filterRole.value = (typeof q.role === 'string' && (q.role === 'admin' || q.role === 'member')) ? q.role : ''
+  filterStatus.value = (typeof q.status === 'string' && (q.status === 'active' || q.status === 'disabled')) ? q.status : ''
+  filterMustChange.value = q.mustChange === 'yes' ? 'yes' : q.mustChange === 'no' ? 'no' : 'all'
+  filterOnboarded.value = q.onboarded === 'yes' ? 'yes' : q.onboarded === 'no' ? 'no' : 'all'
+}
+
+function writeFilterQuery(): void {
+  const query: Record<string, string> = {}
+  if (search.value) query.q = search.value
+  if (filterRole.value) query.role = filterRole.value
+  if (filterStatus.value) query.status = filterStatus.value
+  if (filterMustChange.value !== 'all') query.mustChange = filterMustChange.value
+  if (filterOnboarded.value !== 'all') query.onboarded = filterOnboarded.value
+  void router.replace({ query })
+}
+
+const filteredUsers = computed<AdminUserSummary[]>(() => {
+  const keyword = search.value.trim().toLowerCase()
+  return store.users.filter((person) => {
+    if (keyword) {
+      const hay = `${person.username} ${person.displayName}`.toLowerCase()
+      if (!hay.includes(keyword)) return false
+    }
+    if (filterRole.value && person.role !== filterRole.value) return false
+    if (filterStatus.value && person.status !== filterStatus.value) return false
+    if (filterMustChange.value === 'yes' && !person.mustChangePassword) return false
+    if (filterMustChange.value === 'no' && person.mustChangePassword) return false
+    if (filterOnboarded.value === 'yes' && !person.onboardedAt) return false
+    if (filterOnboarded.value === 'no' && person.onboardedAt) return false
+    return true
+  })
+})
+
+const allSelected = computed<boolean>(
+  () => filteredUsers.value.length > 0 && selectedIds.value.size === filteredUsers.value.length,
+)
+
+function toggleSelect(id: number): void {
+  const next = new Set(selectedIds.value)
+  if (next.has(id)) next.delete(id)
+  else next.add(id)
+  selectedIds.value = next
+}
+
+function toggleSelectAll(): void {
+  if (selectedIds.value.size === filteredUsers.value.length) {
+    selectedIds.value = new Set()
+  } else {
+    selectedIds.value = new Set(filteredUsers.value.map((user) => user.id))
+  }
+}
+
+watch(filteredUsers, () => {
+  const validIds = new Set(filteredUsers.value.map((user) => user.id))
+  const next = new Set<number>()
+  for (const id of selectedIds.value) {
+    if (validIds.has(id)) next.add(id)
+  }
+  selectedIds.value = next
+})
+
+watch([search, filterRole, filterStatus, filterMustChange, filterOnboarded], () => {
+  writeFilterQuery()
+})
+
+async function runBatch(
+  action:
+    | { action: 'enable'; ids: number[] }
+    | { action: 'disable'; ids: number[] }
+    | { action: 'force_change_password'; ids: number[] }
+    | { action: 'set_max_monitors'; ids: number[]; maxMonitors: number }
+    | { action: 'delete'; ids: number[] },
+  confirmMessage: string,
+): Promise<void> {
+  if (selectedIds.value.size === 0) return
+  if (!window.confirm(confirmMessage)) return
+  batchBusy.value = true
+  try {
+    const result = await store.batchUsers(action)
+    if (result.failed.length === 0) {
+      toast.success(tf("已批量处理 {count} 位用户", { count: result.succeeded.length }))
+    } else {
+      toast.error(
+        tf("部分失败：成功 {ok}，失败 {fail}", {
+          ok: result.succeeded.length,
+          fail: result.failed.length,
+        }),
+      )
+    }
+    selectedIds.value = new Set()
+  } catch (err) {
+    toast.error(describeError(err))
+  } finally {
+    batchBusy.value = false
+  }
+}
 
 async function load(): Promise<void> {
   error.value = ''
@@ -170,8 +285,16 @@ async function confirmDelete(): Promise<void> {
 }
 
 onMounted(() => {
+  syncFiltersFromQuery()
   void load()
 })
+
+watch(
+  () => route.query,
+  () => {
+    syncFiltersFromQuery()
+  },
+)
 </script>
 
 <template>
@@ -188,14 +311,141 @@ onMounted(() => {
 
     <ErrorBanner :message="error" />
 
+    <div class="card filter-bar">
+      <div class="field search-field">
+        <label for="u-search">{{ $t("搜索") }}</label>
+        <input
+          id="u-search"
+          v-model="search"
+          class="input"
+          type="search"
+          :placeholder='$t("按用户名或显示名称搜索")'
+        />
+      </div>
+      <div class="field">
+        <label for="u-role">{{ $t("角色") }}</label>
+        <select id="u-role" v-model="filterRole" class="select">
+          <option value="">{{ $t("全部") }}</option>
+          <option value="admin">{{ $t("管理员") }}</option>
+          <option value="member">{{ $t("普通用户") }}</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="u-status">{{ $t("状态") }}</label>
+        <select id="u-status" v-model="filterStatus" class="select">
+          <option value="">{{ $t("全部") }}</option>
+          <option value="active">{{ $t("启用") }}</option>
+          <option value="disabled">{{ $t("禁用") }}</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="u-must-change">{{ $t("待改密") }}</label>
+        <select id="u-must-change" v-model="filterMustChange" class="select">
+          <option value="all">{{ $t("全部") }}</option>
+          <option value="yes">{{ $t("是") }}</option>
+          <option value="no">{{ $t("否") }}</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="u-onboarded">{{ $t("初始设置") }}</label>
+        <select id="u-onboarded" v-model="filterOnboarded" class="select">
+          <option value="all">{{ $t("全部") }}</option>
+          <option value="yes">{{ $t("已完成") }}</option>
+          <option value="no">{{ $t("未完成") }}</option>
+        </select>
+      </div>
+      <div class="field filter-actions">
+        <label class="invisible">{{ $t("操作") }}</label>
+        <button class="btn" type="button" @click="search = ''; filterRole = ''; filterStatus = ''; filterMustChange = 'all'; filterOnboarded = 'all'">
+          {{ $t("清除筛选") }}
+        </button>
+      </div>
+    </div>
+
+    <p v-if="store.users.length > 0" class="faint small filter-summary">
+      {{ tf("显示 {shown} / {total} 位用户", { shown: filteredUsers.length, total: store.users.length }) }}
+    </p>
+
+    <div v-if="selectedIds.size > 0" class="batch-bar card">
+      <span class="batch-count">
+        {{ tf("已选择 {count} 位用户", { count: selectedIds.size }) }}
+      </span>
+      <div class="batch-actions">
+        <button
+          class="btn btn-sm"
+          type="button"
+          :disabled="batchBusy"
+          @click="runBatch({ action: 'enable', ids: Array.from(selectedIds) }, $t('确定批量启用所选用户吗？'))"
+        >
+          {{ $t("批量启用") }}
+        </button>
+        <button
+          class="btn btn-sm"
+          type="button"
+          :disabled="batchBusy"
+          @click="runBatch({ action: 'disable', ids: Array.from(selectedIds) }, $t('确定批量禁用所选用户吗？被禁用用户会立即被注销。'))"
+        >
+          {{ $t("批量禁用") }}
+        </button>
+        <button
+          class="btn btn-sm"
+          type="button"
+          :disabled="batchBusy"
+          @click="runBatch({ action: 'force_change_password', ids: Array.from(selectedIds) }, $t('确定批量强制所选用户下次登录改密吗？现有会话会被注销。'))"
+        >
+          {{ $t("强制改密") }}
+        </button>
+        <div class="inline batch-setmax">
+          <input
+            v-model.number="batchMaxMonitors"
+            class="input input-sm"
+            type="number"
+            min="1"
+            max="2000"
+            style="width: 90px"
+            @click.stop
+          />
+          <button
+            class="btn btn-sm"
+            type="button"
+            :disabled="batchBusy"
+            @click.stop="runBatch({ action: 'set_max_monitors', ids: Array.from(selectedIds), maxMonitors: batchMaxMonitors }, $tf('确定把所选用户的监控配额设为 {max} 吗？', { max: batchMaxMonitors }))"
+          >
+            {{ $t("设置配额") }}
+          </button>
+        </div>
+        <button
+          class="btn btn-sm btn-danger"
+          type="button"
+          :disabled="batchBusy"
+          @click="runBatch({ action: 'delete', ids: Array.from(selectedIds) }, $t('确定批量删除所选用户吗？该操作不可恢复，用户数据会被级联删除。'))"
+        >
+          {{ $t("批量删除") }}
+        </button>
+      </div>
+    </div>
+
     <div v-if="store.loading && store.users.length === 0" class="card">
       <div v-for="index in 4" :key="index" class="skeleton" style="height: 40px; margin-bottom: 8px" />
+    </div>
+
+    <div v-else-if="filteredUsers.length === 0" class="card empty">
+      <p>{{ $t("没有符合条件的用户。") }}</p>
     </div>
 
     <div v-else class="table-wrap">
       <table class="table">
         <thead>
           <tr>
+            <th class="col-check">
+              <input
+                type="checkbox"
+                :checked="allSelected"
+                :aria-label='$t("全选")'
+                @click.stop
+                @change="toggleSelectAll"
+              />
+            </th>
             <th>{{ $t("用户") }}</th>
             <th>{{ $t("角色 / 状态") }}</th>
             <th>{{ $t("区域 / 语言") }}</th>
@@ -208,7 +458,22 @@ onMounted(() => {
           </tr>
         </thead>
         <tbody>
-          <tr v-for="person in store.users" :key="person.id">
+          <tr
+            v-for="person in filteredUsers"
+            :key="person.id"
+            class="clickable-row"
+            :class="{ selected: selectedIds.has(person.id) }"
+            @click="detailTarget = person"
+          >
+            <td class="col-check" @click.stop>
+              <input
+                type="checkbox"
+                :checked="selectedIds.has(person.id)"
+                :aria-label='$t("选择用户")'
+                @click.stop
+                @change="toggleSelect(person.id)"
+              />
+            </td>
             <td>
               <div style="font-weight: 500">
                 {{ person.displayName }}
@@ -411,5 +676,77 @@ onMounted(() => {
       @update:open="deleteTarget = null"
       @confirm="confirmDelete"
     />
+
+    <UserDetailDrawer v-model:target="detailTarget" />
   </div>
 </template>
+
+<style scoped>
+.filter-bar {
+  display: grid;
+  grid-template-columns: minmax(200px, 2fr) repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.filter-bar .field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.filter-bar label {
+  font-size: 12px;
+  color: var(--color-text-muted, #8a8f98);
+}
+.filter-bar .filter-actions {
+  justify-content: flex-end;
+  display: flex;
+  flex-direction: column;
+}
+.filter-bar .invisible {
+  visibility: hidden;
+}
+.filter-summary {
+  margin: 0 0 12px;
+}
+.empty {
+  text-align: center;
+  padding: 32px;
+  color: var(--color-text-muted, #8a8f98);
+}
+.col-check {
+  width: 32px;
+  text-align: center;
+}
+.clickable-row {
+  cursor: pointer;
+}
+.clickable-row.selected {
+  background: var(--color-surface-2, #1a1d24);
+}
+.batch-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+  padding: 10px 14px;
+}
+.batch-count {
+  font-weight: 500;
+  color: var(--color-text-strong, #e6e8ee);
+}
+.batch-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-left: auto;
+  align-items: center;
+}
+.batch-setmax {
+  gap: 6px;
+}
+.input-sm {
+  padding: 4px 8px;
+  font-size: 13px;
+}
+</style>

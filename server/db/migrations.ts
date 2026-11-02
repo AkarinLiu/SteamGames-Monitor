@@ -540,4 +540,25 @@ export const migrations: Migration[] = [
       `)
     },
   },
+  {
+    version: 10,
+    name: 'login history for admin audit',
+    up(db) {
+      db.exec(`
+        CREATE TABLE login_logs (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+          username TEXT NOT NULL,
+          ip TEXT,
+          user_agent TEXT,
+          success INTEGER NOT NULL,
+          reason TEXT,
+          created_at INTEGER NOT NULL
+        );
+        CREATE INDEX idx_login_logs_user ON login_logs(user_id, created_at DESC);
+        CREATE INDEX idx_login_logs_created ON login_logs(created_at DESC);
+        CREATE INDEX idx_login_logs_success ON login_logs(success, created_at DESC);
+      `)
+    },
+  },
 ]

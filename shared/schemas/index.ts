@@ -138,6 +138,32 @@ export const UpdateUserSchema = z.object({
   mustChangePassword: z.boolean().optional(),
 })
 
+export const BatchUserActionSchema = z.discriminatedUnion('action', [
+  z.object({
+    action: z.literal('enable'),
+    ids: z.array(z.number().int().positive()).min(1).max(100),
+  }),
+  z.object({
+    action: z.literal('disable'),
+    ids: z.array(z.number().int().positive()).min(1).max(100),
+  }),
+  z.object({
+    action: z.literal('force_change_password'),
+    ids: z.array(z.number().int().positive()).min(1).max(100),
+  }),
+  z.object({
+    action: z.literal('set_max_monitors'),
+    ids: z.array(z.number().int().positive()).min(1).max(100),
+    maxMonitors: z.number().int().min(1).max(2000),
+  }),
+  z.object({
+    action: z.literal('delete'),
+    ids: z.array(z.number().int().positive()).min(1).max(100),
+  }),
+])
+
+export type BatchUserActionInput = z.infer<typeof BatchUserActionSchema>
+
 export const ResetPasswordSchema = z.object({
   password: PasswordSchema.optional(),
 })
@@ -149,6 +175,7 @@ export const RetentionSchema = z.object({
   inboundDays: z.number().int().min(1).max(3650),
   logsDays: z.number().int().min(1).max(3650),
   newsSeenDays: z.number().int().min(1).max(3650),
+  loginLogsDays: z.number().int().min(1).max(3650),
 })
 
 export const UpdateAdminSettingsSchema = z.object({

@@ -30,6 +30,7 @@ const form = reactive({
   inboundDays: 30,
   logsDays: 180,
   newsSeenDays: 180,
+  loginLogsDays: 90,
 })
 
 const health = computed(() => store.health)
@@ -72,6 +73,7 @@ function applySettingsForm(): void {
   form.inboundDays = current.retention.inboundDays
   form.logsDays = current.retention.logsDays
   form.newsSeenDays = current.retention.newsSeenDays
+  form.loginLogsDays = current.retention.loginLogsDays
 }
 
 async function saveSettings(): Promise<void> {
@@ -90,6 +92,7 @@ async function saveSettings(): Promise<void> {
         inboundDays: form.inboundDays,
         logsDays: form.logsDays,
         newsSeenDays: form.newsSeenDays,
+        loginLogsDays: form.loginLogsDays,
       },
     })
     toast.success(t("系统设置已保存"))
@@ -289,6 +292,10 @@ onBeforeUnmount(() => {
                 <div class="field">
                   <label for="ret-news">{{ $t("新闻去重记录保留（天）") }}</label>
                   <input id="ret-news" v-model.number="form.newsSeenDays" class="input" type="number" min="1" max="3650" />
+                </div>
+                <div class="field">
+                  <label for="ret-login-logs">{{ $t("登录历史保留（天）") }}</label>
+                  <input id="ret-login-logs" v-model.number="form.loginLogsDays" class="input" type="number" min="1" max="3650" />
                 </div>
               </div>
 
