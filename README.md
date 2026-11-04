@@ -1,6 +1,6 @@
 # SteamGames-Monitor
 
-[简体中文](README.md) | [繁體中文](README.zh-TW.md) | [English](README.en.md) | [Deutsch](README.de.md) | [Français](README.fr.md) | [Italiano](README.it.md) | [日本語](README.ja.md) | [한국어](README.ko.md) | [조선어](README.ko-KP.md) | [Nederlands](README.nl.md) | [Русский](README.ru.md)
+[简体中文](README.md) | [繁體中文](docs/zh-TW/README.md) | [English](docs/en/README.md) | [Deutsch](docs/de/README.md) | [Français](docs/fr/README.md) | [Italiano](docs/it/README.md) | [日本語](docs/ja/README.md) | [한국어](docs/ko/README.md) | [조선어](docs/ko-KP/README.md) | [Nederlands](docs/nl/README.md) | [Русский](docs/ru/README.md)
 
 界面支持简体中文、繁体中文、英语、德语、法语、意大利语、日语、韩语、朝鲜语、荷兰语和俄语，可在页面右上角切换；该设置独立于 Steam 内容语言。
 
@@ -187,7 +187,7 @@ gh secret set DOCKERHUB_TOKEN --repo AkarinLiu/SteamGames-Monitor
 
 密钥使用 `APP_SECRET` 派生的 AES-256-GCM 加密存储；API 不会回传明文，编辑时留空表示保留原值。
 
-自定义 WebHook 的请求格式、Payload 字段和签名算法见 [docs/CUSTOM_WEBHOOK.md](docs/CUSTOM_WEBHOOK.md)。
+自定义 WebHook 的请求格式、Payload 字段和签名算法见 [docs/zh-CN/CUSTOM_WEBHOOK.md](docs/zh-CN/CUSTOM_WEBHOOK.md)。
 
 “订阅事件”不勾选表示接收除“检查异常”外的全部事件。
 
@@ -215,7 +215,7 @@ gh secret set DOCKERHUB_TOKEN --repo AkarinLiu/SteamGames-Monitor
 
 指令机器人还可以在编辑页开启 **接收事件通知**：开启后，发售、促销、下架等事件会推送到该机器人最近一次被授权用户使用的会话。需要先由授权用户在聊天中发送过至少一条指令，系统才会记录通知目标；没有最近会话时不会推送。钉钉事件通知还需要填写 App Key、App Secret 和 Robot Code。
 
-机器人的指令始终作用于**机器人所属账号**的数据。所有平台用户（包括扫码时识别的所有者 ID）都必须先通过网页授权或加入允许名单，否则机器人只返回一次性授权链接，不会执行指令；批准时可选择 `viewer`（只读）或 `admin`。所有者 ID 现在仅用于标识。详细步骤见 [docs/BOT_INTEGRATION.md](docs/BOT_INTEGRATION.md)。
+机器人的指令始终作用于**机器人所属账号**的数据。所有平台用户（包括扫码时识别的所有者 ID）都必须先通过网页授权或加入允许名单，否则机器人只返回一次性授权链接，不会执行指令；批准时可选择 `viewer`（只读）或 `admin`。所有者 ID 现在仅用于标识。详细步骤见 [docs/zh-CN/BOT_INTEGRATION.md](docs/zh-CN/BOT_INTEGRATION.md)。
 
 微信 ClawBot（iLink）与 QQ Bot 接入正在按平台官方协议集成，完成后会出现在同一页面。
 
