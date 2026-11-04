@@ -59,7 +59,7 @@ pnpm start   # 事前にビルドが必要。API と静的フロントエンド�
 | `PUBLIC_BASE_URL` | 外部アクセス用アドレス。Feishu / Lark / DingTalk のコールバックアドレス、WeCom の Web 認可リンク、CSRF 検証の生成に使用します。常時接続自体は公開コールバックを必要としません |
 | `TRUSTED_ORIGINS` | 追加で許可する Origin。カンマ区切り（開発時は `http://localhost:5173` を含む） |
 | `COOKIE_SECURE` | HTTPS でデプロイする場合は `1` を設定 |
-| `TRUST_PROXY` | リバースプロキシの段数 |
+| `TRUST_PROXY` | リバースプロキシの段数。既定値 `0` は TCP 対端アドレスを直接使用します。リバースプロキシ配下では実際の段数を設定してください。設定しないと監査ログ / ログイン履歴にプロキシや Docker ゲートウェイのアドレス（例: `172.x.0.1`）が記録されます |
 | `MAX_TOTAL_MONITORS` | 監視項目の全体上限。既定値は 2000 |
 | `ALLOW_INSECURE_WEBHOOKS` | テスト時のみ `1` を設定。http / 内部ネットワークの Webhook を許可します |
 | `ENABLE_DEV_COMMANDS` / `DEV_COMMAND_TOKEN` | 開発用の `/api/dev/command` によるコマンドシミュレーション |
@@ -169,6 +169,8 @@ gh secret set DOCKERHUB_TOKEN --repo AkarinLiu/SteamGames-Monitor
 - イメージの更新：`docker compose pull && docker compose up -d`。ローカルビルドは `docker compose up -d --build`。停止：`docker compose down`（データは保持されます）。
 - リバースプロキシでの注意点：
   - `/webhooks/*` の**元のリクエストボディ**をそのまま転送する必要があります（書き換えや再シリアライズはしないでください）。
+  - 監査ログ / ログイン履歴は `TRUST_PROXY` が `0` より大きい場合のみ `X-Forwarded-For` を参照します。リバースプロキシでこのヘッダーを転送し、`TRUST_PROXY` を実際の段数に正確に設定してください（CDN + ローカルプロキシは合算）。
+  - リバースプロキシなしで `-p 8787:8787` によりポートを直接公開すると、Docker のポートマッピングが送信元アドレスを書き換えるため、ログにはゲートウェイアドレス（例: `172.x.0.1`）しか残りません。`network_mode: host` に変更するか、リバースプロキシを前置して `TRUST_PROXY` を設定してください。
   - `client_max_body_size 1m`、読み取りタイムアウトは 10 秒以上にしてください。
   - HTTP コールバックを使用する Feishu / Lark / DingTalk のアドレスは、公開 HTTPS で到達可能である必要があります。Feishu / Lark、DingTalk の Stream、WeCom スマートボットが送信側の常時接続を使用する場合、コールバックアドレスは不要です。
 

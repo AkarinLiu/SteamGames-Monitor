@@ -59,7 +59,7 @@ pnpm start   # 먼저 건설해야 함; Node가 API와 정적전단을 동시에
 | `PUBLIC_BASE_URL` | 외부접근주소. 페이수 / Lark / 딩딩콜백주소, 기업위신웹페지권한부여련결과 CSRF검증을 생성하는데 리용; 긴련결자체는 공용망콜백이 필요없음 |
 | `TRUSTED_ORIGINS` | 추가로 허용할 Origin, 쉼표로 구분(개발시 `http://localhost:5173` 포함) |
 | `COOKIE_SECURE` | HTTPS전개시 `1`로 설정 |
-| `TRUST_PROXY` | 반대프록시계층수 |
+| `TRUST_PROXY` | 반대프록시계층수. 기본값 `0`은 TCP 대응단주소를 그대로 사용합니다. 반대프록시 뒤에 있으면 실제 계층수로 설정하여야 합니다. 그렇지 않으면 심사일지 / 등록력사에 프록시 또는 Docker 관문주소(예: `172.x.0.1`)가 기록됩니다 |
 | `MAX_TOTAL_MONITORS` | 전역감시항목상한, 기본값 2000 |
 | `ALLOW_INSECURE_WEBHOOKS` | 시험할 때만 `1`로 설정, http / 내부망 Webhook허용 |
 | `ENABLE_DEV_COMMANDS` / `DEV_COMMAND_TOKEN` | 개발용 `/api/dev/command` 모의명령 |
@@ -169,6 +169,8 @@ gh secret set DOCKERHUB_TOKEN --repo AkarinLiu/SteamGames-Monitor
 - 이미지갱신: `docker compose pull && docker compose up -d`; 본지건설은 `docker compose up -d --build`; 정지: `docker compose down`(데터보존).
 - 반대프록시주의사항:
   - `/webhooks/*`의 **원시요청본체**를 그대로 전달해야 합니다(개작하거나 다시 직렬화하지 마십시오).
+  - 심사일지 / 등록력사는 `TRUST_PROXY`가 `0`보다 클 때에만 `X-Forwarded-For`를 읽습니다. 반대프록시가 이 머리부를 전달하여야 하며 `TRUST_PROXY`는 실제 계층수와 정확히 일치하여야 합니다(CDN + 현지프록시 누계).
+  - 반대프록시 없이 `-p 8787:8787`로 직접 포트를 공개하면 Docker의 포트사상이 원천주소를 바꾸므로 일지에는 관문주소(예: `172.x.0.1`)만 남습니다. `network_mode: host`로 바꾸거나 앞에 반대프록시를 두고 `TRUST_PROXY`를 설정하십시오.
   - `client_max_body_size 1m`, 읽기초과시간 ≥10s.
   - HTTP콜백을 리용하는 페이수 / Lark / 딩딩주소는 공용망 HTTPS로 접근할수 있어야 합니다. 페이수 / Lark, 딩딩 Stream과 기업위신지능로보트가 출발긴련결을 리용할 때는 콜백주소가 필요없습니다.
 

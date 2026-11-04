@@ -59,7 +59,7 @@ pnpm start   # richiede una build preventiva; Node serve sia l'API sia il fronte
 | `PUBLIC_BASE_URL` | Indirizzo di accesso pubblico, utilizzato per generare gli URL di callback Feishu / Lark / DingTalk, i link di autorizzazione Web WeCom e la validazione CSRF; le connessioni long-lived non richiedono un callback pubblico |
 | `TRUSTED_ORIGINS` | Origin aggiuntivi consentiti, separati da virgola (in sviluppo include `http://localhost:5173`) |
 | `COOKIE_SECURE` | Impostare a `1` per i deployment su HTTPS |
-| `TRUST_PROXY` | Numero di livelli di reverse proxy |
+| `TRUST_PROXY` | Numero di livelli di reverse proxy. Il valore predefinito `0` usa direttamente l'indirizzo del peer TCP; dietro un reverse proxy impostalo sul numero reale di livelli, altrimenti il log di audit / la cronologia di accesso registrano l'indirizzo del proxy o del gateway Docker (ad es. `172.x.0.1`) |
 | `MAX_TOTAL_MONITORS` | Limite globale di elementi monitorati, predefinito 2000 |
 | `ALLOW_INSECURE_WEBHOOKS` | Impostare a `1` solo in fase di test; consente Webhook http / su rete interna |
 | `ENABLE_DEV_COMMANDS` / `DEV_COMMAND_TOKEN` | Comando di sviluppo `/api/dev/command` per simulare le istruzioni |
@@ -169,6 +169,8 @@ gh secret set DOCKERHUB_TOKEN --repo AkarinLiu/SteamGames-Monitor
 - Aggiornamento dell'immagine: `docker compose pull && docker compose up -d`; build locale con `docker compose up -d --build`; arresto: `docker compose down` (i dati vengono conservati).
 - Note per il reverse proxy:
   - È necessario inoltrare `/webhooks/*` con il **corpo della richiesta originale** intatto (senza riscritture o riserializzazioni).
+  - Il log di audit / la cronologia di accesso leggono `X-Forwarded-For` solo quando `TRUST_PROXY` è maggiore di `0`: il reverse proxy deve inoltrare questo header e `TRUST_PROXY` deve corrispondere esattamente al numero di livelli (somma CDN + proxy locale).
+  - Senza reverse proxy, esporre direttamente la porta con `-p 8787:8787` fa riscrivere l'indirizzo sorgente dal port mapping di Docker, quindi nei log compare solo l'indirizzo del gateway (ad es. `172.x.0.1`); usa invece `network_mode: host` oppure imposta `TRUST_PROXY` dopo aver aggiunto un reverse proxy.
   - `client_max_body_size 1m`, timeout di lettura ≥10s.
   - Gli indirizzi Feishu / Lark / DingTalk che utilizzano callback HTTP devono essere raggiungibili pubblicamente via HTTPS; Feishu / Lark, DingTalk Stream e il bot intelligente WeCom, che usano connessioni in uscita long-lived, non richiedono un URL di callback.
 

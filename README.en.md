@@ -59,7 +59,7 @@ pnpm start   # requires a prior build; Node serves both the API and the static f
 | `PUBLIC_BASE_URL` | Public access address, used to generate Feishu / Lark / DingTalk callback URLs, WeCom web authorization links, and CSRF checks; long connections do not need a public callback address |
 | `TRUSTED_ORIGINS` | Additional allowed origins, comma-separated (include `http://localhost:5173` during development) |
 | `COOKIE_SECURE` | Set to `1` for HTTPS deployments |
-| `TRUST_PROXY` | Number of reverse proxy hops |
+| `TRUST_PROXY` | Number of reverse proxy hops. Defaults to `0`, which uses the TCP peer address directly; behind a reverse proxy set it to the actual number of hops, otherwise audit logs / login history record the proxy or Docker gateway address (e.g. `172.x.0.1`) |
 | `MAX_TOTAL_MONITORS` | Global monitor limit, defaults to 2000 |
 | `ALLOW_INSECURE_WEBHOOKS` | Set to `1` for testing only; allows http / intranet Webhooks |
 | `ENABLE_DEV_COMMANDS` / `DEV_COMMAND_TOKEN` | Development-only `/api/dev/command` for simulating commands |
@@ -169,6 +169,8 @@ gh secret set DOCKERHUB_TOKEN --repo AkarinLiu/SteamGames-Monitor
 - Updating the image: `docker compose pull && docker compose up -d`; local build: `docker compose up -d --build`; stop: `docker compose down` (data is preserved).
 - Reverse proxy notes:
   - The **raw request body** of `/webhooks/*` must be forwarded unchanged (do not rewrite or re-serialize it).
+  - Audit logs / login history read `X-Forwarded-For` only when `TRUST_PROXY` is greater than `0`, so the reverse proxy must forward that header and `TRUST_PROXY` must exactly match the number of hops (accumulate CDN + local proxy).
+  - Without a reverse proxy, publishing the port directly with `-p 8787:8787` makes Docker port mapping rewrite the source address, so logs only show the gateway address (e.g. `172.x.0.1`); use `network_mode: host` instead, or set `TRUST_PROXY` after adding a reverse proxy.
   - `client_max_body_size 1m`, read timeout >= 10s.
   - Feishu / Lark / DingTalk endpoints that use HTTP callbacks must be reachable over public HTTPS; no callback URL is needed when Feishu / Lark, DingTalk Stream, or WeCom intelligent bots use outbound long connections.
 

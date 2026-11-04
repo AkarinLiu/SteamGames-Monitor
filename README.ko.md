@@ -59,7 +59,7 @@ pnpm start   # 먼저 빌드해야 합니다. Node가 API와 정적 프런트엔
 | `PUBLIC_BASE_URL` | 외부 접근 주소로, Feishu / Lark / DingTalk 콜백 주소, WeCom 웹 인증 링크 생성과 CSRF 검증에 사용됩니다. 롱 커넥션 자체는 공인 콜백이 필요하지 않습니다 |
 | `TRUSTED_ORIGINS` | 추가로 허용할 Origin, 쉼표로 구분(개발 시 `http://localhost:5173` 포함) |
 | `COOKIE_SECURE` | HTTPS 배포 시 `1`로 설정합니다 |
-| `TRUST_PROXY` | 리버스 프록시 계층 수 |
+| `TRUST_PROXY` | 리버스 프록시 계층 수. 기본값 `0`은 TCP 피어 주소를 그대로 사용합니다. 리버스 프록시 뒤에 있다면 실제 계층 수로 설정하세요. 그렇지 않으면 감사 로그 / 로그인 기록에 프록시 또는 Docker 게이트웨이 주소(예: `172.x.0.1`)가 저장됩니다 |
 | `MAX_TOTAL_MONITORS` | 전체 모니터링 항목 상한, 기본값 2000 |
 | `ALLOW_INSECURE_WEBHOOKS` | 테스트 시에만 `1`로 설정하여 http / 내부 네트워크 Webhook을 허용합니다 |
 | `ENABLE_DEV_COMMANDS` / `DEV_COMMAND_TOKEN` | 개발용 `/api/dev/command` 명령 시뮬레이션 |
@@ -169,6 +169,8 @@ gh secret set DOCKERHUB_TOKEN --repo AkarinLiu/SteamGames-Monitor
 - 이미지 업데이트: `docker compose pull && docker compose up -d`, 로컬 빌드는 `docker compose up -d --build`, 중지는 `docker compose down`(데이터 유지).
 - 리버스 프록시 주의 사항:
   - `/webhooks/*`의 **원본 요청 본문**을 그대로 전달해야 합니다(재작성하거나 다시 직렬화하지 마세요).
+  - 감사 로그 / 로그인 기록은 `TRUST_PROXY`가 `0`보다 클 때만 `X-Forwarded-For`를 사용합니다. 리버스 프록시가 이 헤더를 전달해야 하며, `TRUST_PROXY`는 실제 계층 수와 정확히 일치해야 합니다(CDN + 로컬 프록시는 합산).
+  - 리버스 프록시 없이 `-p 8787:8787`로 포트를 직접 노출하면 Docker 포트 매핑이 원본 주소를 바꾸므로 로그에는 게이트웨이 주소(예: `172.x.0.1`)만 남습니다. `network_mode: host`로 변경하거나 리버스 프록시를 앞에 두고 `TRUST_PROXY`를 설정하세요.
   - `client_max_body_size 1m`, 읽기 타임아웃 10초 이상.
   - HTTP 콜백을 사용하는 Feishu / Lark / DingTalk 주소는 공인 인터넷에서 HTTPS로 접근 가능해야 합니다. Feishu / Lark, DingTalk Stream, WeCom 스마트 봇이 아웃바운드 롱 커넥션을 사용할 때는 콜백 주소가 필요하지 않습니다.
 

@@ -59,7 +59,7 @@ pnpm start   # Vereist eerst een build; Node serveert zowel de API als de statis
 | `PUBLIC_BASE_URL` | Extern toegankelijk adres, gebruikt voor het genereren van de callbackadressen van Feishu / Lark / DingTalk, de webautorisatielinks van WeCom en de CSRF-validatie; de langdurige verbinding zelf heeft geen openbare callback nodig |
 | `TRUSTED_ORIGINS` | Extra toegestane origins, kommagescheiden (bij ontwikkeling inclusief `http://localhost:5173`) |
 | `COOKIE_SECURE` | Stel in op `1` bij een HTTPS-deployment |
-| `TRUST_PROXY` | Aantal lagen van de reverse proxy |
+| `TRUST_PROXY` | Aantal lagen van de reverse proxy. De standaardwaarde `0` gebruikt direct het TCP-peeradres; achter een reverse proxy stelt u het in op het werkelijke aantal lagen, anders registreren het auditlogboek / de aanmeldgeschiedenis het proxy- of Docker-gatewayadres (bijv. `172.x.0.1`) |
 | `MAX_TOTAL_MONITORS` | Wereldwijde limiet voor monitoritems, standaard 2000 |
 | `ALLOW_INSECURE_WEBHOOKS` | Alleen bij tests op `1` zetten; staat http- / intranet-Webhooks toe |
 | `ENABLE_DEV_COMMANDS` / `DEV_COMMAND_TOKEN` | Alleen voor ontwikkeling: `/api/dev/command` om commando's te simuleren |
@@ -169,6 +169,8 @@ gh secret set DOCKERHUB_TOKEN --repo AkarinLiu/SteamGames-Monitor
 - Image bijwerken: `docker compose pull && docker compose up -d`; lokaal bouwen met `docker compose up -d --build`; stoppen: `docker compose down` (gegevens blijven behouden).
 - Let op bij een reverse proxy:
   - De **oorspronkelijke requestbody** van `/webhooks/*` moet ongewijzigd worden doorgestuurd (niet herschrijven of opnieuw serialiseren).
+  - Het auditlogboek / de aanmeldgeschiedenis leest `X-Forwarded-For` alleen als `TRUST_PROXY` groter is dan `0`: de reverse proxy moet deze header doorsturen en `TRUST_PROXY` moet exact overeenkomen met het aantal lagen (CDN + lokale proxy optellen).
+  - Zonder reverse proxy herschrijft de Docker-poorttoewijzing bij directe publicatie met `-p 8787:8787` het bronadres, waardoor alleen het gatewayadres (bijv. `172.x.0.1`) in de logs verschijnt; gebruik dan `network_mode: host` of stel `TRUST_PROXY` in na een reverse proxy.
   - `client_max_body_size 1m`, lees-timeout ≥10s.
   - De Feishu- / Lark- / DingTalk-adressen met HTTP-callback moeten openbaar via HTTPS bereikbaar zijn; bij uitgaande langdurige verbindingen van Feishu / Lark, DingTalk Stream en de WeCom-slimme robot is geen callbackadres nodig.
 

@@ -59,7 +59,7 @@ pnpm start   # build préalable nécessaire ; Node sert à la fois l'API et le f
 | `PUBLIC_BASE_URL` | Adresse d'accès externe, utilisée pour générer les URL de callback Feishu / Lark / DingTalk, les liens d'autorisation Web WeCom et la validation CSRF ; les connexions longues elles-mêmes ne nécessitent pas de callback public |
 | `TRUSTED_ORIGINS` | Origines supplémentaires autorisées, séparées par des virgules (en développement, incluez `http://localhost:5173`) |
 | `COOKIE_SECURE` | À définir sur `1` lors d'un déploiement HTTPS |
-| `TRUST_PROXY` | Nombre de couches de proxy inverse |
+| `TRUST_PROXY` | Nombre de couches de proxy inverse. La valeur `0` utilise directement l'adresse du pair TCP ; derrière un proxy inverse, indiquez le nombre réel de couches, sinon le journal d'audit / l'historique de connexion enregistrent l'adresse du proxy ou de la passerelle Docker (par ex. `172.x.0.1`) |
 | `MAX_TOTAL_MONITORS` | Nombre maximal global d'éléments surveillés, par défaut 2000 |
 | `ALLOW_INSECURE_WEBHOOKS` | À définir sur `1` uniquement pour les tests, autorise les Webhooks http / réseau interne |
 | `ENABLE_DEV_COMMANDS` / `DEV_COMMAND_TOKEN` | Simulation de commandes via `/api/dev/command` à des fins de développement |
@@ -169,6 +169,8 @@ gh secret set DOCKERHUB_TOKEN --repo AkarinLiu/SteamGames-Monitor
 - Mise à jour de l'image : `docker compose pull && docker compose up -d` ; build local avec `docker compose up -d --build` ; arrêt : `docker compose down` (les données sont conservées).
 - Points d'attention pour le proxy inverse :
   - Le **corps brut de la requête** de `/webhooks/*` doit être transmis tel quel (ne pas le réécrire ni le resérialiser).
+  - Le journal d'audit / l'historique de connexion ne lisent `X-Forwarded-For` que si `TRUST_PROXY` est supérieur à `0` : le proxy inverse doit transmettre cet en-tête et `TRUST_PROXY` doit correspondre exactement au nombre de couches (additionnez CDN + proxy local).
+  - Sans proxy inverse, exposer directement le port avec `-p 8787:8787` fait réécrire l'adresse source par le mapping de ports Docker : les journaux n'affichent alors que l'adresse de la passerelle (par ex. `172.x.0.1`) ; utilisez plutôt `network_mode: host` ou définissez `TRUST_PROXY` après avoir ajouté un proxy inverse.
   - `client_max_body_size 1m`, délai de lecture ≥10s.
   - Les adresses Feishu / Lark / DingTalk utilisant un callback HTTP doivent être joignables publiquement en HTTPS ; Feishu / Lark, DingTalk Stream et le robot intelligent WeCom, qui utilisent des connexions longues sortantes, n'ont pas besoin d'adresse de callback.
 

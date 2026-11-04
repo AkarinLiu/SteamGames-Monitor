@@ -59,7 +59,7 @@ pnpm start   # erfordert einen vorherigen Build; Node liefert API und statisches
 | `PUBLIC_BASE_URL` | Extern erreichbare Adresse; wird zur Erzeugung der Feishu-/Lark-/DingTalk-Rückrufadressen, der WeCom-Web-Autorisierungslinks und für die CSRF-Prüfung verwendet; Langzeitverbindungen selbst benötigen keinen öffentlichen Rückruf |
 | `TRUSTED_ORIGINS` | Zusätzlich erlaubte Origins, durch Kommas getrennt (in der Entwicklung einschließlich `http://localhost:5173`) |
 | `COOKIE_SECURE` | Bei HTTPS-Bereitstellung auf `1` setzen |
-| `TRUST_PROXY` | Anzahl der Reverse-Proxy-Ebenen |
+| `TRUST_PROXY` | Anzahl der Reverse-Proxy-Ebenen. Standard `0` verwendet direkt die TCP-Peer-Adresse; hinter einem Reverse-Proxy auf die tatsächliche Ebenenzahl setzen, sonst protokollieren Audit-Log / Anmeldeverlauf die Proxy- oder Docker-Gateway-Adresse (z. B. `172.x.0.1`) |
 | `MAX_TOTAL_MONITORS` | Globales Limit für Überwachungseinträge, Standard 2000 |
 | `ALLOW_INSECURE_WEBHOOKS` | Nur für Tests auf `1` setzen; erlaubt Webhooks über http / aus dem Intranet |
 | `ENABLE_DEV_COMMANDS` / `DEV_COMMAND_TOKEN` | Entwicklungsbefehl `/api/dev/command` zum Simulieren von Befehlen |
@@ -169,6 +169,8 @@ gh secret set DOCKERHUB_TOKEN --repo AkarinLiu/SteamGames-Monitor
 - Image aktualisieren: `docker compose pull && docker compose up -d`; lokaler Build mit `docker compose up -d --build`; stoppen: `docker compose down` (Daten bleiben erhalten).
 - Hinweise zum Reverse-Proxy:
   - Der **Original-Request-Body** von `/webhooks/*` muss unverändert weitergeleitet werden (nicht umschreiben oder neu serialisieren).
+  - Audit-Log / Anmeldeverlauf lesen `X-Forwarded-For` nur, wenn `TRUST_PROXY` größer als `0` ist. Der Reverse-Proxy muss diesen Header weiterleiten und `TRUST_PROXY` muss exakt der Ebenenzahl entsprechen (CDN + lokaler Proxy addieren).
+  - Ohne Reverse-Proxy schreibt die Docker-Portzuordnung bei direkter Freigabe mit `-p 8787:8787` die Quelladresse um, sodass in den Logs nur die Gateway-Adresse (z. B. `172.x.0.1`) erscheint; verwenden Sie stattdessen `network_mode: host` oder setzen Sie `TRUST_PROXY` nach einem vorgeschalteten Reverse-Proxy.
   - `client_max_body_size 1m`, Lese-Timeout ≥ 10 s.
   - Feishu-/Lark-/DingTalk-Adressen für HTTP-Rückrufe müssen öffentlich über HTTPS erreichbar sein; Feishu / Lark, DingTalk Stream und der WeCom-KI-Bot benötigen bei ausgehenden Langzeitverbindungen keine Rückrufadresse.
 

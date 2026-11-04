@@ -60,7 +60,7 @@ pnpm start   # 需要先构建；由 Node 同时提供 API 与静态前端
 | `PUBLIC_BASE_URL` | 对外访问地址，用于生成飞书 / Lark / 钉钉回调地址、企业微信网页授权链接与 CSRF 校验；长连接本身不需要公网回调 |
 | `TRUSTED_ORIGINS` | 额外允许的 Origin，逗号分隔（开发时含 `http://localhost:5173`） |
 | `COOKIE_SECURE` | HTTPS 部署时设为 `1` |
-| `TRUST_PROXY` | 反向代理层数 |
+| `TRUST_PROXY` | 反向代理层数。默认 `0` 表示直接使用 TCP 对端地址；部署在反向代理后需设为实际层数，否则审计日志 / 登录历史会记录代理或 Docker 网关地址（如 `172.x.0.1`） |
 | `MAX_TOTAL_MONITORS` | 全局监控项上限，默认 2000 |
 | `ALLOW_INSECURE_WEBHOOKS` | 仅测试时设为 `1`，允许 http / 内网 Webhook |
 | `ENABLE_DEV_COMMANDS` / `DEV_COMMAND_TOKEN` | 开发用 `/api/dev/command` 模拟指令 |
@@ -170,6 +170,8 @@ gh secret set DOCKERHUB_TOKEN --repo AkarinLiu/SteamGames-Monitor
 - 更新镜像：`docker compose pull && docker compose up -d`；本地构建用 `docker compose up -d --build`；停止：`docker compose down`（数据保留）。
 - 反向代理需注意：
   - 必须将 `/webhooks/*` 的**原始请求体**原样转发（不要改写或重新序列化）。
+  - 审计日志 / 登录历史只有在 `TRUST_PROXY` 大于 `0` 时才读取 `X-Forwarded-For`，因此反向代理必须转发该请求头，并把 `TRUST_PROXY` 精确设为代理层数（CDN + 本地反代要累加）。
+  - 未部署反向代理、直接通过 `-p 8787:8787` 暴露端口时，Docker 端口映射会改写源地址，日志中只会出现网关地址（如 `172.x.0.1`）；此时应改用 `network_mode: host`，或在前置反向代理后设置 `TRUST_PROXY`。
   - `client_max_body_size 1m`，读取超时 ≥10s。
   - 使用 HTTP 回调的飞书 / Lark / 钉钉地址必须公网 HTTPS 可达；飞书 / Lark、钉钉 Stream 与企业微信智能机器人使用出站长连接时不需要回调地址。
 

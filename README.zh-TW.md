@@ -59,7 +59,7 @@ pnpm start   # 需要先建置；由 Node 同時提供 API 與靜態前端
 | `PUBLIC_BASE_URL` | 對外存取位址，用於產生飛書 / Lark / 釘釘回呼位址、企業微信網頁授權連結與 CSRF 驗證；長連線本身不需要公網回呼 |
 | `TRUSTED_ORIGINS` | 額外允許的 Origin，以逗號分隔（開發時含 `http://localhost:5173`） |
 | `COOKIE_SECURE` | HTTPS 部署時設為 `1` |
-| `TRUST_PROXY` | 反向代理層數 |
+| `TRUST_PROXY` | 反向代理層數。預設 `0` 直接使用 TCP 對端位址；部署在反向代理後需設為實際層數，否則審計日誌 / 登入歷史會記錄代理或 Docker 閘道位址（如 `172.x.0.1`） |
 | `MAX_TOTAL_MONITORS` | 全域監控項目上限，預設 2000 |
 | `ALLOW_INSECURE_WEBHOOKS` | 僅測試時設為 `1`，允許 http / 內網 Webhook |
 | `ENABLE_DEV_COMMANDS` / `DEV_COMMAND_TOKEN` | 開發用 `/api/dev/command` 模擬指令 |
@@ -169,6 +169,8 @@ gh secret set DOCKERHUB_TOKEN --repo AkarinLiu/SteamGames-Monitor
 - 更新映像：`docker compose pull && docker compose up -d`；本機建置用 `docker compose up -d --build`；停止：`docker compose down`（資料保留）。
 - 反向代理需注意：
   - 必須將 `/webhooks/*` 的**原始請求主體**原樣轉發（不要改寫或重新序列化）。
+  - 審計日誌 / 登入歷史只有在 `TRUST_PROXY` 大於 `0` 時才讀取 `X-Forwarded-For`，因此反向代理必須轉發該標頭，並將 `TRUST_PROXY` 精確設為代理層數（CDN + 本機反代需累加）。
+  - 未部署反向代理、直接透過 `-p 8787:8787` 暴露連接埠時，Docker 連接埠映射會改寫來源位址，日誌中只會出現閘道位址（如 `172.x.0.1`）；此時應改用 `network_mode: host`，或在前置反向代理後設定 `TRUST_PROXY`。
   - `client_max_body_size 1m`，讀取逾時 ≥10s。
   - 使用 HTTP 回呼的飛書 / Lark / 釘釘位址必須是公網 HTTPS 可達；飛書 / Lark、釘釘 Stream 與企業微信智慧機器人使用對外長連線時不需要回呼位址。
 
