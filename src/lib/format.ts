@@ -94,14 +94,29 @@ export function formatBytes(bytes: number): string {
   return `${value.toFixed(1)} ${unit}`
 }
 
-export function availabilityLabel(status: Availability): string {
-  if (status === 'available') return t("可购买")
+/**
+ * The monitor is listed but has no purchasable price (delisted, withdrawn, or
+ * region locked). Coming-soon items simply have no price yet, so they are not
+ * labelled this way.
+ */
+export function isPriceUnavailable(
+  monitor: Pick<Monitor, 'priceUnavailable' | 'availability' | 'releaseStatus'>,
+): boolean {
+  return (
+    monitor.priceUnavailable &&
+    monitor.availability === 'available' &&
+    monitor.releaseStatus !== 'coming_soon'
+  )
+}
+
+export function availabilityLabel(status: Availability, priceUnavailable = false): string {
+  if (status === 'available') return priceUnavailable ? t('在售（无价格）') : t("可购买")
   if (status === 'unavailable') return t("不可购买")
   return t("待首次检查")
 }
 
-export function availabilityBadge(status: Availability): string {
-  if (status === 'available') return 'badge-green'
+export function availabilityBadge(status: Availability, priceUnavailable = false): string {
+  if (status === 'available') return priceUnavailable ? 'badge-warning' : 'badge-green'
   if (status === 'unavailable') return 'badge-danger'
   return 'badge-neutral'
 }
@@ -122,11 +137,11 @@ export function monitorStatusLabel(monitor: Monitor): string {
   }
   if (monitor.delistingWarningAt) return t('即将停售')
   if (monitor.availability === 'unknown') return t("待检查")
-  if (monitor.priceUnavailable) return t('在售（无价格）')
+  if (monitor.releaseStatus === 'coming_soon') return t('即将发售')
+  if (isPriceUnavailable(monitor)) return t('在售（无价格）')
   if (monitor.discountPercent > 0) {
     return tf("促销中 -{discount}%", { discount: monitor.discountPercent })
   }
-  if (monitor.releaseStatus === 'coming_soon') return t('即将发售')
   return t('正常在售')
 }
 
@@ -136,7 +151,7 @@ export function monitorStatusTone(monitor: Monitor): string {
   if (monitor.availability === 'unavailable') return 'badge-danger'
   if (monitor.delistingWarningAt) return 'badge-warning'
   if (monitor.availability === 'unknown') return 'badge-neutral'
-  if (monitor.priceUnavailable) return 'badge-warning'
+  if (isPriceUnavailable(monitor)) return 'badge-warning'
   if (monitor.discountPercent > 0) return 'badge-green'
   return 'badge-accent'
 }

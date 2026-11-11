@@ -13,6 +13,7 @@ import {
   availabilityBadge,
   formatDateTime,
   formatRelative,
+  isPriceUnavailable,
   monitorStatusLabel,
   monitorStatusTone,
   releaseLabel,
@@ -243,8 +244,8 @@ onMounted(() => {
             <dt>{{ $t("商店可购") }}</dt>
             <dd>
               <StatusBadge
-                :label="availabilityLabel(monitor.availability)"
-                :tone="availabilityBadge(monitor.availability)"
+                :label="availabilityLabel(monitor.availability, isPriceUnavailable(monitor))"
+                :tone="availabilityBadge(monitor.availability, isPriceUnavailable(monitor))"
               />
               <span v-if="monitor.everAvailable" class="faint small"> {{ $t("· 曾经可售") }}</span>
             </dd>
@@ -321,8 +322,18 @@ onMounted(() => {
                   <td class="small nowrap">{{ formatDateTime(snapshot.checkedAt, timezone) }}</td>
                   <td>
                     <StatusBadge
-                      :label="availabilityLabel(snapshot.availability)"
-                      :tone="availabilityBadge(snapshot.availability)"
+                      :label="
+                        availabilityLabel(
+                          snapshot.availability,
+                          snapshot.priceUnavailable && snapshot.releaseStatus !== 'coming_soon',
+                        )
+                      "
+                      :tone="
+                        availabilityBadge(
+                          snapshot.availability,
+                          snapshot.priceUnavailable && snapshot.releaseStatus !== 'coming_soon',
+                        )
+                      "
                     />
                   </td>
                   <td class="num small">

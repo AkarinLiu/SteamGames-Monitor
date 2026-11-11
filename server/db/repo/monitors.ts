@@ -504,9 +504,11 @@ export function getMonitorStats(db: Db, userId: number): MonitorStats {
     .prepare(
       `SELECT
         COUNT(*) AS total,
-        COALESCE(SUM(CASE WHEN availability = 'available' THEN 1 ELSE 0 END), 0) AS available,
+        COALESCE(SUM(CASE WHEN availability = 'available'
+          AND (price_unavailable = 0 OR release_status = 'coming_soon') THEN 1 ELSE 0 END), 0) AS available,
         COALESCE(SUM(CASE WHEN availability = 'available' AND discount_percent > 0 THEN 1 ELSE 0 END), 0) AS on_sale,
-        COALESCE(SUM(CASE WHEN availability = 'unavailable' THEN 1 ELSE 0 END), 0) AS unavailable,
+        COALESCE(SUM(CASE WHEN availability = 'unavailable'
+          OR (price_unavailable = 1 AND release_status != 'coming_soon') THEN 1 ELSE 0 END), 0) AS unavailable,
         COALESCE(SUM(CASE WHEN release_status = 'coming_soon' THEN 1 ELSE 0 END), 0) AS coming_soon,
         COALESCE(SUM(CASE WHEN delisting_warning_at IS NOT NULL AND availability != 'unavailable' THEN 1 ELSE 0 END), 0) AS delisting_soon,
         COALESCE(SUM(CASE WHEN enabled = 0 THEN 1 ELSE 0 END), 0) AS paused,

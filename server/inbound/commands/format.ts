@@ -9,9 +9,16 @@ import type { BotMessages } from '../../i18n'
 
 import { eventLabel, formatBotMessage as fmt } from '../../i18n'
 
-/** The monitor is listed but has no purchasable price (delisted or withdrawn). */
+/**
+ * The monitor is listed but has no purchasable price (delisted or withdrawn).
+ * Coming-soon items have no price yet, so they keep the plain "no price" wording.
+ */
 function priceIsUnavailable(monitor: MonitorRow): boolean {
-  return monitor.price_unavailable === 1 && monitor.availability !== 'unavailable'
+  return (
+    monitor.price_unavailable === 1 &&
+    monitor.availability !== 'unavailable' &&
+    monitor.release_status !== 'coming_soon'
+  )
 }
 
 export function monitorStatusLabel(monitor: MonitorRow, messages: BotMessages): string {

@@ -4,7 +4,13 @@ import { openDatabase, runMigrations, type Db } from './database'
 import { migrations } from './migrations'
 import { countActiveAdmins, createUser, findUserByUsername, updateUser } from './repo/users'
 import { createSession, findSessionWithUser } from './repo/sessions'
-import { createMonitor, findMonitorByAppid, listMonitors } from './repo/monitors'
+import {
+  createMonitor,
+  findMonitorByAppid,
+  getMonitorStats,
+  listMonitors,
+  updateMonitor,
+} from './repo/monitors'
 import { createEvent } from './repo/events'
 import { claimDueDeliveries, createDelivery, markDeliverySent } from './repo/deliveries'
 import { getSetting, setSetting, getRetention } from './repo/settings'
@@ -200,6 +206,33 @@ describe('database schema', () => {
     expect(() => createMonitor(db, input)).toThrowError(/UNIQUE/i)
     expect(findMonitorByAppid(db, user.id, 1091500)?.name).toBe('Cyberpunk 2077')
     expect(listMonitors(db, user.id, { page: 1, pageSize: 20 }).total).toBe(1)
+  })
+
+  it('does not count a listed item without a price as on sale', () => {
+    const user = makeUser()
+    const base = {
+      userId: user.id,
+      kind: 'game' as const,
+      name: 'Tank Royale',
+      storeUrl: 'https://store.steampowered.com/app/929140/',
+      region: 'cn',
+      language: 'schinese',
+      nextCheckAt: Date.now(),
+    }
+    const delisted = createMonitor(db, { ...base, appid: 929140 })
+    updateMonitor(db, delisted.id, { availability: 'available', priceUnavailable: true })
+    const comingSoon = createMonitor(db, { ...base, appid: 929141, name: 'Unreleased' })
+    updateMonitor(db, comingSoon.id, {
+      availability: 'available',
+      priceUnavailable: true,
+      releaseStatus: 'coming_soon',
+    })
+    const purchasable = createMonitor(db, { ...base, appid: 929142, name: 'On sale' })
+    updateMonitor(db, purchasable.id, { availability: 'available', priceUnavailable: false })
+
+    const stats = getMonitorStats(db, user.id)
+    expect(stats.available).toBe(2)
+    expect(stats.unavailable).toBe(1)
   })
 
   it('deduplicates events by dedupe key', () => {
