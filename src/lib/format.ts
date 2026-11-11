@@ -109,14 +109,33 @@ export function isPriceUnavailable(
   )
 }
 
+/**
+ * 「曾经可售」 is only meaningful as context for an item that could be bought
+ * before but cannot be bought now. Every successful check flips everAvailable
+ * on, so that flag alone must not decide whether the hint is shown.
+ */
+export function showsPreviouslyPurchasable(
+  monitor: Pick<
+    Monitor,
+    'everAvailable' | 'availability' | 'priceUnavailable' | 'releaseStatus'
+  >,
+): boolean {
+  return (
+    monitor.everAvailable &&
+    (monitor.availability === 'unavailable' || isPriceUnavailable(monitor))
+  )
+}
+
 export function availabilityLabel(status: Availability, priceUnavailable = false): string {
-  if (status === 'available') return priceUnavailable ? t('在售（无价格）') : t("可购买")
+  // Steam keeps answering for delisted / withdrawn / region-locked apps but leaves
+  // the purchase options out; such an item is not purchasable even though it is listed.
+  if (status === 'available') return priceUnavailable ? t("不可购买") : t("可购买")
   if (status === 'unavailable') return t("不可购买")
   return t("待首次检查")
 }
 
 export function availabilityBadge(status: Availability, priceUnavailable = false): string {
-  if (status === 'available') return priceUnavailable ? 'badge-warning' : 'badge-green'
+  if (status === 'available') return priceUnavailable ? 'badge-danger' : 'badge-green'
   if (status === 'unavailable') return 'badge-danger'
   return 'badge-neutral'
 }
@@ -138,7 +157,7 @@ export function monitorStatusLabel(monitor: Monitor): string {
   if (monitor.delistingWarningAt) return t('即将停售')
   if (monitor.availability === 'unknown') return t("待检查")
   if (monitor.releaseStatus === 'coming_soon') return t('即将发售')
-  if (isPriceUnavailable(monitor)) return t('在售（无价格）')
+  if (isPriceUnavailable(monitor)) return t("不可购买")
   if (monitor.discountPercent > 0) {
     return tf("促销中 -{discount}%", { discount: monitor.discountPercent })
   }
@@ -151,7 +170,7 @@ export function monitorStatusTone(monitor: Monitor): string {
   if (monitor.availability === 'unavailable') return 'badge-danger'
   if (monitor.delistingWarningAt) return 'badge-warning'
   if (monitor.availability === 'unknown') return 'badge-neutral'
-  if (isPriceUnavailable(monitor)) return 'badge-warning'
+  if (isPriceUnavailable(monitor)) return 'badge-danger'
   if (monitor.discountPercent > 0) return 'badge-green'
   return 'badge-accent'
 }

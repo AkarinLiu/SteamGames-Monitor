@@ -6,6 +6,7 @@ import {
   isPriceUnavailable,
   monitorStatusLabel,
   monitorStatusTone,
+  showsPreviouslyPurchasable,
 } from './format'
 
 function monitor(overrides: Partial<Monitor> = {}): Monitor {
@@ -13,6 +14,7 @@ function monitor(overrides: Partial<Monitor> = {}): Monitor {
     enabled: true,
     baselinePending: false,
     availability: 'available',
+    everAvailable: true,
     releaseStatus: 'released',
     delistingWarningAt: null,
     discountPercent: 0,
@@ -48,9 +50,9 @@ describe('availabilityLabel', () => {
     expect(availabilityBadge('available')).toBe('badge-green')
   })
 
-  it('says the item is listed without a price instead of purchasable', () => {
-    expect(availabilityLabel('available', true)).toBe('在售（无价格）')
-    expect(availabilityBadge('available', true)).toBe('badge-warning')
+  it('does not call a listed item without a price purchasable', () => {
+    expect(availabilityLabel('available', true)).toBe('不可购买')
+    expect(availabilityBadge('available', true)).toBe('badge-danger')
   })
 
   it('does not change genuinely unavailable items', () => {
@@ -60,10 +62,10 @@ describe('availabilityLabel', () => {
 })
 
 describe('monitorStatusLabel', () => {
-  it('reports a delisted item as listed without a price', () => {
+  it('reports a listed item without a price as not purchasable', () => {
     const item = monitor({ priceUnavailable: true })
-    expect(monitorStatusLabel(item)).toBe('在售（无价格）')
-    expect(monitorStatusTone(item)).toBe('badge-warning')
+    expect(monitorStatusLabel(item)).toBe('不可购买')
+    expect(monitorStatusTone(item)).toBe('badge-danger')
   })
 
   it('still reports an unreleased item as coming soon', () => {
@@ -74,5 +76,29 @@ describe('monitorStatusLabel', () => {
 
   it('keeps the normal on-sale wording for priced items', () => {
     expect(monitorStatusLabel(monitor())).toBe('正常在售')
+  })
+})
+
+describe('showsPreviouslyPurchasable', () => {
+  it('does not add the hint to an item that is still purchasable', () => {
+    expect(showsPreviouslyPurchasable(monitor())).toBe(false)
+  })
+
+  it('adds the hint once a listed item loses its price', () => {
+    expect(showsPreviouslyPurchasable(monitor({ priceUnavailable: true }))).toBe(true)
+  })
+
+  it('adds the hint while the item is unavailable', () => {
+    expect(showsPreviouslyPurchasable(monitor({ availability: 'unavailable' }))).toBe(true)
+  })
+
+  it('does not add the hint to an item that was never checked', () => {
+    expect(showsPreviouslyPurchasable(monitor({ everAvailable: false }))).toBe(false)
+  })
+
+  it('does not add the hint to an unreleased item', () => {
+    expect(
+      showsPreviouslyPurchasable(monitor({ priceUnavailable: true, releaseStatus: 'coming_soon' })),
+    ).toBe(false)
   })
 })

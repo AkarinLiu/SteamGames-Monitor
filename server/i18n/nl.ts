@@ -35,7 +35,7 @@ export const nl: BotMessages = {
   statusUnknown: 'Te controleren',
   statusOnSale: 'In de aanbieding',
   statusAvailable: 'Te koop',
-  statusNoPrice: 'Te koop, geen prijs',
+  statusNoPrice: 'Niet te koop',
 
   priceFree: 'Gratis',
   priceWithDiscount: '{price} (-{discount}%)',

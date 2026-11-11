@@ -35,7 +35,7 @@ export const koKP: BotMessages = {
   statusUnknown: '검사대기',
   statusOnSale: '할인중',
   statusAvailable: '판매중',
-  statusNoPrice: '판매중(가격 없음)',
+  statusNoPrice: '구매불가',
 
   priceFree: '무료',
   priceWithDiscount: '{price}(-{discount}%)',

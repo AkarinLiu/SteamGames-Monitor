@@ -17,6 +17,7 @@ import {
   monitorStatusLabel,
   monitorStatusTone,
   releaseLabel,
+  showsPreviouslyPurchasable,
 } from '@/lib/format'
 import ErrorBanner from '@/components/ErrorBanner.vue'
 import EmptyState from '@/components/EmptyState.vue'
@@ -247,7 +248,7 @@ onMounted(() => {
                 :label="availabilityLabel(monitor.availability, isPriceUnavailable(monitor))"
                 :tone="availabilityBadge(monitor.availability, isPriceUnavailable(monitor))"
               />
-              <span v-if="monitor.everAvailable" class="faint small"> {{ $t("· 曾经可售") }}</span>
+              <span v-if="showsPreviouslyPurchasable(monitor)" class="faint small"> {{ $t("· 曾经可售") }}</span>
             </dd>
             <dt>{{ $t("下次检查") }}</dt>
             <dd>{{ monitor.enabled ? formatRelative(monitor.nextCheckAt) : $t("已暂停") }}</dd>

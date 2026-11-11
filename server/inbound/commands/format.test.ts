@@ -39,8 +39,8 @@ describe('monitor formatting with no purchasable price', () => {
     } as unknown as MonitorRow
   }
 
-  it('labels a listed item without a price instead of calling it on sale', () => {
-    expect(monitorStatusLabel(monitorRow(), messages)).toBe('在售（无价格）')
+  it('labels a listed item without a price as not purchasable', () => {
+    expect(monitorStatusLabel(monitorRow(), messages)).toBe('不可购买')
   })
 
   it('never shows a stale last known price for it', () => {

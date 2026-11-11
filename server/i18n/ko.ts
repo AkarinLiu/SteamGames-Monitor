@@ -35,7 +35,7 @@ export const ko: BotMessages = {
   statusUnknown: '검사 대기',
   statusOnSale: '할인 중',
   statusAvailable: '판매 중',
-  statusNoPrice: '판매 중(가격 없음)',
+  statusNoPrice: '구매 불가',
 
   priceFree: '무료',
   priceWithDiscount: '{price}(-{discount}%)',

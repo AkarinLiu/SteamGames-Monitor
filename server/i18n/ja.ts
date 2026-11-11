@@ -35,7 +35,7 @@ export const ja: BotMessages = {
   statusUnknown: 'チェック待ち',
   statusOnSale: 'セール中',
   statusAvailable: '販売中',
-  statusNoPrice: '販売中（価格なし）',
+  statusNoPrice: '購入不可',
 
   priceFree: '無料',
   priceWithDiscount: '{price}（-{discount}%）',

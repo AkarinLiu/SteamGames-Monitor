@@ -35,7 +35,7 @@ export const ru: BotMessages = {
   statusUnknown: 'Ожидает проверки',
   statusOnSale: 'Идёт скидка',
   statusAvailable: 'В продаже',
-  statusNoPrice: 'В продаже, цены нет',
+  statusNoPrice: 'Недоступно для покупки',
 
   priceFree: 'Бесплатно',
   priceWithDiscount: '{price} (-{discount}%)',

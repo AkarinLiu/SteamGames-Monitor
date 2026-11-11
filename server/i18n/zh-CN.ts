@@ -31,7 +31,7 @@ export const zhCN = {
   statusUnknown: '待检查',
   statusOnSale: '促销中',
   statusAvailable: '在售',
-  statusNoPrice: '在售（无价格）',
+  statusNoPrice: '不可购买',
 
   priceFree: '免费',
   priceWithDiscount: '{price}（-{discount}%）',

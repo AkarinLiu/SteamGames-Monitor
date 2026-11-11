@@ -33,7 +33,7 @@ export const zhTW: BotMessages = {
   statusUnknown: '待檢查',
   statusOnSale: '特價中',
   statusAvailable: '販售中',
-  statusNoPrice: '販售中（無價格）',
+  statusNoPrice: '無法購買',
 
   priceFree: '免費',
   priceWithDiscount: '{price}（-{discount}%）',

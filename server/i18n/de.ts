@@ -34,7 +34,7 @@ export const de: BotMessages = {
   statusUnknown: 'Prüfung ausstehend',
   statusOnSale: 'Im Angebot',
   statusAvailable: 'Im Verkauf',
-  statusNoPrice: 'Gelistet, kein Preis',
+  statusNoPrice: 'Nicht kaufbar',
 
   priceFree: 'Kostenlos',
   priceWithDiscount: '{price} (-{discount} %)',

@@ -35,7 +35,7 @@ export const it: BotMessages = {
   statusUnknown: 'In attesa di controllo',
   statusOnSale: 'In promozione',
   statusAvailable: 'In vendita',
-  statusNoPrice: 'In vendita, senza prezzo',
+  statusNoPrice: 'Non acquistabile',
 
   priceFree: 'Gratuito',
   priceWithDiscount: '{price} (-{discount} %)',

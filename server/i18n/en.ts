@@ -33,7 +33,7 @@ export const en: BotMessages = {
   statusUnknown: 'Pending check',
   statusOnSale: 'On sale',
   statusAvailable: 'Available',
-  statusNoPrice: 'Listed, no price',
+  statusNoPrice: 'Unavailable',
 
   priceFree: 'Free',
   priceWithDiscount: '{price} (-{discount}%)',
