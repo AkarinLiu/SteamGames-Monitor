@@ -35,10 +35,12 @@ export const nl: BotMessages = {
   statusUnknown: 'Te controleren',
   statusOnSale: 'In de aanbieding',
   statusAvailable: 'Te koop',
+  statusNoPrice: 'Te koop, geen prijs',
 
   priceFree: 'Gratis',
   priceWithDiscount: '{price} (-{discount}%)',
   priceNone: 'Geen prijs',
+  priceUnavailable: 'Niet verkrijgbaar',
 
   monitorLine: '#{id} {name} ({appid}) · {status} · {price}',
   appidOnly: 'AppID: {appid}',
@@ -154,6 +156,7 @@ export const nl: BotMessages = {
   notificationBecamePaid: 'Dit item is van gratis naar betaald gegaan.',
   notificationBecamePaidWithPrice: 'Dit item is van gratis naar betaald gegaan: {price}.',
   notificationBasePriceChange: 'Wijziging basisprijs: {old} → {new}',
+  notificationPriceUnavailable: 'Dit item heeft momenteel geen koopbare prijs in regio {region} (mogelijk delisted, teruggetrokken of daar niet te koop), dus de prijs kan niet worden opgehaald.',
   notificationSteamNews: 'Steam-nieuws: "{title}"',
   notificationMatchedKeyword: 'Gevonden trefwoord: {keyword}',
   notificationDelistingHint:
@@ -163,6 +166,7 @@ export const nl: BotMessages = {
     'Twee opeenvolgende controles bevestigden dat dit item niet te koop is in de winkel.',
   notificationRestoredFirst: 'Dit item is nu te koop in regio {region}.',
   notificationRestored: 'Dit item is weer te koop (regio {region}).',
+  notificationRestoredPreviousPrice: 'Vorige prijs: {price}',
   notificationCheckFailed: '{count} opeenvolgende mislukte controles ({code}).',
   notificationAutoPaused:
     'Deze monitor is automatisch gepauzeerd; controleer hem en hervat handmatig.',

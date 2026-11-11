@@ -35,10 +35,12 @@ export const koKP: BotMessages = {
   statusUnknown: '검사대기',
   statusOnSale: '할인중',
   statusAvailable: '판매중',
+  statusNoPrice: '판매중(가격 없음)',
 
   priceFree: '무료',
   priceWithDiscount: '{price}(-{discount}%)',
   priceNone: '가격 없음',
+  priceUnavailable: '구매 불가',
 
   monitorLine: '#{id} {name}({appid}) · {status} · {price}',
   appidOnly: 'AppID: {appid}',
@@ -151,6 +153,7 @@ export const koKP: BotMessages = {
   notificationBecamePaid: '이 항목은 무료에서 유료로 변경되였습니다.',
   notificationBecamePaidWithPrice: '이 항목은 무료에서 유료로 변경되였습니다: {price}.',
   notificationBasePriceChange: '원가 변화: {old} → {new}',
+  notificationPriceUnavailable: '이 항목은 현재 지역 {region}에서 구매할수 있는 가격이 없습니다(판매 중지, 철회 또는 해당 지역에서 판매하지 않을수 있음). 따라서 가격을 알수 없습니다.',
   notificationSteamNews: 'Steam 소식: "{title}"',
   notificationMatchedKeyword: '일치한 핵심단어: {keyword}',
   notificationDelistingHint:
@@ -160,6 +163,7 @@ export const koKP: BotMessages = {
     '련속 2회 검사에서 이 항목을 상점에서 구매할 수 없음을 확인했습니다.',
   notificationRestoredFirst: '이 항목은 이제 지역 {region}에서 구매할 수 있습니다.',
   notificationRestored: '이 항목은 다시 구매 가능합니다(지역 {region}).',
+  notificationRestoredPreviousPrice: '이전 가격: {price}',
   notificationCheckFailed: '련속 {count}회 검사 실패({code}).',
   notificationAutoPaused:
     '이 감시항목이 자동으로 일시중지되였습니다. 확인 후 수동으로 재개하세요.',

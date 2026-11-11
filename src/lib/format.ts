@@ -122,6 +122,7 @@ export function monitorStatusLabel(monitor: Monitor): string {
   }
   if (monitor.delistingWarningAt) return t('即将停售')
   if (monitor.availability === 'unknown') return t("待检查")
+  if (monitor.priceUnavailable) return t('在售（无价格）')
   if (monitor.discountPercent > 0) {
     return tf("促销中 -{discount}%", { discount: monitor.discountPercent })
   }
@@ -135,6 +136,7 @@ export function monitorStatusTone(monitor: Monitor): string {
   if (monitor.availability === 'unavailable') return 'badge-danger'
   if (monitor.delistingWarningAt) return 'badge-warning'
   if (monitor.availability === 'unknown') return 'badge-neutral'
+  if (monitor.priceUnavailable) return 'badge-warning'
   if (monitor.discountPercent > 0) return 'badge-green'
   return 'badge-accent'
 }

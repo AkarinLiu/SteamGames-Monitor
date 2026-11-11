@@ -6,7 +6,13 @@ import {
 } from '../../../shared/utils'
 import type { MonitorRow } from '../../db/rows'
 import type { BotMessages } from '../../i18n'
+
 import { eventLabel, formatBotMessage as fmt } from '../../i18n'
+
+/** The monitor is listed but has no purchasable price (delisted or withdrawn). */
+function priceIsUnavailable(monitor: MonitorRow): boolean {
+  return monitor.price_unavailable === 1 && monitor.availability !== 'unavailable'
+}
 
 export function monitorStatusLabel(monitor: MonitorRow, messages: BotMessages): string {
   if (monitor.enabled !== 1) return messages.statusPaused
@@ -15,10 +21,12 @@ export function monitorStatusLabel(monitor: MonitorRow, messages: BotMessages): 
   if (monitor.release_status === 'coming_soon') return messages.statusComingSoon
   if (monitor.availability === 'unknown') return messages.statusUnknown
   if (Number(monitor.discount_percent) > 0) return messages.statusOnSale
+  if (priceIsUnavailable(monitor)) return messages.statusNoPrice
   return messages.statusAvailable
 }
 
 export function monitorPriceText(monitor: MonitorRow, messages: BotMessages): string {
+  if (priceIsUnavailable(monitor)) return messages.priceUnavailable
   if (monitor.is_free === 1) return messages.priceFree
   const final = monitor.price_final_formatted
   const discount = Number(monitor.discount_percent)

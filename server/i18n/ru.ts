@@ -35,10 +35,12 @@ export const ru: BotMessages = {
   statusUnknown: 'Ожидает проверки',
   statusOnSale: 'Идёт скидка',
   statusAvailable: 'В продаже',
+  statusNoPrice: 'В продаже, цены нет',
 
   priceFree: 'Бесплатно',
   priceWithDiscount: '{price} (-{discount}%)',
   priceNone: 'Нет цены',
+  priceUnavailable: 'Недоступен для покупки',
 
   monitorLine: '#{id} {name} ({appid}) · {status} · {price}',
   appidOnly: 'AppID: {appid}',
@@ -155,6 +157,7 @@ export const ru: BotMessages = {
   notificationBecamePaid: 'Этот товар стал платным.',
   notificationBecamePaidWithPrice: 'Этот товар стал платным: {price}.',
   notificationBasePriceChange: 'Изменение базовой цены: {old} → {new}',
+  notificationPriceUnavailable: 'У этого товара сейчас нет цены для покупки в регионе {region} (возможно, он снят с продажи, отозван или не продаётся в этом регионе), поэтому цену получить нельзя.',
   notificationSteamNews: 'Новость Steam: «{title}»',
   notificationMatchedKeyword: 'Совпавшее ключевое слово: {keyword}',
   notificationDelistingHint:
@@ -164,6 +167,7 @@ export const ru: BotMessages = {
     'Две проверки подряд подтвердили, что этот товар нельзя купить в магазине.',
   notificationRestoredFirst: 'Этот товар теперь можно купить в регионе {region}.',
   notificationRestored: 'Этот товар снова доступен для покупки (регион {region}).',
+  notificationRestoredPreviousPrice: 'Прежняя цена: {price}',
   notificationCheckFailed: 'Неудачных проверок подряд: {count} ({code}).',
   notificationAutoPaused:
     'Этот мониторинг приостановлен автоматически; проверьте его и возобновите вручную.',

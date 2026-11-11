@@ -87,6 +87,7 @@ export interface MonitorRow {
   price_final_formatted: string | null
   discount_percent: number
   is_free: number
+  price_unavailable: number
   sale_started_at: number | null
   unavailable_since: number | null
   delisted_notified_at: number | null
@@ -115,6 +116,7 @@ export interface SnapshotRow {
   price_final_formatted: string | null
   discount_percent: number
   is_free: number
+  price_unavailable: number
   release_status: string
   suppressed: number
   error_code: string | null
@@ -284,6 +286,7 @@ export function toMonitor(row: MonitorRow): Monitor {
     priceFinalFormatted: row.price_final_formatted,
     discountPercent: Number(row.discount_percent),
     isFree: row.is_free === 1,
+    priceUnavailable: row.price_unavailable === 1,
     saleStartedAt: row.sale_started_at,
     unavailableSince: row.unavailable_since,
     delistedNotifiedAt: row.delisted_notified_at,
@@ -314,6 +317,7 @@ export function toSnapshot(row: SnapshotRow): Snapshot {
     priceFinalFormatted: row.price_final_formatted,
     discountPercent: Number(row.discount_percent),
     isFree: row.is_free === 1,
+    priceUnavailable: row.price_unavailable === 1,
     releaseStatus: row.release_status as ReleaseStatus,
     suppressed: row.suppressed === 1,
     errorCode: row.error_code,

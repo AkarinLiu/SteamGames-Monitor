@@ -46,6 +46,7 @@ export interface MonitorPatch {
   priceFinalFormatted?: string | null
   discountPercent?: number
   isFree?: boolean
+  priceUnavailable?: boolean
   saleStartedAt?: number | null
   unavailableSince?: number | null
   delistedNotifiedAt?: number | null
@@ -83,6 +84,7 @@ const PATCH_COLUMNS: Record<keyof MonitorPatch, string> = {
   priceFinalFormatted: 'price_final_formatted',
   discountPercent: 'discount_percent',
   isFree: 'is_free',
+  priceUnavailable: 'price_unavailable',
   saleStartedAt: 'sale_started_at',
   unavailableSince: 'unavailable_since',
   delistedNotifiedAt: 'delisted_notified_at',
@@ -101,6 +103,7 @@ const BOOLEAN_KEYS = new Set<keyof MonitorPatch>([
   'baselinePending',
   'everAvailable',
   'isFree',
+  'priceUnavailable',
 ])
 
 function toSqlValue(key: keyof MonitorPatch, value: unknown): string | number | null {

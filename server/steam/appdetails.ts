@@ -4,7 +4,7 @@ import { safeJsonParse } from '../../shared/utils'
 import type { SteamRateLimiter } from '../monitor/rateLimiter'
 import { env } from '../env'
 import { steamFetchJson, SteamRequestError } from './client'
-import { normalizeAppDetails } from './normalize'
+import { normalizeAppDetails, withPriceState } from './normalize'
 import type { AppDetailsResult, NormalizedApp } from './types'
 
 export const STEAM_CACHE_TTL_MS = 10 * 60_000
@@ -47,10 +47,13 @@ export async function fetchAppDetails(
     const cached = getSteamCache(db, appid, region, language)
     if (cached && now() - Number(cached.fetched_at) <= ttl) {
       const app = safeJsonParse<NormalizedApp | null>(cached.normalized_json, null)
-      if (app && typeof app === 'object' && app.appid) {
+      // Rows cached by older builds predate `priceState`; their `price` is still
+      // authoritative, so derive the state instead of trusting a missing field.
+      const normalized = app ? withPriceState(app) : null
+      if (normalized && typeof normalized === 'object' && normalized.appid) {
         return {
           status: 'ok',
-          app,
+          app: normalized,
           fetchedAt: Number(cached.fetched_at),
           fromCache: true,
           durationMs: 0,

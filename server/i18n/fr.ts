@@ -35,10 +35,12 @@ export const fr: BotMessages = {
   statusUnknown: 'En attente de vérification',
   statusOnSale: 'En promotion',
   statusAvailable: 'En vente',
+  statusNoPrice: 'En vente, sans prix',
 
   priceFree: 'Gratuit',
   priceWithDiscount: '{price} (-{discount} %)',
   priceNone: 'Aucun prix',
+  priceUnavailable: 'Non achetable',
 
   monitorLine: '#{id} {name} ({appid}) · {status} · {price}',
   appidOnly: 'AppID : {appid}',
@@ -154,6 +156,7 @@ export const fr: BotMessages = {
   notificationBecamePaid: 'Cet élément est passé de gratuit à payant.',
   notificationBecamePaidWithPrice: 'Cet élément est passé de gratuit à payant : {price}.',
   notificationBasePriceChange: 'Variation du prix de base : {old} → {new}',
+  notificationPriceUnavailable: "Cet élément n'a actuellement aucun prix achetable dans la région {region} (retiré du magasin ou non vendu dans cette région) ; son prix est donc indisponible.",
   notificationSteamNews: 'Actualité Steam : « {title} »',
   notificationMatchedKeyword: 'Mot-clé détecté : {keyword}',
   notificationDelistingHint:
@@ -163,6 +166,7 @@ export const fr: BotMessages = {
     'Deux vérifications consécutives ont confirmé que cet élément n’est pas achetable dans la boutique.',
   notificationRestoredFirst: 'Cet élément est désormais achetable dans la région {region}.',
   notificationRestored: 'Cet élément est de nouveau achetable (région {region}).',
+  notificationRestoredPreviousPrice: 'Prix précédent : {price}',
   notificationCheckFailed: '{count} échecs de vérification consécutifs ({code}).',
   notificationAutoPaused:
     'Ce suivi a été suspendu automatiquement ; vérifiez-le puis reprenez-le manuellement.',

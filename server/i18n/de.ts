@@ -34,10 +34,12 @@ export const de: BotMessages = {
   statusUnknown: 'Prüfung ausstehend',
   statusOnSale: 'Im Angebot',
   statusAvailable: 'Im Verkauf',
+  statusNoPrice: 'Gelistet, kein Preis',
 
   priceFree: 'Kostenlos',
   priceWithDiscount: '{price} (-{discount} %)',
   priceNone: 'Kein Preis',
+  priceUnavailable: 'Nicht kaufbar',
 
   monitorLine: '#{id} {name} ({appid}) · {status} · {price}',
   appidOnly: 'AppID: {appid}',
@@ -151,6 +153,7 @@ export const de: BotMessages = {
   notificationBecamePaid: 'Dieser Artikel ist jetzt kostenpflichtig.',
   notificationBecamePaidWithPrice: 'Dieser Artikel ist jetzt kostenpflichtig: {price}.',
   notificationBasePriceChange: 'Grundpreisänderung: {old} → {new}',
+  notificationPriceUnavailable: 'Dieser Artikel hat derzeit keinen kaufbaren Preis in Region {region} (möglicherweise delistet, zurückgezogen oder dort nicht erhältlich); der Preis kann nicht ermittelt werden.',
   notificationSteamNews: 'Steam-News: "{title}"',
   notificationMatchedKeyword: 'Treffer-Schlüsselwort: {keyword}',
   notificationDelistingHint:
@@ -160,6 +163,7 @@ export const de: BotMessages = {
     'Zwei aufeinanderfolgende Prüfungen bestätigten, dass dieser Artikel im Shop nicht kaufbar ist.',
   notificationRestoredFirst: 'Dieser Artikel kann jetzt in Region {region} gekauft werden.',
   notificationRestored: 'Dieser Artikel ist wieder kaufbar (Region {region}).',
+  notificationRestoredPreviousPrice: 'Vorheriger Preis: {price}',
   notificationCheckFailed: '{count} aufeinanderfolgende Prüfungen fehlgeschlagen ({code}).',
   notificationAutoPaused:
     'Dieser Monitor wurde automatisch pausiert; bitte prüfen und manuell fortsetzen.',

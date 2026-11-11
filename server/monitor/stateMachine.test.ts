@@ -26,6 +26,7 @@ function state(overrides: Partial<MonitorState> = {}): MonitorState {
     priceFinalFormatted: '¥ 298.00',
     discountPercent: 0,
     isFree: false,
+    priceUnavailable: false,
     saleStartedAt: null,
     unavailableSince: null,
     delistedNotifiedAt: null,
@@ -272,6 +273,155 @@ describe('deriveMonitorUpdate', () => {
       unavailableConfirmed: false,
     })
     expect(result.events.map((e) => e.type)).toEqual(['price_change'])
+  })
+
+  // Steam keeps answering for apps that can no longer be bought but omits
+  // price_overview, so a delisted app must not look like it lost its price.
+  function priceLessApp() {
+    return app({
+      appid: 929140,
+      name: 'Tank Royale',
+      price: null,
+      priceState: { status: 'unavailable', reason: 'not_sold' },
+    })
+  }
+
+  it('keeps the last known price and emits nothing when a listed app loses its price', () => {
+    const result = deriveMonitorUpdate({
+      monitorId: 1,
+      now: NOW,
+      threshold: 20,
+      prev: state({
+        priceInitialRaw: 3700,
+        priceFinalRaw: 3700,
+        priceInitialFormatted: 'CNY 37.00',
+        priceFinalFormatted: '¥ 37.00',
+      }),
+      next: priceLessApp(),
+      unavailableConfirmed: false,
+    })
+    expect(result.events).toEqual([])
+    expect(result.patch.availability).toBe('available')
+    expect(result.patch.priceUnavailable).toBe(true)
+    expect(result.patch.priceInitialRaw).toBe(3700)
+    expect(result.patch.priceInitialFormatted).toBe('CNY 37.00')
+    expect(result.patch.priceFinalFormatted).toBe('¥ 37.00')
+  })
+
+  it('does not end an active sale just because the price disappeared', () => {
+    const result = deriveMonitorUpdate({
+      monitorId: 1,
+      now: NOW,
+      threshold: 20,
+      prev: state({
+        discountPercent: 50,
+        priceFinalRaw: 14900,
+        priceFinalFormatted: '¥ 149.00',
+        saleStartedAt: NOW - 60_000,
+      }),
+      next: priceLessApp(),
+      unavailableConfirmed: false,
+    })
+    expect(result.events).toEqual([])
+    expect(result.patch.discountPercent).toBe(50)
+    expect(result.patch.saleStartedAt).toBe(NOW - 60_000)
+  })
+
+  it('records a first-seen price-less app as listed without a price', () => {
+    const result = deriveMonitorUpdate({
+      monitorId: 1,
+      now: NOW,
+      threshold: 20,
+      prev: state({
+        baselinePending: true,
+        availability: 'unknown',
+        everAvailable: false,
+        currency: null,
+        priceInitialRaw: null,
+        priceFinalRaw: null,
+        priceInitialFormatted: null,
+        priceFinalFormatted: null,
+      }),
+      next: priceLessApp(),
+      unavailableConfirmed: false,
+    })
+    expect(result.events).toEqual([])
+    expect(result.patch.baselinePending).toBe(false)
+    expect(result.patch.priceUnavailable).toBe(true)
+    expect(result.patch.priceInitialRaw).toBeNull()
+  })
+
+  it('still reports a release when the game launched without a price', () => {
+    const result = deriveMonitorUpdate({
+      monitorId: 1,
+      now: NOW,
+      threshold: 20,
+      prev: state({
+        releaseStatus: 'coming_soon',
+        releaseDateText: '2026-11-11',
+        availability: 'unknown',
+        everAvailable: false,
+        priceInitialRaw: null,
+        priceFinalRaw: null,
+        priceInitialFormatted: null,
+        priceFinalFormatted: null,
+      }),
+      next: priceLessApp(),
+      unavailableConfirmed: false,
+    })
+    expect(result.events.map((e) => e.type)).toEqual(['release'])
+    expect(result.patch.releaseStatus).toBe('released')
+    expect(result.patch.priceUnavailable).toBe(true)
+  })
+
+  it('clears the price-less flag once a price is readable again', () => {
+    const result = deriveMonitorUpdate({
+      monitorId: 1,
+      now: NOW,
+      threshold: 20,
+      prev: state({
+        priceUnavailable: true,
+        priceInitialRaw: 3700,
+        priceFinalRaw: 3700,
+        priceInitialFormatted: 'CNY 37.00',
+        priceFinalFormatted: '¥ 37.00',
+      }),
+      next: app({
+        price: {
+          currency: 'CNY',
+          initialRaw: 4500,
+          finalRaw: 4500,
+          discountPercent: 0,
+          initialFormatted: 'CNY 45.00',
+          finalFormatted: '¥ 45.00',
+        },
+      }),
+      unavailableConfirmed: false,
+    })
+    expect(result.events.map((e) => e.type)).toEqual(['price_change'])
+    expect(result.events[0]?.payload.oldPriceInitialFormatted).toBe('CNY 37.00')
+    expect(result.patch.priceUnavailable).toBe(false)
+  })
+
+  it('reports the previous price when a delisted item returns with a new one', () => {
+    const result = deriveMonitorUpdate({
+      monitorId: 1,
+      now: NOW,
+      threshold: 20,
+      prev: state({
+        availability: 'unavailable',
+        unavailableSince: NOW - 3_600_000,
+        consecutiveUnavailable: 2,
+        priceInitialRaw: 3700,
+        priceFinalRaw: 3700,
+        priceInitialFormatted: 'CNY 37.00',
+        priceFinalFormatted: '¥ 37.00',
+      }),
+      next: app(),
+      unavailableConfirmed: false,
+    })
+    expect(result.events.map((e) => e.type)).toEqual(['restored'])
+    expect(result.events[0]?.payload.previousPriceFinalFormatted).toBe('¥ 37.00')
   })
 
   it('marks the first failed check without an event', () => {

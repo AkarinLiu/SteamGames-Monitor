@@ -9,6 +9,7 @@ import type { MonitorRow, UserRow } from '../db/rows'
 import { enqueueEventDeliveries } from '../notify/dispatcher'
 import { fetchAppDetails } from '../steam/appdetails'
 import { SteamRequestError } from '../steam/client'
+import { withPriceState } from '../steam/normalize'
 import type { AppDetailsResult } from '../steam/types'
 import { logger } from '../lib/logger'
 import type { SteamRateLimiter } from './rateLimiter'
@@ -209,6 +210,7 @@ export function applyFetchResult(
       priceFinalFormatted: app.price?.finalFormatted ?? null,
       discountPercent: app.price?.discountPercent ?? 0,
       isFree: app.isFree,
+      priceUnavailable: withPriceState(app).priceState?.status === 'unavailable',
       releaseStatus: app.release.comingSoon ? 'coming_soon' : 'released',
       suppressed: baseline,
       httpStatus: result.httpStatus,

@@ -33,10 +33,12 @@ export const zhTW: BotMessages = {
   statusUnknown: '待檢查',
   statusOnSale: '特價中',
   statusAvailable: '販售中',
+  statusNoPrice: '販售中（無價格）',
 
   priceFree: '免費',
   priceWithDiscount: '{price}（-{discount}%）',
   priceNone: '暫無價格',
+  priceUnavailable: '無可購買價格',
 
   monitorLine: '#{id} {name}（{appid}）· {status} · {price}',
   appidOnly: 'AppID：{appid}',
@@ -142,6 +144,7 @@ export const zhTW: BotMessages = {
   notificationBecamePaid: '此商品已從免費轉為付費。',
   notificationBecamePaidWithPrice: '此商品已從免費轉為付費：{price}。',
   notificationBasePriceChange: '原價變化：{old} → {new}',
+  notificationPriceUnavailable: '此商品目前在區域 {region} 沒有可購買的價格（可能已下架、停售或未在該區域發售），因此無法查詢價格。',
   notificationSteamNews: 'Steam 新聞：「{title}」',
   notificationMatchedKeyword: '命中關鍵字：{keyword}',
   notificationDelistingHint: '這是基於新聞關鍵字的啟發式預警，請人工確認是否即將下架。',
@@ -149,6 +152,7 @@ export const zhTW: BotMessages = {
   notificationDelistedConfirmed: '連續 2 次檢查確認此商品在商店中無法購買。',
   notificationRestoredFirst: '此商品現在可以在區域 {region} 購買。',
   notificationRestored: '此商品已恢復可購買（區域 {region}）。',
+  notificationRestoredPreviousPrice: '先前價格：{price}',
   notificationCheckFailed: '連續 {count} 次檢查失敗（{code}）。',
   notificationAutoPaused: '已自動暫停此監控項目，請檢查後手動恢復。',
   notificationSteamNewsFallback: 'Steam 新聞',

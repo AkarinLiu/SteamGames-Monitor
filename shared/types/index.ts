@@ -91,6 +91,8 @@ export interface Monitor {
   priceFinalFormatted: string | null
   discountPercent: number
   isFree: boolean
+  /** The app is listed but has no purchasable price (delisted, withdrawn, region-locked). */
+  priceUnavailable: boolean
   saleStartedAt: number | null
   unavailableSince: number | null
   delistedNotifiedAt: number | null
@@ -124,6 +126,7 @@ export interface Snapshot {
   priceFinalFormatted: string | null
   discountPercent: number
   isFree: boolean
+  priceUnavailable: boolean
   releaseStatus: ReleaseStatus
   suppressed: boolean
   errorCode: string | null

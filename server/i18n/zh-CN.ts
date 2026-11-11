@@ -31,10 +31,12 @@ export const zhCN = {
   statusUnknown: '待检查',
   statusOnSale: '促销中',
   statusAvailable: '在售',
+  statusNoPrice: '在售（无价格）',
 
   priceFree: '免费',
   priceWithDiscount: '{price}（-{discount}%）',
   priceNone: '暂无价格',
+  priceUnavailable: '无可购买价格',
 
   monitorLine: '#{id} {name}（{appid}）· {status} · {price}',
   appidOnly: 'AppID：{appid}',
@@ -140,6 +142,7 @@ export const zhCN = {
   notificationBecamePaid: '该商品已从免费转为付费。',
   notificationBecamePaidWithPrice: '该商品已从免费转为付费：{price}。',
   notificationBasePriceChange: '原价变化：{old} → {new}',
+  notificationPriceUnavailable: '该商品当前在区域 {region} 没有可购买的价格（可能已下架、停售或仅在部分地区发售），因此价格无法查询。',
   notificationSteamNews: 'Steam 新闻：「{title}」',
   notificationMatchedKeyword: '命中关键词：{keyword}',
   notificationDelistingHint: '这是基于新闻关键词的启发式预警，请人工确认是否即将下架。',
@@ -147,6 +150,7 @@ export const zhCN = {
   notificationDelistedConfirmed: '连续 2 次检查确认该商品在商店中无法购买。',
   notificationRestoredFirst: '该商品现在可以在区域 {region} 购买。',
   notificationRestored: '该商品已恢复可购买（区域 {region}）。',
+  notificationRestoredPreviousPrice: '此前价格：{price}',
   notificationCheckFailed: '连续 {count} 次检查失败（{code}）。',
   notificationAutoPaused: '已自动暂停该监控项，请检查后手动恢复。',
   notificationSteamNewsFallback: 'Steam 新闻',

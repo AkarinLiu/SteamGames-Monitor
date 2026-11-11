@@ -33,10 +33,12 @@ export const en: BotMessages = {
   statusUnknown: 'Pending check',
   statusOnSale: 'On sale',
   statusAvailable: 'Available',
+  statusNoPrice: 'Listed, no price',
 
   priceFree: 'Free',
   priceWithDiscount: '{price} (-{discount}%)',
   priceNone: 'No price',
+  priceUnavailable: 'Not purchasable',
 
   monitorLine: '#{id} {name} ({appid}) · {status} · {price}',
   appidOnly: 'AppID: {appid}',
@@ -145,6 +147,7 @@ export const en: BotMessages = {
   notificationBecamePaid: 'This item changed from free to paid.',
   notificationBecamePaidWithPrice: 'This item changed from free to paid: {price}.',
   notificationBasePriceChange: 'Base price change: {old} → {new}',
+  notificationPriceUnavailable: 'This item currently has no purchasable price in region {region} (it may be delisted, withdrawn, or not sold there), so its price cannot be read.',
   notificationSteamNews: 'Steam news: "{title}"',
   notificationMatchedKeyword: 'Matched keyword: {keyword}',
   notificationDelistingHint:
@@ -154,6 +157,7 @@ export const en: BotMessages = {
     'Two consecutive checks confirmed that this item cannot be purchased in the store.',
   notificationRestoredFirst: 'This item can now be purchased in region {region}.',
   notificationRestored: 'This item is purchasable again (region {region}).',
+  notificationRestoredPreviousPrice: 'Previous price: {price}',
   notificationCheckFailed: '{count} consecutive check failures ({code}).',
   notificationAutoPaused:
     'This monitor was paused automatically; check it and resume manually.',

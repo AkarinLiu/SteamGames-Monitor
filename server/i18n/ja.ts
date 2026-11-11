@@ -35,10 +35,12 @@ export const ja: BotMessages = {
   statusUnknown: 'チェック待ち',
   statusOnSale: 'セール中',
   statusAvailable: '販売中',
+  statusNoPrice: '販売中（価格なし）',
 
   priceFree: '無料',
   priceWithDiscount: '{price}（-{discount}%）',
   priceNone: '価格なし',
+  priceUnavailable: '購入不可',
 
   monitorLine: '#{id} {name}（{appid}）· {status} · {price}',
   appidOnly: 'AppID：{appid}',
@@ -152,6 +154,7 @@ export const ja: BotMessages = {
   notificationBecamePaid: 'この商品は無料から有料になりました。',
   notificationBecamePaidWithPrice: 'この商品は無料から有料になりました：{price}。',
   notificationBasePriceChange: '通常価格の変化：{old} → {new}',
+  notificationPriceUnavailable: 'この商品は地域 {region} で現在購入可能な価格がありません（販売終了・取り下げ、またはその地域では販売されていない可能性があります）。そのため価格を取得できません。',
   notificationSteamNews: 'Steam ニュース：「{title}」',
   notificationMatchedKeyword: '一致したキーワード：{keyword}',
   notificationDelistingHint:
@@ -161,6 +164,7 @@ export const ja: BotMessages = {
     '2 回連続のチェックで、この商品がストアで購入できないことを確認しました。',
   notificationRestoredFirst: 'この商品は地域 {region} で購入できるようになりました。',
   notificationRestored: 'この商品は再び購入可能になりました（地域 {region}）。',
+  notificationRestoredPreviousPrice: '以前の価格：{price}',
   notificationCheckFailed: '{count} 回連続でチェックに失敗しました（{code}）。',
   notificationAutoPaused:
     'この監視は自動的に一時停止されました。確認後に手動で再開してください。',

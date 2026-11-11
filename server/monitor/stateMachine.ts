@@ -8,6 +8,7 @@ import type {
 } from '../../shared/types'
 import type { MonitorPatch } from '../db/repo/monitors'
 import type { MonitorRow } from '../db/rows'
+import { withPriceState } from '../steam/normalize'
 import type { NormalizedApp } from '../steam/types'
 import { isExactReleaseDate } from './releaseDate'
 
@@ -24,6 +25,7 @@ export interface MonitorState {
   priceFinalFormatted: string | null
   discountPercent: number
   isFree: boolean
+  priceUnavailable: boolean
   saleStartedAt: number | null
   unavailableSince: number | null
   delistedNotifiedAt: number | null
@@ -67,6 +69,7 @@ export function monitorRowToState(row: MonitorRow): MonitorState {
     priceFinalFormatted: row.price_final_formatted,
     discountPercent: Number(row.discount_percent),
     isFree: Number(row.is_free) === 1,
+    priceUnavailable: Number(row.price_unavailable) === 1,
     saleStartedAt: row.sale_started_at,
     unavailableSince: row.unavailable_since,
     delistedNotifiedAt: row.delisted_notified_at,
@@ -120,9 +123,50 @@ function unavailablePatch(
       consecutiveUnavailable,
       delistedNotifiedAt,
       baselinePending: false,
+      priceUnavailable: false,
       saleStartedAt: null,
     },
     events,
+  }
+}
+
+/**
+ * Steam still answers with a valid payload for apps that can no longer be bought
+ * (delisted, withdrawn, or not sold in this region); it just leaves
+ * `price_overview` out. The monitor is still "available" in that case — the app
+ * was not delisted from the database — but its price is gone, so price, discount
+ * and sale state must not be rewritten to `null` / `0` as if the app had become
+ * a free or unpriced product.
+ */
+function canRestorePrice(prev: MonitorState): boolean {
+  return !prev.baselinePending && prev.everAvailable && prev.availability !== 'unavailable'
+}
+
+function priceUnavailablePatch(prev: MonitorState, next: NormalizedApp): MonitorPatch {
+  // Once the price is gone there is nothing left to report, so the last known price
+  // is kept for display instead of being cleared to null / 0 (which is what made a
+  // delisted app look like it had become free or unpriced). A first baseline has no
+  // previous price to keep.
+  const keepPrice = !prev.baselinePending
+  return {
+    baselinePending: false,
+    availability: 'available',
+    everAvailable: true,
+    releaseStatus: next.release.comingSoon ? 'coming_soon' : 'released',
+    releaseDateText: next.release.dateText,
+    currency: keepPrice ? prev.currency : null,
+    priceInitialRaw: keepPrice ? prev.priceInitialRaw : null,
+    priceFinalRaw: keepPrice ? prev.priceFinalRaw : null,
+    priceInitialFormatted: keepPrice ? prev.priceInitialFormatted : null,
+    priceFinalFormatted: keepPrice ? prev.priceFinalFormatted : null,
+    discountPercent: keepPrice ? prev.discountPercent : 0,
+    isFree: keepPrice ? prev.isFree : false,
+    priceUnavailable: true,
+    saleStartedAt: keepPrice ? prev.saleStartedAt : null,
+    unavailableSince: null,
+    delistedNotifiedAt: null,
+    delistingWarningAt: prev.delistingWarningAt,
+    consecutiveUnavailable: 0,
   }
 }
 
@@ -131,6 +175,28 @@ export function deriveMonitorUpdate(input: DeriveInput): DeriveResult {
 
   if (!next) {
     return unavailablePatch(prev, now, unavailableConfirmed, monitorId)
+  }
+
+  // No purchasable price: nothing about the price changed (it did not become free
+  // and it did not get cheaper), so no price, sale or restore event is derived.
+  // A release without a price is still a release, so that event is kept.
+  const priceState = withPriceState(next).priceState ?? { status: 'unknown' }
+  if (priceState.status === 'unavailable') {
+    const releaseStatus: ReleaseStatus = next.release.comingSoon ? 'coming_soon' : 'released'
+    const events: DerivedEvent[] = []
+    if (!prev.baselinePending && prev.releaseStatus === 'coming_soon' && releaseStatus === 'released') {
+      events.push(
+        event(
+          'release',
+          {
+            releaseDateText: next.release.dateText ?? prev.releaseDateText,
+            previousStatus: prev.releaseStatus,
+          },
+          `release:${monitorId}:${now}`,
+        ),
+      )
+    }
+    return { patch: priceUnavailablePatch(prev, next), events }
   }
 
   const discountPercent = next.price?.discountPercent ?? 0
@@ -150,6 +216,9 @@ export function deriveMonitorUpdate(input: DeriveInput): DeriveResult {
 
   const wasUnavailable = prev.availability === 'unavailable'
   const firstAvailable = !prev.everAvailable
+  // The price the monitor knew before this check, if any. A monitor baselined while
+  // the app had no purchasable price has no previous price to report.
+  const previousPriceFinalFormatted = canRestorePrice(prev) ? prev.priceFinalFormatted : null
   const events: DerivedEvent[] = []
 
   if (!prev.baselinePending) {
@@ -192,6 +261,8 @@ export function deriveMonitorUpdate(input: DeriveInput): DeriveResult {
             unavailableSince: prev.unavailableSince,
             priceFinalFormatted,
             discountPercent,
+            previousPriceFinalFormatted: prev.priceFinalFormatted,
+            previousDiscountPercent: prev.discountPercent,
           },
           `restored:${monitorId}:${prev.unavailableSince ?? now}`,
         ),
@@ -205,6 +276,8 @@ export function deriveMonitorUpdate(input: DeriveInput): DeriveResult {
             unavailableSince: null,
             priceFinalFormatted,
             discountPercent,
+            previousPriceFinalFormatted,
+            previousDiscountPercent: previousPriceFinalFormatted ? prev.discountPercent : null,
           },
           `restored:${monitorId}:first:${now}`,
         ),
@@ -315,6 +388,7 @@ export function deriveMonitorUpdate(input: DeriveInput): DeriveResult {
       priceFinalFormatted,
       discountPercent,
       isFree: next.isFree,
+      priceUnavailable: false,
       saleStartedAt,
       unavailableSince: null,
       delistedNotifiedAt: null,

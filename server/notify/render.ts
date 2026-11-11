@@ -115,13 +115,19 @@ function buildEventLines(
         } else {
           lines.push(messages.notificationBecamePaid)
         }
-      } else {
+      } else if (oldInitial && initial) {
         lines.push(
           fmt(messages.notificationBasePriceChange, {
-            old: oldInitial ?? '—',
-            new: initial ?? '—',
+            old: oldInitial,
+            new: initial,
           }),
         )
+      } else if (initial) {
+        lines.push(fmt(messages.notificationCurrentPrice, { price: initial }))
+      } else {
+        // One side of the comparison is missing. Rendering it as "…… → —" reads
+        // like the item lost its price, so state the absence explicitly instead.
+        lines.push(fmt(messages.notificationPriceUnavailable, { region }))
       }
       break
     }
@@ -148,12 +154,16 @@ function buildEventLines(
       )
       const final = asString(p.priceFinalFormatted)
       const discount = asNumber(p.discountPercent) ?? 0
+      const previousFinal = asString(p.previousPriceFinalFormatted)
       if (final) {
         lines.push(
           fmt(messages.notificationCurrentPrice, {
             price: formatPriceLine(null, final, discount),
           }),
         )
+      }
+      if (previousFinal && previousFinal !== final) {
+        lines.push(fmt(messages.notificationRestoredPreviousPrice, { price: previousFinal }))
       }
       break
     }

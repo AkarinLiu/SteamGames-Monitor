@@ -17,6 +17,7 @@ export interface CreateSnapshotInput {
   priceFinalFormatted?: string | null
   discountPercent?: number
   isFree?: boolean
+  priceUnavailable?: boolean
   releaseStatus?: ReleaseStatus
   suppressed?: boolean
   errorCode?: string | null
@@ -30,8 +31,9 @@ export function createSnapshot(db: Db, input: CreateSnapshotInput): Snapshot {
       `INSERT INTO snapshots (
         monitor_id, user_id, checked_at, region, availability, currency,
         price_initial_raw, price_final_raw, price_initial_formatted, price_final_formatted,
-        discount_percent, is_free, release_status, suppressed, error_code, http_status, duration_ms
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        discount_percent, is_free, price_unavailable, release_status, suppressed, error_code,
+        http_status, duration_ms
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .run(
       input.monitorId,
@@ -46,6 +48,7 @@ export function createSnapshot(db: Db, input: CreateSnapshotInput): Snapshot {
       input.priceFinalFormatted ?? null,
       input.discountPercent ?? 0,
       input.isFree ? 1 : 0,
+      input.priceUnavailable ? 1 : 0,
       input.releaseStatus ?? 'unknown',
       input.suppressed ? 1 : 0,
       input.errorCode ?? null,

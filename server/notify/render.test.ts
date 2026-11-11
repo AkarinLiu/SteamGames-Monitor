@@ -74,6 +74,58 @@ describe('notification rendering locale', () => {
     expect(message.text).toContain('Previous release date: Coming soon')
   })
 
+  it('explains a missing price instead of rendering an em dash', () => {
+    const message = renderEventMessage(
+      {
+        ...event,
+        type: 'price_change',
+        payload: {
+          name: 'Tank Royale',
+          region: 'cn',
+          oldPriceInitialRaw: 3700,
+          priceInitialRaw: null,
+          oldPriceInitialFormatted: 'CNY 37.00',
+          priceInitialFormatted: null,
+          oldIsFree: false,
+          isFree: false,
+          currency: null,
+        },
+      },
+      { ...monitor, name: 'Tank Royale', region: 'cn' },
+      'Asia/Shanghai',
+      'zh-CN',
+    )
+
+    expect(message.title).toBe('【价格变动】Tank Royale')
+    expect(message.text).toContain('没有可购买的价格')
+    expect(message.text).not.toContain('CNY 37.00 → —')
+  })
+
+  it('reports the price known before a delisted item was restored', () => {
+    const message = renderEventMessage(
+      {
+        ...event,
+        type: 'restored',
+        payload: {
+          name: 'Tank Royale',
+          region: 'cn',
+          firstAvailable: false,
+          unavailableSince: 1_799_000_000_000,
+          priceFinalFormatted: '¥ 45.00',
+          discountPercent: 0,
+          previousPriceFinalFormatted: '¥ 37.00',
+          previousDiscountPercent: 0,
+        },
+      },
+      { ...monitor, name: 'Tank Royale', region: 'cn' },
+      'Asia/Shanghai',
+      'zh-CN',
+    )
+
+    expect(message.text).toContain('¥ 45.00')
+    expect(message.text).toContain('此前价格：¥ 37.00')
+  })
+
   it('falls back to Chinese for unsupported locales', () => {
     const message = renderTestMessage('Webhook', 'UTC', 'not-a-locale')
     expect(message.title).toBe('【测试通知】Steam 监控')

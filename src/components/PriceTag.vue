@@ -8,6 +8,9 @@ const props = defineProps<{ monitor: Monitor }>()
 
 const finalText = computed(() => {
   if (props.monitor.isFree) return t("免费")
+  // The last known price is kept in the row for notifications, but it is no longer
+  // the current price, so showing it here without qualification would be misleading.
+  if (props.monitor.priceUnavailable) return '—'
   return props.monitor.priceFinalFormatted ?? '—'
 })
 const initialText = computed(() =>

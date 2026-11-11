@@ -54,9 +54,13 @@ export function eventSummary(type: EventType, payload: EventPayload): string {
     case 'price_change': {
       if (payload.oldIsFree === true && payload.isFree === false) return t('由免费转为付费')
       if (payload.oldIsFree === false && payload.isFree === true) return t('转为免费')
+      const current = payloadString(payload.priceInitialFormatted)
+      // Older events were recorded when a missing price was rendered as an em dash;
+      // their payload has no new price, so say that instead of showing "→ ?".
+      if (!current) return t('无可购买价格')
       return tf("原价 {old} → {new}", {
         old: payloadString(payload.oldPriceInitialFormatted) ?? '?',
-        new: payloadString(payload.priceInitialFormatted) ?? '?',
+        new: current,
       })
     }
     case 'delisting_warning':

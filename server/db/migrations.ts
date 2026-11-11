@@ -561,4 +561,17 @@ export const migrations: Migration[] = [
       `)
     },
   },
+  {
+    version: 11,
+    name: 'track unavailable price',
+    up(db) {
+      // Steam keeps a delisted / withdrawn app in its store API (success: true) but
+      // stops returning `price_overview`. The last known price is kept for display,
+      // so a separate flag records that the app is listed but no longer purchasable.
+      db.exec(
+        'ALTER TABLE monitors ADD COLUMN price_unavailable INTEGER NOT NULL DEFAULT 0;' +
+          'ALTER TABLE snapshots ADD COLUMN price_unavailable INTEGER NOT NULL DEFAULT 0;',
+      )
+    },
+  },
 ]
