@@ -12,6 +12,7 @@ import { fetchNews } from '../steam/news'
 import type { SteamNewsItem } from '../steam/types'
 import type { SteamRateLimiter } from './rateLimiter'
 import { computeNextNewsCheckAt, jitterMs } from './policies'
+import { findNewsKeyword } from './newsKeywords'
 import { logger } from '../lib/logger'
 
 const log = logger.child('news')
@@ -128,7 +129,10 @@ export class NewsScanner {
       return { matched: 0, eventsCreated: 0 }
     }
 
-    const keywords = safeJsonParse<string[]>(user.news_keywords_json, DEFAULT_NEWS_KEYWORDS)
+    const configured = safeJsonParse<string[]>(user.news_keywords_json, DEFAULT_NEWS_KEYWORDS)
+    // An empty list means "use the defaults", matching the settings hint. It used
+    // to silently disable every news warning because a valid [] parsed as [].
+    const keywords = configured.length > 0 ? configured : DEFAULT_NEWS_KEYWORDS
     const matchMode = user.news_match_mode as NewsMatchMode
     const earliest = Math.max(Number(monitor.created_at), now - MAX_AGE_MS)
     let matched = 0
@@ -136,8 +140,8 @@ export class NewsScanner {
 
     for (const item of items) {
       if (!item.date || item.date < earliest || item.date > now + FUTURE_TOLERANCE_MS) continue
-      const keyword = findKeyword(item, keywords, matchMode)
-      if (!keyword) continue
+      const match = findNewsKeyword(item, keywords, matchMode)
+      if (!match) continue
       matched += 1
 
       db.transaction(() => {
@@ -147,7 +151,7 @@ export class NewsScanner {
           title: item.title,
           url: item.url,
           publishedAt: item.date,
-          matchedKeyword: keyword,
+          matchedKeyword: match.keyword,
           seenAt: now,
         })
         if (!seen) return
@@ -167,7 +171,8 @@ export class NewsScanner {
             gid: item.gid,
             title: item.title,
             url: item.url,
-            matchedKeyword: keyword,
+            matchedKeyword: match.keyword,
+            matchedField: match.field,
             publishedAt: item.date,
             feedName: item.feedName,
             heuristic: true,
@@ -187,18 +192,4 @@ export class NewsScanner {
     updateMonitor(db, monitor.id, { nextNewsCheckAt })
     return { matched, eventsCreated }
   }
-}
-
-function findKeyword(
-  item: SteamNewsItem,
-  keywords: string[],
-  mode: NewsMatchMode,
-): string | null {
-  const haystack = (mode === 'title' ? item.title : `${item.title}\n${item.contents}`).toLowerCase()
-  if (!haystack) return null
-  for (const keyword of keywords) {
-    const needle = keyword.trim().toLowerCase()
-    if (needle && haystack.includes(needle)) return keyword
-  }
-  return null
 }

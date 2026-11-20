@@ -29,7 +29,7 @@ export interface NewsFetchResult {
 }
 
 export function buildNewsUrl(appid: number): string {
-  return `${env.STEAM_API_BASE_URL}/ISteamNews/GetNewsForApp/v2/?appid=${appid}&count=20&maxlength=1000`
+  return `${env.STEAM_API_BASE_URL}/ISteamNews/GetNewsForApp/v2/?appid=${appid}&count=50&maxlength=1000`
 }
 
 function normalizeNewsItem(raw: NewsApiItem): SteamNewsItem | null {

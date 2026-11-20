@@ -1,4 +1,23 @@
 import type { DatabaseSync } from 'node:sqlite'
+import { DEFAULT_NEWS_KEYWORDS } from '../../shared/constants'
+
+/**
+ * The delisting keyword list shipped up to v1.1.5. Users who never edited their
+ * keywords still hold exactly this list, so migration 12 can upgrade them
+ * without overwriting a customised configuration.
+ */
+export const LEGACY_DEFAULT_NEWS_KEYWORDS = [
+  '下架',
+  '即将下架',
+  '停止销售',
+  '终止销售',
+  '停售',
+  '不再销售',
+  'delist',
+  'delisted',
+  'removed from sale',
+  'no longer available',
+]
 
 export interface Migration {
   version: number
@@ -571,6 +590,16 @@ export const migrations: Migration[] = [
       db.exec(
         'ALTER TABLE monitors ADD COLUMN price_unavailable INTEGER NOT NULL DEFAULT 0;' +
           'ALTER TABLE snapshots ADD COLUMN price_unavailable INTEGER NOT NULL DEFAULT 0;',
+      )
+    },
+  },
+  {
+    version: 12,
+    name: 'expand default news keywords',
+    up(db) {
+      db.prepare('UPDATE users SET news_keywords_json = ? WHERE news_keywords_json = ?').run(
+        JSON.stringify(DEFAULT_NEWS_KEYWORDS),
+        JSON.stringify(LEGACY_DEFAULT_NEWS_KEYWORDS),
       )
     },
   },

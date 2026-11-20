@@ -180,17 +180,134 @@ export const DEFAULT_NOTIFY_EVENT_TYPES: EventType[] = EVENT_TYPES.filter(
   (t) => t !== 'check_error',
 )
 
+/**
+ * Heuristic delisting keywords scanned in Steam news.
+ *
+ * The list intentionally covers explicit removal-from-sale wording as well as
+ * the service and licence events that usually precede it. The matcher
+ * (server/monitor/newsKeywords.ts) handles case, full-width text, word
+ * boundaries and negations such as "will not be delisted" / "不会下架", so
+ * entries can stay focused on phrases that really imply a removal.
+ */
 export const DEFAULT_NEWS_KEYWORDS = [
+  // 简体中文
   '下架',
   '即将下架',
+  '暂时下架',
+  '暂停销售',
+  '停售',
   '停止销售',
   '终止销售',
-  '停售',
+  '停止售卖',
+  '停止发售',
+  '终止发售',
+  '结束销售',
   '不再销售',
+  '不再发售',
+  '无法购买',
+  '停运',
+  '停服',
+  '关服',
+  '停止运营',
+  '暂停运营',
+  '终止运营',
+  '结束运营',
+  '服务终止',
+  '停止服务',
+  '终止服务',
+  '关闭服务器',
+  '服务器关闭',
+  '授权到期',
+  '版权到期',
+  // 繁體中文
+  '停止販售',
+  '終止販售',
+  '停止營運',
+  '結束營運',
+  '停止服務',
+  '終止服務',
+  '關閉伺服器',
+  // English
   'delist',
   'delisted',
+  'delisting',
+  'de-listed',
   'removed from sale',
+  'removed from the store',
+  'removed from the steam store',
+  'removed from the marketplace',
+  'removed from steam',
+  'removal from the store',
   'no longer available',
+  'no longer be available',
+  'no longer available for purchase',
+  'no longer purchasable',
+  'unavailable for purchase',
+  'cannot be purchased',
+  'taken down',
+  'taken off the store',
+  'withdrawn from sale',
+  'withdrawn from the store',
+  'pulled from the store',
+  'discontinued',
+  'ceased sales',
+  'cease sales',
+  'end of sales',
+  'end of service',
+  'server shutdown',
+  'servers shutting down',
+  'shutting down servers',
+  'license expired',
+  'license expiring',
+  'rights expired',
+  'will not be available',
+  "won't be available",
+  'will no longer be available',
+  'no longer sold',
+  'no longer be sold',
+  // 日本語
+  '販売終了',
+  '販売を終了',
+  '配信終了',
+  '配信を終了',
+  '販売停止',
+  'サービス終了',
+  // 한국어
+  '판매 종료',
+  '판매 중단',
+  '판매가 중단',
+  '서비스 종료',
+  // Русский
+  'снят с продажи',
+  'снята с продажи',
+  'снятие с продажи',
+  'сняли с продажи',
+  'продажа прекращена',
+  // Español
+  'retirado de la venta',
+  'retirada de la venta',
+  'ya no estará disponible',
+  'dejará de estar disponible',
+  // Português
+  'removido da venda',
+  'removida da venda',
+  'não estará mais disponível',
+  'não será mais vendido',
+  // Deutsch
+  'aus dem verkauf genommen',
+  'nicht mehr erhältlich',
+  'nicht mehr verfügbar',
+  // Français
+  'retiré de la vente',
+  'retirée de la vente',
+  'ne sera plus disponible',
+  "n'est plus disponible",
+  // Italiano
+  'rimosso dalla vendita',
+  'non sarà più disponibile',
+  // Nederlands
+  'niet meer beschikbaar',
+  'niet meer verkrijgbaar',
 ]
 
 export const NEWS_MATCH_MODE_OPTIONS: Option<NewsMatchMode>[] = [
@@ -234,7 +351,7 @@ export const LIMITS = {
   maxChannelsPerUser: 10,
   maxBotsPerUser: 3,
   maxDlcImport: 50,
-  maxNewsKeywords: 30,
+  maxNewsKeywords: 130,
   keywordMaxLength: 48,
   sessionTtlMs: 7 * 24 * 60 * 60 * 1000,
   loginWindowMs: 15 * 60 * 1000,

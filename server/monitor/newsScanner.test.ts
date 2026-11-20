@@ -21,14 +21,24 @@ afterEach(() => {
   db.close()
 })
 
-function setup(): number {
+function setup(
+  options: {
+    keywords?: string[]
+    matchMode?: 'title' | 'any'
+    title?: string
+    contents?: string
+  } = {},
+): number {
   const user = createUser(db, {
     username: 'news-user',
     displayName: 'News User',
     passwordHash: 'scrypt$test',
     role: 'member',
   })
-  updateUser(db, user.id, { newsKeywords: ['delist'] })
+  updateUser(db, user.id, {
+    newsKeywords: options.keywords ?? ['delist'],
+    newsMatchMode: options.matchMode ?? 'title',
+  })
   const monitor = createMonitor(db, {
     userId: user.id,
     appid: APP_ID,
@@ -45,9 +55,9 @@ function setup(): number {
     payloadJson: JSON.stringify([
       {
         gid: 'news-1',
-        title: 'Soon Gone will be delisted soon',
+        title: options.title ?? 'Soon Gone will be delisted soon',
         url: 'https://store.steampowered.com/news/app/424242/view/1',
-        contents: '',
+        contents: options.contents ?? '',
         date: NOW - 1_000,
         feedName: 'mock',
       },
@@ -81,5 +91,49 @@ describe('NewsScanner delisting warning status', () => {
     const second = await scanner().tick()
     expect(second.eventsCreated).toBe(0)
     expect(findMonitorByIdInternal(db, monitorId)?.delisting_warning_at).toBe(NOW)
+  })
+
+  it('falls back to the default keywords when the configured list is empty', async () => {
+    setup({ keywords: [] })
+
+    const result = await scanner().tick()
+    expect(result.eventsCreated).toBe(1)
+  })
+
+  it('ignores negated delisting statements', async () => {
+    setup({ keywords: ['delist'], title: 'Soon Gone will not be delisted' })
+
+    const result = await scanner().tick()
+    expect(result.eventsCreated).toBe(0)
+  })
+
+  it('ignores removal wording about something other than the product', async () => {
+    setup({ keywords: ['no longer available'], title: 'Soon Gone is no longer available for free' })
+
+    const result = await scanner().tick()
+    expect(result.eventsCreated).toBe(0)
+  })
+
+  it('scans announcement bodies when the user selects the body mode', async () => {
+    setup({
+      keywords: ['delist'],
+      title: 'An important announcement',
+      contents: 'Soon Gone will be delisted on June 1.',
+      matchMode: 'any',
+    })
+
+    const result = await scanner().tick()
+    expect(result.eventsCreated).toBe(1)
+  })
+
+  it('does not scan announcement bodies in title-only mode', async () => {
+    setup({
+      keywords: ['delist'],
+      title: 'An important announcement',
+      contents: 'Soon Gone will be delisted on June 1.',
+    })
+
+    const result = await scanner().tick()
+    expect(result.eventsCreated).toBe(0)
   })
 })

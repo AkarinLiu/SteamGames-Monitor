@@ -12,7 +12,7 @@ A single process serves the web UI, REST API, Steam polling scheduler, notificat
 - **Independent multi-user accounts**: admins create accounts, and each user has their own monitors, events, notification channels, and command bots, with strict data isolation.
 - **Monitors**: appid, store link, or name search; bulk-import all DLC for a base game.
 - **Status changes**: release (coming soon flips), release date announced / changed, sale start / change / end, base price change, unavailable (delisted), and restored.
-- **Delisting detection**: the store purchasability state must flip twice in a row before a delisting is confirmed; Steam news keywords provide early warning (heuristic, for reference only).
+- **Delisting early warning**: the store purchasability state must flip twice in a row before a delisting is confirmed. Steam news and announcements are also scanned against a built-in multilingual keyword set (Chinese, English, Japanese, Korean, Russian, and more) covering sales removal, service shutdowns, and licence expiry, while filtering negations such as "will not be delisted" and unrelated contexts such as leaving a subscription or becoming paid (heuristic, for reference only).
 - **Notification channels**: WeCom group bot, Feishu custom bot, DingTalk custom bot, custom WebHook, SMTP email; failed deliveries are retried automatically.
 - **Command bots**: Feishu / Lark app bot (one-click QR creation, HTTP callback or WebSocket long connection), DingTalk bot (one-click QR creation, HTTP callback or Stream long connection), WeCom intelligent bot long connection, with QR creation, web authorization for unauthorized users, and event notifications; supports `/add`, `/list`, `/price`, `/check`, `/pause`, `/resume`, `/remove`, `/adddlc`, `/events`, `/cancel`; WeChat ClawBot and QQ Bot are being integrated following the platforms' official protocols.
 - **Operations friendly**: health checks, Docker image, online database backup, configurable data retention policy.
@@ -305,7 +305,7 @@ Combined with `ALLOW_INSECURE_WEBHOOKS=1` and `STEAM_STORE_BASE_URL` / `STEAM_AP
 ## Known limitations
 
 - The Steam store interface is unofficial and may change or rate-limit; it cannot distinguish "delisted / not sellable in this region / invalid appid", so the system requires "was purchasable before + two consecutive unavailable checks" to reduce false positives.
-- News keyword warnings only cover Steam news / announcements and are heuristic hints that need human confirmation.
+- News keyword warnings only cover Steam news / announcements and are heuristic hints; multilingual keywords and negation filtering reduce noise, but human confirmation is still required.
 - The exact sale end time is unknown; `sale_end` depends on the next poll discovering that the discount has dropped to zero.
 - WeCom group bots can only send; use the WeCom intelligent bot long connection for in-group commands. A long connection supports only one valid connection per bot, so multiple instances will kick each other offline.
 - WeChat ClawBot (iLink) and QQ Bot are being integrated following the platforms' official protocols.

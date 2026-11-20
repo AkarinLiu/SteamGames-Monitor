@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { DatabaseSync } from 'node:sqlite'
+import { DEFAULT_NEWS_KEYWORDS } from '../../shared/constants'
 import { openDatabase, runMigrations, type Db } from './database'
-import { migrations } from './migrations'
+import { LEGACY_DEFAULT_NEWS_KEYWORDS, migrations } from './migrations'
 import { countActiveAdmins, createUser, findUserByUsername, updateUser } from './repo/users'
 import { createSession, findSessionWithUser } from './repo/sessions'
 import {
@@ -284,5 +285,38 @@ describe('database schema', () => {
     expect(getRetention(db).snapshotsDays).toBe(90)
     setSetting(db, 'cache_ttl_seconds', 600)
     expect(getSetting(db, 'cache_ttl_seconds', 0)).toBe(600)
+  })
+
+  it('expands untouched default news keywords and keeps customised lists', () => {
+    const raw = new DatabaseSync(':memory:')
+    raw.exec(
+      'CREATE TABLE schema_migrations (version INTEGER PRIMARY KEY, applied_at INTEGER NOT NULL)',
+    )
+    raw.exec('PRAGMA foreign_keys = ON')
+    for (const migration of migrations.filter((item) => item.version <= 11)) {
+      migration.up(raw)
+      raw
+        .prepare('INSERT INTO schema_migrations (version, applied_at) VALUES (?, ?)')
+        .run(migration.version, Date.now())
+    }
+    const insertUser = raw.prepare(
+      `INSERT INTO users
+         (username, display_name, password_hash, news_keywords_json, created_at, updated_at)
+       VALUES (?, ?, 'scrypt$test', ?, 1, 1)`,
+    )
+    insertUser.run('legacy', 'Legacy', JSON.stringify(LEGACY_DEFAULT_NEWS_KEYWORDS))
+    insertUser.run('custom', 'Custom', JSON.stringify(['my keyword']))
+
+    runMigrations(raw)
+
+    const keywordsOf = (username: string): string[] => {
+      const row = raw
+        .prepare('SELECT news_keywords_json FROM users WHERE username = ?')
+        .get(username) as { news_keywords_json: string }
+      return JSON.parse(row.news_keywords_json) as string[]
+    }
+    expect(keywordsOf('legacy')).toEqual(DEFAULT_NEWS_KEYWORDS)
+    expect(keywordsOf('custom')).toEqual(['my keyword'])
+    raw.close()
   })
 })
