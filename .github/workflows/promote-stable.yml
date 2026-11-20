@@ -6,7 +6,7 @@ on:
       version:
         description: Version tag to promote to latest (without v)
         required: true
-        default: '1.1.5'
+        default: '1.1.6'
 
 permissions:
   contents: read
