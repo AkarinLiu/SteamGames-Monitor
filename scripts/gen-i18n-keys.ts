@@ -28,7 +28,7 @@ for (const file of files) {
   if (file.replaceAll('\\', '/').startsWith('src/i18n/')) continue
   const source = fs.readFileSync(file, 'utf8')
   for (const match of source.matchAll(
-    /\b(?:\$t|\$tf|t|tf)\(\s*("(?:\\.|[^"])*"|'(?:\\.|[^'])*')/g,
+    /\b(?:\$tf|\$t|tf|t)\(\s*("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')/g,
   )) {
     const raw = match[1]
     if (!raw) continue

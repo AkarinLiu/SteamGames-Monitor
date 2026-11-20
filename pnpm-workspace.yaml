@@ -2,3 +2,9 @@ allowBuilds:
   esbuild: true
   weclaw-bridge: true
   protobufjs: false
+
+# minimatch < 11.0.1 is vulnerable to a globparts amplification DoS
+# (GHSA-g3hv-75wg-m249). js-beautify still pins an older editorconfig/glob,
+# so force every vulnerable copy to the patched release.
+overrides:
+  "minimatch@<11.0.1": "11.0.9"

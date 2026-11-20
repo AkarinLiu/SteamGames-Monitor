@@ -1,4 +1,4 @@
-import { randomBytes, scrypt, timingSafeEqual } from 'node:crypto'
+import { randomBytes, randomInt, scrypt, timingSafeEqual } from 'node:crypto'
 
 const SCRYPT_N = 32768
 const SCRYPT_R = 8
@@ -61,10 +61,11 @@ const TEMP_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789
 const TEMP_LENGTH = 18
 
 export function generateTemporaryPassword(): string {
-  const bytes = randomBytes(TEMP_LENGTH)
   let out = ''
   for (let i = 0; i < TEMP_LENGTH; i += 1) {
-    out += TEMP_ALPHABET[(bytes[i] ?? 0) % TEMP_ALPHABET.length]
+    // randomInt() rejection-samples internally, so the alphabet stays uniform.
+    // Using a random byte modulo the alphabet length would bias the output.
+    out += TEMP_ALPHABET[randomInt(TEMP_ALPHABET.length)] ?? ''
   }
   return out
 }
