@@ -603,4 +603,39 @@ export const migrations: Migration[] = [
       )
     },
   },
+  {
+    version: 13,
+    name: 'gotify and bark notification channels',
+    up(db) {
+      db.exec(`
+        CREATE TABLE notification_channels_push (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          name TEXT NOT NULL,
+          type TEXT NOT NULL CHECK (type IN ('wecom_bot', 'feishu_bot', 'dingtalk_bot', 'webhook', 'smtp', 'gotify', 'bark')),
+          enabled INTEGER NOT NULL DEFAULT 1,
+          event_types_json TEXT NOT NULL DEFAULT '[]' CHECK (json_valid(event_types_json)),
+          config_enc TEXT NOT NULL,
+          key_version INTEGER NOT NULL DEFAULT 1,
+          last_test_at INTEGER,
+          last_test_ok INTEGER,
+          last_test_error TEXT,
+          created_at INTEGER NOT NULL,
+          updated_at INTEGER NOT NULL
+        );
+
+        INSERT INTO notification_channels_push
+          (id, user_id, name, type, enabled, event_types_json, config_enc, key_version,
+           last_test_at, last_test_ok, last_test_error, created_at, updated_at)
+        SELECT id, user_id, name, type, enabled, event_types_json, config_enc, key_version,
+               last_test_at, last_test_ok, last_test_error, created_at, updated_at
+        FROM notification_channels;
+
+        DROP TABLE notification_channels;
+        ALTER TABLE notification_channels_push RENAME TO notification_channels;
+
+        CREATE INDEX idx_channels_user ON notification_channels(user_id);
+      `)
+    },
+  },
 ]

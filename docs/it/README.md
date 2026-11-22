@@ -4,7 +4,7 @@
 
 L’interfaccia è disponibile in cinese semplificato, cinese tradizionale, inglese, tedesco, francese, italiano, giapponese, coreano, nordcoreano, olandese e russo. Puoi cambiarla dal selettore in alto a destra; questa impostazione è indipendente dalla lingua dei contenuti Steam.
 
-Sistema self-hosted multiutente per il monitoraggio dello stato di vendita di giochi e DLC su Steam. Utilizza SQLite per l'archiviazione dei dati, monitora **ritiro dal listino / delisting, sconti e uscite**, e invia notifiche tramite bot di gruppo WeCom, bot Feishu, bot DingTalk o e-mail SMTP.
+Sistema self-hosted multiutente per il monitoraggio dello stato di vendita di giochi e DLC su Steam. Utilizza SQLite per l'archiviazione dei dati, monitora **ritiro dal listino / delisting, sconti e uscite**, e invia notifiche tramite bot di gruppo WeCom, bot Feishu, bot DingTalk, notifiche Gotify / Bark o e-mail SMTP.
 Un unico processo espone contemporaneamente l'interfaccia Web, l'API REST, lo scheduler di polling di Steam, la coda di consegna delle notifiche, i callback Feishu / Lark / DingTalk, nonché le connessioni long-lived di Feishu, DingTalk Stream e WeCom: una soluzione adatta al deployment con Docker Compose su singola macchina.
 
 ## Funzionalità
@@ -13,7 +13,7 @@ Un unico processo espone contemporaneamente l'interfaccia Web, l'API REST, lo sc
 - **Elementi monitorati**: supporta appid, link allo store e ricerca per nome; supporta l'importazione in blocco di tutti i DLC di un gioco base.
 - **Cambi di stato**: uscita (inversione dello stato "coming soon"), data di uscita confermata / modificata, inizio / variazione / fine della promozione, variazione del prezzo originale, non disponibilità (delisting) e ripristino.
 - **Determinazione del delisting**: il delisting viene confermato solo dopo due inversioni consecutive dello stato di acquistabilità nello store; in combinazione con le parole chiave delle notizie Steam viene fornito un avviso anticipato (euristico, solo a titolo di riferimento).
-- **Canali di notifica**: bot di gruppo WeCom, bot personalizzato Feishu, bot personalizzato DingTalk, WebHook personalizzato, e-mail SMTP; nuovo tentativo automatico in caso di errore.
+- **Canali di notifica**: bot di gruppo WeCom, bot personalizzato Feishu, bot personalizzato DingTalk, WebHook personalizzato, notifiche Gotify / Bark, e-mail SMTP; nuovo tentativo automatico in caso di errore.
 - **Bot di comando**: bot applicativo Feishu / Lark (creazione con un clic tramite scansione del codice QR, callback HTTP o connessione long-lived WebSocket), bot DingTalk (creazione con un clic tramite scansione del codice QR, callback HTTP o connessione long-lived Stream), connessione long-lived del bot intelligente WeCom, con supporto alla creazione tramite scansione del codice QR, all'autorizzazione tramite pagina Web per utenti non autorizzati e alle notifiche degli eventi; supporta `/add`, `/list`, `/price`, `/check`, `/pause`, `/resume`, `/remove`, `/adddlc`, `/events`, `/cancel`; WeChat ClawBot e QQ Bot sono in fase di integrazione secondo i protocolli ufficiali delle rispettive piattaforme.
 - **Orientato alle operazioni**: health check, immagini Docker, backup online del database, criteri di conservazione dei dati configurabili.
 
@@ -183,6 +183,8 @@ Nella pagina "Canali di notifica" aggiunga un canale:
 - **Bot personalizzato DingTalk**: impostazioni del gruppo → assistente intelligente di gruppo → aggiungi bot; se abilita la firma aggiuntiva, inserisca anche la chiave di firma.
 - **WebHook personalizzato**: inserisca un endpoint HTTPS qualsiasi; il sistema invia gli eventi in POST come JSON, con chiave di firma HMAC e header Authorization opzionali.
 - **SMTP**: inserisca server, porta, SSL/TLS, mittente e destinatari (più indirizzi separati da virgola).
+- **Gotify**: URL del server e token dell'app, con priorità 0–10 facoltativa; i messaggi vengono inviati in Markdown.
+- **Bark**: chiave dispositivo e gruppo facoltativo; lascia vuoto l'URL del server per usare il servizio ufficiale `https://api.day.app` oppure indica un server self-hosted.
 
 Le chiavi vengono archiviate cifrate con AES-256-GCM tramite una chiave derivata da `APP_SECRET`; l'API non restituisce mai il testo in chiaro e, in fase di modifica, lasciare vuoto il campo significa mantenere il valore esistente.
 

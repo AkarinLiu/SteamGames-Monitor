@@ -19,10 +19,14 @@ import { sendFeishu } from './transports/feishuBot'
 import { sendDingtalk } from './transports/dingtalkBot'
 import { sendWebhook } from './transports/webhook'
 import { sendSmtp } from './transports/smtp'
+import { sendGotify } from './transports/gotify'
+import { sendBark } from './transports/bark'
 import type {
+  BarkChannelConfig,
   ChannelConfig,
   DingtalkChannelConfig,
   FeishuChannelConfig,
+  GotifyChannelConfig,
   RenderedMessage,
   SendResult,
   SmtpChannelConfig,
@@ -262,6 +266,10 @@ export function sendByChannel(
       return sendWebhook(config as WebhookChannelConfig, message)
     case 'smtp':
       return sendSmtp(config as SmtpChannelConfig, message)
+    case 'gotify':
+      return sendGotify(config as GotifyChannelConfig, message)
+    case 'bark':
+      return sendBark(config as BarkChannelConfig, message)
     default:
       return Promise.resolve({
         ok: false,

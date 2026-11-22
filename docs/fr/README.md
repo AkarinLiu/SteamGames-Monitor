@@ -4,7 +4,7 @@
 
 L’interface est disponible en chinois simplifié, chinois traditionnel, anglais, allemand, français, italien, japonais, coréen, nord-coréen, néerlandais et russe. Changez de langue via le sélecteur en haut à droite ; ce réglage est indépendant de la langue du contenu Steam.
 
-Système auto-hébergé et multi-utilisateurs de surveillance du statut de vente des jeux / DLC Steam. Les données sont stockées dans SQLite ; le système surveille les **retraits de vente / délistages à venir, les promotions et les sorties**, et notifie via un robot de groupe WeCom, un robot Feishu, un robot DingTalk ou des e-mails SMTP.
+Système auto-hébergé et multi-utilisateurs de surveillance du statut de vente des jeux / DLC Steam. Les données sont stockées dans SQLite ; le système surveille les **retraits de vente / délistages à venir, les promotions et les sorties**, et notifie via un robot de groupe WeCom, un robot Feishu, un robot DingTalk, des notifications Gotify / Bark ou des e-mails SMTP.
 Un même processus fournit à la fois l'interface Web, l'API REST, l'ordonnancement du polling Steam, la file de distribution des notifications, les callbacks Feishu / Lark / DingTalk, ainsi que les connexions longues Feishu, DingTalk Stream et WeCom ; il est adapté à un déploiement Docker Compose sur une seule machine.
 
 ## Fonctionnalités
@@ -13,7 +13,7 @@ Un même processus fournit à la fois l'interface Web, l'API REST, l'ordonnancem
 - **Éléments surveillés** : prise en charge de l'appid, du lien vers la boutique et de la recherche par nom ; import groupé de tous les DLC d'un jeu de base.
 - **Changements d'état** : sortie (basculement de « coming soon »), date de sortie confirmée / modifiée, début / variation / fin de promotion, changement du prix de base, indisponibilité (délistage) et restauration.
 - **Détermination du délistage** : le délistage n'est confirmé qu'après deux basculements consécutifs de l'état d'achat dans la boutique ; combiné à des mots-clés des actualités Steam pour une alerte anticipée (heuristique, à titre indicatif uniquement).
-- **Canaux de notification** : robot de groupe WeCom, robot personnalisé Feishu, robot personnalisé DingTalk, WebHook personnalisé, e-mail SMTP ; nouvelle tentative automatique en cas d'échec.
+- **Canaux de notification** : robot de groupe WeCom, robot personnalisé Feishu, robot personnalisé DingTalk, WebHook personnalisé, notifications Gotify / Bark, e-mail SMTP ; nouvelle tentative automatique en cas d'échec.
 - **Robots de commandes** : robot d'application Feishu / Lark (création en un clic par QR code, callback HTTP ou connexion longue WebSocket), robot DingTalk (création en un clic par QR code, callback HTTP ou connexion longue Stream), connexion longue du robot intelligent WeCom ; prise en charge de la création par QR code, de l'autorisation via une page Web et des notifications d'événements ; commandes `/add`, `/list`, `/price`, `/check`, `/pause`, `/resume`, `/remove`, `/adddlc`, `/events`, `/cancel` ; WeChat ClawBot et QQ Bot sont en cours d'intégration selon les protocoles officiels des plateformes.
 - **Exploitation facilitée** : contrôle de santé, image Docker, sauvegarde de la base en ligne, politique de rétention des données configurable.
 
@@ -183,6 +183,8 @@ Ajoutez un canal dans la page « Canaux de notification » :
 - **Robot personnalisé DingTalk** : Paramètres du groupe → Assistant de groupe intelligent → Ajouter un robot ; si la signature est activée, renseignez également la clé de signature.
 - **WebHook personnalisé** : renseignez n'importe quelle interface HTTPS ; le système envoie les événements en JSON via POST, avec une clé de signature HMAC et un en-tête Authorization facultatifs.
 - **SMTP** : renseignez le serveur, le port, SSL/TLS, l'expéditeur et les destinataires (plusieurs adresses séparées par des virgules).
+- **Gotify** : URL du serveur et jeton de l'application, avec une priorité 0–10 facultative ; les messages sont envoyés en Markdown.
+- **Bark** : clé d'appareil et groupe facultatif ; laissez l'URL du serveur vide pour utiliser le service officiel `https://api.day.app`, ou indiquez un serveur auto-hébergé.
 
 Les clés sont stockées chiffrées en AES-256-GCM avec une clé dérivée de `APP_SECRET` ; l'API ne renvoie jamais le texte en clair ; laisser le champ vide lors de l'édition conserve la valeur existante.
 

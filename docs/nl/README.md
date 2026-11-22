@@ -4,7 +4,7 @@
 
 De interface is beschikbaar in Vereenvoudigd Chinees, Traditioneel Chinees, Engels, Duits, Frans, Italiaans, Japans, Koreaans, Noord-Koreaans, Nederlands en Russisch. Wissel via de selector rechtsboven; deze instelling staat los van de Steam-inhoudstaal.
 
-Zelfgehost multiuser-systeem voor het monitoren van de verkoopstatus van Steam-games en -DLC. De gegevens worden opgeslagen in SQLite. Het systeem monitort **aanstaande stopzetting van de verkoop / delisting, kortingen en releases** en verstuurt meldingen via WeCom-groepsbots, Feishu-bots, DingTalk-bots of SMTP-e-mail.
+Zelfgehost multiuser-systeem voor het monitoren van de verkoopstatus van Steam-games en -DLC. De gegevens worden opgeslagen in SQLite. Het systeem monitort **aanstaande stopzetting van de verkoop / delisting, kortingen en releases** en verstuurt meldingen via WeCom-groepsbots, Feishu-bots, DingTalk-bots, Gotify-/Bark-push of SMTP-e-mail.
 Hetzelfde proces levert tegelijk de webinterface, de REST API, de Steam-pollingscheduler, de afleverwachtrij voor notificaties, de callbacks van Feishu / Lark / DingTalk en de langdurige verbindingen van Feishu, DingTalk Stream en WeCom. Daarmee is het geschikt voor Docker Compose-deployment op één machine.
 
 ## Functies
@@ -13,7 +13,7 @@ Hetzelfde proces levert tegelijk de webinterface, de REST API, de Steam-pollings
 - **Monitoritems**: ondersteuning voor appid, winkel-URL en zoeken op naam; u kunt in één keer alle DLC van een basisgame importeren.
 - **Statuswijzigingen**: release (het omklappen van "coming soon"), releasedatum bevestigd / gewijzigd, begin / wijziging / einde van een actie, wijziging van de oorspronkelijke prijs, niet beschikbaar (delisting) en herstel.
 - **Delistingdetectie**: een delisting wordt pas bevestigd nadat de aankoopstatus in de winkel twee keer achter elkaar is omgeslagen; in combinatie met trefwoorden uit Steam-nieuws wordt een vroege waarschuwing gegeven (heuristisch, alleen ter indicatie).
-- **Notificatiekanalen**: WeCom-groepsbot, aangepaste Feishu-bot, aangepaste DingTalk-bot, aangepaste WebHook en SMTP-e-mail; mislukte leveringen worden automatisch opnieuw geprobeerd.
+- **Notificatiekanalen**: WeCom-groepsbot, aangepaste Feishu-bot, aangepaste DingTalk-bot, aangepaste WebHook, Gotify-/Bark-push en SMTP-e-mail; mislukte leveringen worden automatisch opnieuw geprobeerd.
 - **Commando-bots**: Feishu-/Lark-appbots (met één QR-scan aanmaken, HTTP-callback of WebSocket-langdurige verbinding), DingTalk-bots (met één QR-scan aanmaken, HTTP-callback of Stream-langdurige verbinding) en de langdurige verbinding van de WeCom-slimme robot; met ondersteuning voor aanmaken via QR-code, webautorisatie voor niet-geautoriseerde gebruikers en gebeurtenismeldingen; ondersteunt `/add`, `/list`, `/price`, `/check`, `/pause`, `/resume`, `/remove`, `/adddlc`, `/events`, `/cancel`; WeChat ClawBot en QQ Bot worden volgens de officiële platformprotocollen geïntegreerd.
 - **Operationeel vriendelijk**: health check, Docker-images, online back-up van de database en een configureerbaar bewaarbeleid voor gegevens.
 
@@ -183,6 +183,8 @@ Voeg op de pagina "Notificatiekanalen" een kanaal toe:
 - **Aangepaste DingTalk-bot**: groepinstellingen → Slimme groepsassistent → Bot toevoegen; als u ondertekening inschakelt, vult u ook de ondertekeningssleutel in.
 - **Aangepaste WebHook**: vul een willekeurig HTTPS-endpoint in; het systeem verstuurt JSON-gebeurtenissen via POST, optioneel met een HMAC-handtekeningsleutel en een Authorization-header.
 - **SMTP**: vul server, poort, SSL/TLS, afzender en ontvangers in (meerdere adressen kommagescheiden).
+- **Gotify**: server-URL en app-token, met optionele prioriteit 0–10; berichten worden als Markdown verzonden.
+- **Bark**: apparaatsleutel en optionele groep; laat de server-URL leeg om de officiële `https://api.day.app` te gebruiken, of wijs naar een zelfgehoste server.
 
 Sleutels worden versleuteld opgeslagen met AES-256-GCM op basis van een uit `APP_SECRET` afgeleide sleutel; de API geeft nooit platte tekst terug en een leeg veld bij het bewerken betekent dat de bestaande waarde behouden blijft.
 

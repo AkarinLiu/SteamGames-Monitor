@@ -141,6 +141,40 @@ describe('notification delivery', () => {
     })
   }
 
+  async function addGotifyChannel(userId: number) {
+    const { createChannel } = await import('../db/repo/channels')
+    const { encryptConfig, channelAad, currentKeyVersion } = await import('./secrets')
+    return createChannel(db!, {
+      userId,
+      name: 'Gotify 推送',
+      type: 'gotify',
+      enabled: true,
+      eventTypes: [],
+      configEnc: encryptConfig(
+        { serverUrl: `${baseUrl}/gotify`, token: 'gotify-token', priority: 8 },
+        channelAad(userId, 'gotify'),
+      ),
+      keyVersion: currentKeyVersion(),
+    })
+  }
+
+  async function addBarkChannel(userId: number) {
+    const { createChannel } = await import('../db/repo/channels')
+    const { encryptConfig, channelAad, currentKeyVersion } = await import('./secrets')
+    return createChannel(db!, {
+      userId,
+      name: 'Bark 推送',
+      type: 'bark',
+      enabled: true,
+      eventTypes: [],
+      configEnc: encryptConfig(
+        { serverUrl: `${baseUrl}/bark`, deviceKey: 'bark-key', group: 'Steam' },
+        channelAad(userId, 'bark'),
+      ),
+      keyVersion: currentKeyVersion(),
+    })
+  }
+
   async function addNotifyingBot(userId: number, notifyEnabled = true) {
     const { createBot, touchBotChat } = await import('../db/repo/bots')
     const { encryptConfig, botAad, currentKeyVersion } = await import('./secrets')
@@ -254,6 +288,48 @@ describe('notification delivery', () => {
       .update(`${timestamp}.${request.raw}`)
       .digest('hex')}`
     expect(signature).toBe(expected)
+  })
+
+  it('sends gotify notifications with markdown and priority', async () => {
+    const { user, event } = await seed()
+    await addGotifyChannel(user.id)
+    const { enqueueEventDeliveries } = await import('./dispatcher')
+    const { DeliveryWorker } = await import('./deliveryWorker')
+
+    expect(enqueueEventDeliveries(db!, event)).toBe(1)
+    const worker = new DeliveryWorker(db!)
+    expect(await worker.tick()).toBe(1)
+
+    const request = received[0]!
+    expect(request.path).toBe('/gotify/message')
+    expect(request.headers['x-gotify-key']).toBe('gotify-token')
+    expect(request.body).toMatchObject({
+      title: '【促销开始】赛博朋克 2077',
+      priority: 8,
+      extras: { 'client::display': { contentType: 'text/markdown' } },
+    })
+    expect(request.body.message as string).toContain('-50%')
+  })
+
+  it('sends bark notifications with device key, group and store link', async () => {
+    const { user, event } = await seed()
+    await addBarkChannel(user.id)
+    const { enqueueEventDeliveries } = await import('./dispatcher')
+    const { DeliveryWorker } = await import('./deliveryWorker')
+
+    expect(enqueueEventDeliveries(db!, event)).toBe(1)
+    const worker = new DeliveryWorker(db!)
+    expect(await worker.tick()).toBe(1)
+
+    const request = received[0]!
+    expect(request.path).toBe('/bark/push')
+    expect(request.body).toMatchObject({
+      device_key: 'bark-key',
+      group: 'Steam',
+      title: '【促销开始】赛博朋克 2077',
+      url: 'https://store.steampowered.com/app/1091500/',
+    })
+    expect(request.body.body as string).toContain('-50%')
   })
 
   it('renders event notifications in the owner UI language', async () => {

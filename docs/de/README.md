@@ -4,7 +4,7 @@
 
 Die Oberfläche ist auf vereinfachtem Chinesisch, traditionellem Chinesisch, Englisch, Deutsch, Französisch, Italienisch, Japanisch, Koreanisch, Nordkoreanisch, Niederländisch und Russisch verfügbar. Sie lässt sich oben rechts umschalten; diese Einstellung ist unabhängig von der Steam-Inhaltssprache.
 
-Selbst gehostetes Mehrbenutzer-Überwachungssystem für den Verkaufsstatus von Steam-Spielen und DLCs. Die Daten werden in SQLite gespeichert; überwacht werden **bevorstehende Verkaufsbeendigungen / Delistings, Rabattaktionen und Veröffentlichungen**, und die Benachrichtigung erfolgt über WeCom-Gruppenbots, Feishu-Bots, DingTalk-Bots oder SMTP-E-Mail.
+Selbst gehostetes Mehrbenutzer-Überwachungssystem für den Verkaufsstatus von Steam-Spielen und DLCs. Die Daten werden in SQLite gespeichert; überwacht werden **bevorstehende Verkaufsbeendigungen / Delistings, Rabattaktionen und Veröffentlichungen**, und die Benachrichtigung erfolgt über WeCom-Gruppenbots, Feishu-Bots, DingTalk-Bots, Gotify- oder Bark-Push oder SMTP-E-Mail.
 Ein einzelner Prozess stellt gleichzeitig die Weboberfläche, die REST-API, die Steam-Abfrageplanung, die Zustellwarteschlange für Benachrichtigungen, Feishu-/Lark-/DingTalk-Rückrufe sowie Feishu-, DingTalk-Stream- und WeCom-Langzeitverbindungen bereit und eignet sich für die Bereitstellung mit Docker Compose auf einem einzelnen Host.
 
 ## Funktionen
@@ -13,7 +13,7 @@ Ein einzelner Prozess stellt gleichzeitig die Weboberfläche, die REST-API, die 
 - **Überwachungseinträge**: Unterstützt appid, Shop-Links und Namenssuche; außerdem den Massenimport aller DLCs eines Basisspiels.
 - **Statusänderungen**: Veröffentlichung (Wechsel von „coming soon“), bestätigtes / geändertes Veröffentlichungsdatum, Beginn / Änderung / Ende einer Rabattaktion, Änderung des Grundpreises, Nichtverfügbarkeit (Delisting) und Wiederherstellung.
 - **Delisting-Erkennung**: Ein Delisting gilt erst als bestätigt, wenn der Kaufsstatus im Shop zweimal in Folge umschlägt; zusammen mit Schlüsselwörtern aus Steam-News erfolgt eine Vorwarnung (heuristisch, nur als Hinweis zu verstehen).
-- **Benachrichtigungskanäle**: WeCom-Gruppenbot, benutzerdefinierter Feishu-Bot, benutzerdefinierter DingTalk-Bot, benutzerdefinierter WebHook, SMTP-E-Mail; bei Fehlern wird automatisch erneut versucht.
+- **Benachrichtigungskanäle**: WeCom-Gruppenbot, benutzerdefinierter Feishu-Bot, benutzerdefinierter DingTalk-Bot, benutzerdefinierter WebHook, Gotify-/Bark-Push, SMTP-E-Mail; bei Fehlern wird automatisch erneut versucht.
 - **Befehls-Bots**: Feishu-/Lark-App-Bot (per QR-Code in einem Schritt erstellt, HTTP-Rückruf oder WebSocket-Langzeitverbindung), DingTalk-Bot (per QR-Code erstellt, HTTP-Rückruf oder Stream-Langzeitverbindung), WeCom-KI-Bot über Langzeitverbindung; unterstützt die Erstellung per QR-Code, die Web-Autorisierung nicht autorisierter Benutzer und Ereignisbenachrichtigungen; unterstützt `/add`, `/list`, `/price`, `/check`, `/pause`, `/resume`, `/remove`, `/adddlc`, `/events`, `/cancel`; WeChat ClawBot und QQ Bot werden derzeit gemäß den offiziellen Plattformprotokollen angebunden.
 - **Betriebsfreundlich**: Health Checks, Docker-Images, Online-Sicherung der Datenbank, konfigurierbare Aufbewahrungsrichtlinie für Daten.
 
@@ -183,6 +183,8 @@ Fügen Sie auf der Seite „Benachrichtigungskanäle“ einen Kanal hinzu:
 - **Benutzerdefinierter DingTalk-Bot**: Gruppeneinstellungen → Intelligenter Gruppenassistent → Bot hinzufügen; wenn die Signierung aktiviert ist, tragen Sie zusätzlich den Signaturschlüssel ein.
 - **Benutzerdefinierter WebHook**: Geben Sie eine beliebige HTTPS-Schnittstelle an; das System sendet die JSON-Ereignisse per POST, optional mit HMAC-Signaturschlüssel und Authorization-Header.
 - **SMTP**: Server, Port, SSL/TLS, Absender und Empfänger eintragen (mehrere Adressen durch Kommas getrennt).
+- **Gotify**: Server-URL und App-Token eintragen, optional mit Priorität 0–10; Nachrichten werden als Markdown gesendet.
+- **Bark**: Geräteschlüssel und optionale Gruppe eintragen; die Server-URL leer lassen, um den offiziellen Dienst `https://api.day.app` zu verwenden, oder einen selbst gehosteten Server angeben.
 
 Schlüssel werden mit AES-256-GCM verschlüsselt gespeichert, wobei der Schlüssel aus `APP_SECRET` abgeleitet wird; die API gibt niemals Klartext zurück, und ein leeres Feld beim Bearbeiten bedeutet, dass der bisherige Wert beibehalten wird.
 

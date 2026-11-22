@@ -321,6 +321,8 @@ export const CHANNEL_TYPE_OPTIONS: Option<ChannelType>[] = [
   { value: 'dingtalk_bot', label: '钉钉机器人' },
   { value: 'webhook', label: '自定义 WebHook' },
   { value: 'smtp', label: 'SMTP 邮件' },
+  { value: 'gotify', label: 'Gotify 推送' },
+  { value: 'bark', label: 'Bark 推送' },
 ]
 
 export const BOT_PLATFORM_OPTIONS: Option<BotPlatform>[] = [

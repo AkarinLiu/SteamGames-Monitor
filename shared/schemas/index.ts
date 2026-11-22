@@ -305,12 +305,26 @@ export const SmtpConfigSchema = z.object({
   to: z.array(trimmed(3, 320)).min(1).max(20),
 })
 
+export const GotifyChannelConfigSchema = z.object({
+  serverUrl: HttpUrlSchema,
+  token: trimmed(1, 200),
+  priority: z.number().int().min(0).max(10).optional().default(5),
+})
+
+export const BarkChannelConfigSchema = z.object({
+  serverUrl: HttpUrlSchema.optional().default('https://api.day.app'),
+  deviceKey: trimmed(1, 200),
+  group: z.string().trim().max(64).optional().default(''),
+})
+
 export const CHANNEL_CONFIG_SCHEMAS = {
   wecom_bot: WecomChannelConfigSchema,
   feishu_bot: FeishuChannelConfigSchema,
   dingtalk_bot: DingtalkChannelConfigSchema,
   webhook: WebhookChannelConfigSchema,
   smtp: SmtpConfigSchema,
+  gotify: GotifyChannelConfigSchema,
+  bark: BarkChannelConfigSchema,
 } as const
 
 const channelCommon = {
@@ -341,6 +355,16 @@ export const CreateChannelSchema = z.discriminatedUnion('type', [
     config: WebhookChannelConfigSchema,
   }),
   z.object({ type: z.literal('smtp'), ...channelCommon, config: SmtpConfigSchema }),
+  z.object({
+    type: z.literal('gotify'),
+    ...channelCommon,
+    config: GotifyChannelConfigSchema,
+  }),
+  z.object({
+    type: z.literal('bark'),
+    ...channelCommon,
+    config: BarkChannelConfigSchema,
+  }),
 ])
 
 export const UpdateChannelSchema = z.object({

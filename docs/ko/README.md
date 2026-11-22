@@ -4,7 +4,7 @@
 
 인터페이스는 중국어 간체, 중국어 번체, 영어, 독일어, 프랑스어, 이탈리아어, 일본어, 한국어, 조선어, 네덜란드어, 러시아어를 지원합니다. 오른쪽 위 선택기에서 전환할 수 있으며, 이 설정은 Steam 콘텐츠 언어와 별개입니다.
 
-자체 호스팅 방식의 다중 사용자 Steam 게임 / DLC 판매 상태 모니터링 시스템입니다. SQLite에 데이터를 저장하고, **곧 판매 중단 / 스토어 삭제, 할인, 출시**를 모니터링하며, WeCom 그룹 봇, Feishu 봇, DingTalk 봇 또는 SMTP 이메일로 알림을 보냅니다.
+자체 호스팅 방식의 다중 사용자 Steam 게임 / DLC 판매 상태 모니터링 시스템입니다. SQLite에 데이터를 저장하고, **곧 판매 중단 / 스토어 삭제, 할인, 출시**를 모니터링하며, WeCom 그룹 봇, Feishu 봇, DingTalk 봇, Gotify / Bark 푸시 또는 SMTP 이메일로 알림을 보냅니다.
 하나의 프로세스가 웹 UI, REST API, Steam 폴링 스케줄러, 알림 전달 큐, Feishu / Lark / DingTalk 콜백, 그리고 Feishu·DingTalk Stream과 WeCom 롱 커넥션을 동시에 제공하므로 단일 머신 Docker Compose 배포에 적합합니다.
 
 ## 기능
@@ -13,7 +13,7 @@
 - **모니터링 항목**: appid, 스토어 링크, 이름 검색을 지원하며, 기본 게임의 모든 DLC를 일괄 가져올 수 있습니다.
 - **상태 변화**: 출시(coming soon 전환), 출시일 확정 / 변경, 프로모션 시작 / 변경 / 종료, 정가 변경, 구매 불가(판매 중단)와 복구.
 - **판매 중단 판정**: 스토어 구매 가능 상태가 연속 두 번 뒤집혀야 판매 중단으로 확정하며, Steam 뉴스 키워드를 함께 활용해 사전 경고를 제공합니다(휴리스틱, 참고용).
-- **알림 채널**: WeCom 그룹 봇, Feishu 사용자 지정 봇, DingTalk 사용자 지정 봇, 사용자 지정 WebHook, SMTP 이메일. 실패 시 자동으로 재시도합니다.
+- **알림 채널**: WeCom 그룹 봇, Feishu 사용자 지정 봇, DingTalk 사용자 지정 봇, 사용자 지정 WebHook, Gotify / Bark 푸시, SMTP 이메일. 실패 시 자동으로 재시도합니다.
 - **명령 봇**: Feishu / Lark 앱 봇(QR 원클릭 생성, HTTP 콜백 또는 WebSocket 롱 커넥션), DingTalk 봇(QR 원클릭 생성, HTTP 콜백 또는 Stream 롱 커넥션), WeCom 스마트 봇 롱 커넥션. QR 생성, 미승인 사용자 웹 인증, 이벤트 알림을 제공하며 `/add`, `/list`, `/price`, `/check`, `/pause`, `/resume`, `/remove`, `/adddlc`, `/events`, `/cancel` 명령을 지원합니다. WeChat ClawBot과 QQ Bot은 플랫폼 공식 프로토콜에 따라 연동 중입니다.
 - **운영 친화적**: 헬스 체크, Docker 이미지, 데이터베이스 온라인 백업, 구성 가능한 데이터 보존 정책.
 
@@ -183,6 +183,8 @@ gh secret set DOCKERHUB_TOKEN --repo AkarinLiu/SteamGames-Monitor
 - **DingTalk 사용자 지정 봇**: 그룹 설정 → 스마트 그룹 도우미 → 봇 추가. 서명을 사용하는 경우 서명 키도 함께 입력하세요.
 - **사용자 지정 WebHook**: 임의의 HTTPS 엔드포인트를 입력합니다. 시스템이 JSON 이벤트를 POST하며, HMAC 서명 키와 Authorization 헤더는 선택 사항입니다.
 - **SMTP**: 서버, 포트, SSL/TLS, 발신자와 수신자를 입력합니다(여러 주소는 쉼표로 구분).
+- **Gotify**: 서버 주소와 앱 Token을 입력합니다. 우선순위(0–10)는 선택 사항이며 메시지는 Markdown으로 전송됩니다.
+- **Bark**: 기기 키와 선택적 그룹을 입력합니다. 서버 주소를 비워 두면 공식 `https://api.day.app`을 사용하며, 자체 호스팅 서버도 지정할 수 있습니다.
 
 키는 `APP_SECRET`에서 파생된 AES-256-GCM으로 암호화되어 저장되며, API는 평문을 반환하지 않습니다. 편집 시 비워 두면 기존 값을 유지합니다.
 

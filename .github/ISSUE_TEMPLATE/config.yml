@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 部署与使用文档 / Documentation
+    url: https://github.com/AkarinLiu/SteamGames-Monitor#readme
+    about: 安装、升级、通知渠道与指令机器人配置 / Installation, upgrades, notification channels, and bot setup
+  - name: 自定义 WebHook 文档 / Custom WebHook docs
+    url: https://github.com/AkarinLiu/SteamGames-Monitor/blob/main/docs/en/CUSTOM_WEBHOOK.md
+    about: Payload 字段、请求格式与签名算法 / Payload fields, request format, and signature algorithm

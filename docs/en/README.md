@@ -4,7 +4,7 @@
 
 The interface is available in Simplified Chinese, Traditional Chinese, English, German, French, Italian, Japanese, Korean, North Korean, Dutch, and Russian. Switch it from the top-right selector; this setting is independent of the Steam content language.
 
-A self-hosted, multi-user monitoring system for Steam game / DLC sales status. Data is stored in SQLite; the system monitors **upcoming delistings / removals, discounts, and releases**, and sends notifications through WeCom group bots, Feishu bots, DingTalk bots, or SMTP email.
+A self-hosted, multi-user monitoring system for Steam game / DLC sales status. Data is stored in SQLite; the system monitors **upcoming delistings / removals, discounts, and releases**, and sends notifications through WeCom group bots, Feishu bots, DingTalk bots, Gotify / Bark push, or SMTP email.
 A single process serves the web UI, REST API, Steam polling scheduler, notification delivery queue, Feishu / Lark / DingTalk callbacks, and Feishu, DingTalk Stream, and WeCom long connections at the same time, making it suitable for single-host Docker Compose deployments.
 
 ## Features
@@ -13,7 +13,7 @@ A single process serves the web UI, REST API, Steam polling scheduler, notificat
 - **Monitors**: appid, store link, or name search; bulk-import all DLC for a base game.
 - **Status changes**: release (coming soon flips), release date announced / changed, sale start / change / end, base price change, unavailable (delisted), and restored.
 - **Delisting early warning**: the store purchasability state must flip twice in a row before a delisting is confirmed. Steam news and announcements are also scanned against a built-in multilingual keyword set (Chinese, English, Japanese, Korean, Russian, and more) covering sales removal, service shutdowns, and licence expiry, while filtering negations such as "will not be delisted" and unrelated contexts such as leaving a subscription or becoming paid (heuristic, for reference only).
-- **Notification channels**: WeCom group bot, Feishu custom bot, DingTalk custom bot, custom WebHook, SMTP email; failed deliveries are retried automatically.
+- **Notification channels**: WeCom group bot, Feishu custom bot, DingTalk custom bot, custom WebHook, Gotify / Bark push, SMTP email; failed deliveries are retried automatically.
 - **Command bots**: Feishu / Lark app bot (one-click QR creation, HTTP callback or WebSocket long connection), DingTalk bot (one-click QR creation, HTTP callback or Stream long connection), WeCom intelligent bot long connection, with QR creation, web authorization for unauthorized users, and event notifications; supports `/add`, `/list`, `/price`, `/check`, `/pause`, `/resume`, `/remove`, `/adddlc`, `/events`, `/cancel`; WeChat ClawBot and QQ Bot are being integrated following the platforms' official protocols.
 - **Operations friendly**: health checks, Docker image, online database backup, configurable data retention policy.
 
@@ -183,6 +183,8 @@ Add a channel on the "Notification channels" page:
 - **DingTalk custom bot**: group settings → smart group assistant → add bot; if signing is enabled, also fill in the signing secret.
 - **Custom WebHook**: any HTTPS endpoint; the system POSTs JSON events, with optional HMAC signing secret and Authorization header.
 - **SMTP**: server, port, SSL/TLS, sender, and recipients (separate multiple addresses with commas).
+- **Gotify**: server URL and app token, with an optional 0–10 priority; messages are sent as Markdown.
+- **Bark**: device key and optional group; leave the server URL blank to use the official `https://api.day.app`, or point it at a self-hosted server.
 
 Secrets are stored encrypted with AES-256-GCM using a key derived from `APP_SECRET`; the API never returns plaintext, and leaving a field empty when editing keeps the existing value.
 

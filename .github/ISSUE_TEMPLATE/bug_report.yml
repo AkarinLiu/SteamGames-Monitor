@@ -1,0 +1,112 @@
+name: 缺陷报告 / Bug report
+description: 报告可复现的故障或异常行为 / Report a reproducible bug
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢反馈！请尽量提供可复现步骤和日志，并**隐去 Token、密码、Webhook 地址、Cookie 等敏感信息**。
+        Thanks for reporting! Please include reproduction steps and logs, and **redact tokens, passwords, Webhook URLs, cookies, and other secrets**.
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: 提交前检查 / Before submitting
+      options:
+        - label: 我已搜索现有 Issue，确认没有重复 / I searched existing issues and found no duplicate
+          required: true
+        - label: 我使用的是最新版本，并已阅读相关文档 / I am using the latest version and have read the docs
+          required: true
+
+  - type: dropdown
+    id: deployment
+    attributes:
+      label: 部署方式 / Deployment
+      options:
+        - Docker Compose
+        - Docker
+        - 源码运行（pnpm dev / pnpm build）/ From source
+        - 其他 / Other
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: 版本 / Version
+      description: 可在页面底部、镜像标签或 package.json 中查看 / See the UI footer, image tag, or package.json
+      placeholder: 1.1.6
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: 影响范围 / Affected area
+      options:
+        - 监控与状态检测 / Monitoring and status detection
+        - 通知渠道 / Notification channels
+        - 指令机器人 / Command bots
+        - Web 界面 / Web UI
+        - 账号与权限 / Accounts and permissions
+        - 管理后台 / Admin
+        - Docker / 部署 / Deployment
+        - 其他 / Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: 问题描述 / What happened
+      description: 清楚描述实际行为与异常信息 / Describe the actual behavior and any errors
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤 / Steps to reproduce
+      placeholder: |
+        1. ...
+        2. ...
+        3. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望行为 / Expected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: 日志 / Logs
+      description: 粘贴相关日志，先删除敏感信息 / Paste relevant logs after removing secrets
+      render: shell
+
+  - type: input
+    id: environment
+    attributes:
+      label: 环境 / Environment
+      description: 操作系统、浏览器、反向代理等 / OS, browser, reverse proxy, etc.
+      placeholder: Windows 11 / Chrome 131 / Nginx
+
+  - type: textarea
+    id: config
+    attributes:
+      label: 相关配置 / Relevant configuration
+      description: 只保留与问题相关的配置项，务必隐去密钥 / Keep only relevant settings and redact secrets
+      render: yaml
+
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: 隐私确认 / Privacy check
+      options:
+        - label: 我已确认内容中不包含 Token、密码、Webhook 地址等敏感信息 / I confirm no tokens, passwords, or Webhook URLs are included
+          required: true

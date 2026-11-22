@@ -31,12 +31,26 @@ export interface SmtpChannelConfig {
   to: string[]
 }
 
+export interface GotifyChannelConfig {
+  serverUrl: string
+  token: string
+  priority?: number
+}
+
+export interface BarkChannelConfig {
+  serverUrl: string
+  deviceKey: string
+  group?: string
+}
+
 export type ChannelConfig =
   | WecomChannelConfig
   | FeishuChannelConfig
   | DingtalkChannelConfig
   | WebhookChannelConfig
   | SmtpChannelConfig
+  | GotifyChannelConfig
+  | BarkChannelConfig
 
 export interface SendResult {
   ok: boolean

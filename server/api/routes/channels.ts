@@ -47,19 +47,33 @@ function parseConfig(type: ChannelType, input: unknown): Record<string, unknown>
       return parseWith(CHANNEL_CONFIG_SCHEMAS.webhook, input)
     case 'smtp':
       return parseWith(CHANNEL_CONFIG_SCHEMAS.smtp, input)
+    case 'gotify':
+      return parseWith(CHANNEL_CONFIG_SCHEMAS.gotify, input)
+    case 'bark':
+      return parseWith(CHANNEL_CONFIG_SCHEMAS.bark, input)
     default:
       throw conflict(`不支持的通知渠道类型：${String(type)}`)
   }
 }
 
-function assertWebhookAllowed(type: ChannelType, config: Record<string, unknown>): void {
+function assertChannelTargetAllowed(type: ChannelType, config: Record<string, unknown>): void {
   if (type === 'smtp') return
-  const webhookUrl = config.webhookUrl
-  if (typeof webhookUrl === 'string') assertSafeOutboundUrl(webhookUrl)
+  const target =
+    type === 'gotify' || type === 'bark' ? config.serverUrl : config.webhookUrl
+  if (typeof target === 'string') assertSafeOutboundUrl(target)
 }
 
 function decryptChannelConfig(row: ChannelRow): ChannelConfig {
   return decryptConfig<ChannelConfig>(row.config_enc, channelAad(row.user_id, row.type))
+}
+
+function urlHost(raw: string | undefined): string {
+  if (!raw) return ''
+  try {
+    return new URL(raw).host
+  } catch {
+    return ''
+  }
 }
 
 function configSummary(type: ChannelType, config: ChannelConfig): Record<string, unknown> {
@@ -85,16 +99,33 @@ function configSummary(type: ChannelType, config: ChannelConfig): Record<string,
       passwordSet: Boolean(smtp.password),
     }
   }
-  const webhook = (config as { webhookUrl?: string }).webhookUrl ?? ''
-  let webhookHost = ''
-  try {
-    webhookHost = new URL(webhook).host
-  } catch {
-    webhookHost = ''
+  if (type === 'gotify') {
+    const gotify = config as { serverUrl?: string; token?: string; priority?: number }
+    return {
+      serverHost: urlHost(gotify.serverUrl),
+      serverSet: Boolean(gotify.serverUrl),
+      tokenSet: Boolean(gotify.token),
+      priority: gotify.priority ?? 5,
+    }
   }
+  if (type === 'bark') {
+    const bark = config as { serverUrl?: string; deviceKey?: string; group?: string }
+    return {
+      serverHost: urlHost(bark.serverUrl),
+      serverSet: Boolean(bark.serverUrl),
+      deviceKeySet: Boolean(bark.deviceKey),
+      group: bark.group ?? '',
+    }
+  }
+  const webhook = (config as { webhookUrl?: string }).webhookUrl ?? ''
   const secretSet = Boolean((config as { secret?: string }).secret)
   const authorizationSet = Boolean((config as { authorization?: string }).authorization)
-  return { webhookHost, webhookSet: Boolean(webhook), secretSet, authorizationSet }
+  return {
+    webhookHost: urlHost(webhook),
+    webhookSet: Boolean(webhook),
+    secretSet,
+    authorizationSet,
+  }
 }
 
 function toChannelView(row: ChannelRow): Record<string, unknown> {
@@ -117,6 +148,26 @@ function mergeConfig(
   replaceSecret: boolean,
 ): Record<string, unknown> {
   const merged: Record<string, unknown> = { ...existing }
+
+  if (type === 'gotify') {
+    for (const key of ['serverUrl', 'priority']) {
+      if (input[key] !== undefined) merged[key] = input[key]
+    }
+    if (typeof input.token === 'string' && (input.token || replaceSecret)) {
+      merged.token = input.token
+    }
+    return merged
+  }
+
+  if (type === 'bark') {
+    for (const key of ['serverUrl', 'group']) {
+      if (input[key] !== undefined) merged[key] = input[key]
+    }
+    if (typeof input.deviceKey === 'string' && (input.deviceKey || replaceSecret)) {
+      merged.deviceKey = input.deviceKey
+    }
+    return merged
+  }
 
   if (type === 'smtp') {
     for (const key of ['host', 'port', 'secure', 'requireTls', 'from', 'to']) {
@@ -160,7 +211,7 @@ export function channelRoutes(runtime: Runtime): Hono<AppBindings> {
       throw conflict(`每个账号最多创建 ${LIMITS.maxChannelsPerUser} 个通知渠道`)
     }
     const config = parseConfig(input.type, input.config)
-    assertWebhookAllowed(input.type, config)
+    assertChannelTargetAllowed(input.type, config)
     const encoded = encryptConfig(config, channelAad(user.id, input.type))
     const row = createChannel(db, {
       userId: user.id,
@@ -196,7 +247,7 @@ export function channelRoutes(runtime: Runtime): Hono<AppBindings> {
         input.replaceSecret === true,
       )
       const validated = parseConfig(row.type as ChannelType, merged)
-      assertWebhookAllowed(row.type as ChannelType, validated)
+      assertChannelTargetAllowed(row.type as ChannelType, validated)
       configEnc = encryptConfig(
         validated,
         channelAad(row.user_id, row.type),

@@ -41,6 +41,11 @@ const form = reactive({
   webhookUrl: '',
   secret: '',
   authorization: '',
+  serverUrl: '',
+  token: '',
+  priority: 5,
+  deviceKey: '',
+  group: '',
   host: '',
   port: 587,
   secure: true,
@@ -55,6 +60,7 @@ const deleteTarget = ref<ChannelView | null>(null)
 const deleteBusy = ref(false)
 
 const isSmtp = computed(() => form.type === 'smtp')
+const isPush = computed(() => form.type === 'gotify' || form.type === 'bark')
 const isEditing = computed(() => editing.value !== null)
 
 const CHANNEL_DOCS: Record<ChannelType, string> = {
@@ -63,6 +69,8 @@ const CHANNEL_DOCS: Record<ChannelType, string> = {
   dingtalk_bot: 'https://open.dingtalk.com/document/orgapp/custom-robot-access',
   webhook: '',
   smtp: 'https://nodemailer.com/smtp/',
+  gotify: 'https://gotify.net/docs/pushmsg',
+  bark: 'https://bark.day.app/#/tutorial',
 }
 
 const channelDocsUrl = computed(() => CHANNEL_DOCS[form.type])
@@ -79,6 +87,20 @@ function configSummary(channel: ChannelView): string {
     const to = Array.isArray(config.to) ? config.to.join(', ') : ''
     return `${host}${port ? `:${port}` : ''}${to ? ` → ${to}` : ''}`
   }
+  if (channel.type === 'gotify' || channel.type === 'bark') {
+    const host = typeof config.serverHost === 'string' ? config.serverHost : ''
+    let credential = ''
+    if (channel.type === 'gotify') {
+      credential = config.tokenSet === true ? t(" · 已配置 Token") : ''
+    } else {
+      credential = config.deviceKeySet === true ? t(" · 已配置设备 Key") : ''
+    }
+    const group =
+      channel.type === 'bark' && typeof config.group === 'string' && config.group
+        ? ` · ${config.group}`
+        : ''
+    return `${host || t("未配置服务器")}${credential}${group}`
+  }
   const host = typeof config.webhookHost === 'string' ? config.webhookHost : ''
   const secret = config.secretSet === true ? t(" · 已配置签名密钥") : ''
   const auth = config.authorizationSet === true ? t(" · 已配置 Authorization") : ''
@@ -93,6 +115,11 @@ function resetForm(): void {
   form.webhookUrl = ''
   form.secret = ''
   form.authorization = ''
+  form.serverUrl = ''
+  form.token = ''
+  form.priority = 5
+  form.deviceKey = ''
+  form.group = ''
   form.host = ''
   form.port = 587
   form.secure = true
@@ -126,6 +153,12 @@ function openEdit(channel: ChannelView): void {
     form.from = typeof config.from === 'string' ? config.from : ''
     form.to = Array.isArray(config.to) ? config.to.join(', ') : ''
   }
+  if (channel.type === 'gotify' && typeof config.priority === 'number') {
+    form.priority = config.priority
+  }
+  if (channel.type === 'bark' && typeof config.group === 'string') {
+    form.group = config.group
+  }
   dialogOpen.value = true
 }
 
@@ -158,6 +191,20 @@ function buildConfig(): Record<string, unknown> | null {
     if (form.password) config.password = form.password
     return config
   }
+  if (isPush.value) {
+    const config: Record<string, unknown> = {}
+    if (form.serverUrl.trim()) config.serverUrl = form.serverUrl.trim()
+    if (form.type === 'gotify') {
+      if (form.token.trim()) config.token = form.token.trim()
+      const priority = Number(form.priority)
+      config.priority = Number.isFinite(priority) ? priority : 5
+    } else {
+      if (form.deviceKey.trim()) config.deviceKey = form.deviceKey.trim()
+      if (form.group.trim()) config.group = form.group.trim()
+      else if (isEditing.value) config.group = ''
+    }
+    return config
+  }
   const config: Record<string, unknown> = {}
   if (form.webhookUrl.trim()) config.webhookUrl = form.webhookUrl.trim()
   if (form.secret.trim()) config.secret = form.secret.trim()
@@ -180,6 +227,16 @@ async function save(): Promise<void> {
   if (isSmtp.value) {
     if (!form.host.trim() || !form.from.trim() || !form.to.trim()) {
       dialogError.value = t("请填写 SMTP 服务器、发件人与至少一个收件人")
+      return
+    }
+  }
+  if (isPush.value && !isEditing.value) {
+    if (form.type === 'gotify' && (!form.serverUrl.trim() || !form.token.trim())) {
+      dialogError.value = t("请填写 Gotify 服务器地址与应用 Token")
+      return
+    }
+    if (form.type === 'bark' && !form.deviceKey.trim()) {
+      dialogError.value = t("请填写 Bark 设备 Key")
       return
     }
   }
@@ -285,7 +342,7 @@ onMounted(() => {
     <div class="page-header">
       <div>
         <h1>{{ $t("通知渠道") }}</h1>
-        <p>{{ $t("通过企业微信、飞书、钉钉群机器人、自定义 WebHook 或 SMTP 邮件接收状态变化通知。") }}</p>
+        <p>{{ $t("通过企业微信、飞书、钉钉群机器人、自定义 WebHook、Gotify / Bark 推送或 SMTP 邮件接收状态变化通知。") }}</p>
       </div>
       <div class="page-actions">
         <button class="btn btn-primary" type="button" @click="openCreate">{{ $t("添加渠道") }}</button>
@@ -308,7 +365,7 @@ onMounted(() => {
     <EmptyState
       v-else-if="store.items.length === 0"
       :title='$t("还没有通知渠道")'
-      :description='$t("配置群机器人、自定义 WebHook 或 SMTP 邮件，状态变化会自动推送。")'
+      :description='$t("配置群机器人、自定义 WebHook、Gotify / Bark 推送或 SMTP 邮件，状态变化会自动推送。")'
     >
       <button class="btn btn-primary" type="button" style="margin-top: 12px" @click="openCreate"> {{ $t("添加第一个渠道") }} </button>
     </EmptyState>
@@ -452,6 +509,72 @@ onMounted(() => {
             <div class="field">
               <label for="ch-to">{{ $t("收件人") }}</label>
               <input id="ch-to" v-model="form.to" class="input" :placeholder='$t("多个地址用逗号分隔")' />
+            </div>
+          </div>
+        </template>
+
+        <template v-else-if="isPush">
+          <div class="field">
+            <label for="ch-server">{{ $t("服务器地址") }}</label>
+            <input
+              id="ch-server"
+              v-model="form.serverUrl"
+              class="input"
+              :placeholder="
+                isEditing
+                  ? $t('留空保留当前值')
+                  : form.type === 'gotify'
+                    ? 'https://gotify.example.com'
+                    : 'https://api.day.app'
+              "
+            />
+            <span class="field-hint">
+              {{
+                form.type === 'gotify'
+                  ? $t("自建 Gotify 服务器，填写服务器地址与应用 Token，消息以 Markdown 发送。")
+                  : $t("Bark 服务器地址留空时使用官方 api.day.app，设备 Key 可在 App 中查看。")
+              }}
+            </span>
+          </div>
+          <div v-if="form.type === 'gotify'" class="grid-2">
+            <div class="field">
+              <label for="ch-token">{{ $t("应用 Token") }}</label>
+              <input
+                id="ch-token"
+                v-model="form.token"
+                class="input"
+                type="password"
+                autocomplete="new-password"
+                :placeholder="isEditing ? $t('留空保留当前值') : ''"
+              />
+            </div>
+            <div class="field">
+              <label for="ch-priority">{{ $t("优先级（0–10）") }}</label>
+              <input
+                id="ch-priority"
+                v-model.number="form.priority"
+                class="input"
+                type="number"
+                min="0"
+                max="10"
+              />
+            </div>
+          </div>
+          <div v-else class="grid-2">
+            <div class="field">
+              <label for="ch-device">{{ $t("设备 Key") }}</label>
+              <input
+                id="ch-device"
+                v-model="form.deviceKey"
+                class="input"
+                type="password"
+                autocomplete="new-password"
+                :placeholder="isEditing ? $t('留空保留当前值') : ''"
+              />
+            </div>
+            <div class="field">
+              <label for="ch-group">{{ $t("通知分组（可选）") }}</label>
+              <input id="ch-group" v-model="form.group" class="input" placeholder="SteamGames-Monitor" />
             </div>
           </div>
         </template>

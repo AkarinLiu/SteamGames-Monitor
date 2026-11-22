@@ -21,7 +21,14 @@ export type EventType =
 
 export type EventSeverity = 'info' | 'warning' | 'critical'
 
-export type ChannelType = 'wecom_bot' | 'feishu_bot' | 'dingtalk_bot' | 'webhook' | 'smtp'
+export type ChannelType =
+  | 'wecom_bot'
+  | 'feishu_bot'
+  | 'dingtalk_bot'
+  | 'webhook'
+  | 'smtp'
+  | 'gotify'
+  | 'bark'
 export type BotPlatform = 'feishu' | 'dingtalk' | 'wecom'
 export type BotAccessRole = 'admin' | 'viewer'
 export type FeishuBrand = 'feishu' | 'lark'

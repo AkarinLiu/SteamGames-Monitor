@@ -224,6 +224,48 @@ describe('channel API', () => {
     expect(deleteB.status).toBe(404)
   })
 
+  it('creates a gotify channel without echoing the app token', async () => {
+    const { cookie } = await loginAs('member', 'alice')
+    const created = await api('/channels', cookie, {
+      method: 'POST',
+      body: JSON.stringify({
+        type: 'gotify',
+        name: 'Gotify',
+        config: { serverUrl: `${baseUrl}/gotify`, token: 'gotify-token' },
+      }),
+    })
+    expect(created.status).toBe(201)
+    const body = (await created.json()) as { channel: { config: Record<string, unknown> } }
+    expect(JSON.stringify(body)).not.toContain('gotify-token')
+    expect(body.channel.config).toMatchObject({
+      serverHost: `127.0.0.1:${new URL(baseUrl).port}`,
+      serverSet: true,
+      tokenSet: true,
+      priority: 5,
+    })
+  })
+
+  it('defaults the bark server and hides the device key', async () => {
+    const { cookie } = await loginAs('member', 'alice')
+    const created = await api('/channels', cookie, {
+      method: 'POST',
+      body: JSON.stringify({
+        type: 'bark',
+        name: 'Bark',
+        config: { deviceKey: 'bark-key' },
+      }),
+    })
+    expect(created.status).toBe(201)
+    const body = (await created.json()) as { channel: { config: Record<string, unknown> } }
+    expect(JSON.stringify(body)).not.toContain('bark-key')
+    expect(body.channel.config).toMatchObject({
+      serverHost: 'api.day.app',
+      serverSet: true,
+      deviceKeySet: true,
+      group: '',
+    })
+  })
+
   it('requires authentication', async () => {
     const response = await app.request('/api/channels')
     expect(response.status).toBe(401)

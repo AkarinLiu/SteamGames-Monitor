@@ -105,6 +105,8 @@ const commands = [
             <li>{{ $t("钉钉自定义机器人：markdown，支持加签，90037 等限流错误会自动重试。") }}</li>
             <li>{{ $t("自定义 WebHook：POST JSON 事件，可选 HMAC-SHA256 签名与 Authorization 头。") }}</li>
             <li>{{ $t("SMTP 邮件：同时发送纯文本与 HTML，主题不超过 200 字符。") }}</li>
+            <li>{{ $t("Gotify：POST Markdown 消息到自建服务器，可设置 0–10 优先级。") }}</li>
+            <li>{{ $t("Bark：通过官方或自建服务器推送到 iOS，支持通知分组与点击跳转商店。") }}</li>
             <li>{{ $t("投递失败会按 30 秒 → 2 分钟 → 10 分钟 → 1 小时 → 6 小时 → 24 小时重试，最多 6 次。") }}</li>
           </ul>
         </section>
