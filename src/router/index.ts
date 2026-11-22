@@ -91,6 +91,12 @@ const router = createRouter({
           meta: { title: '帮助', subtitle: '接入步骤与指令说明' },
         },
         {
+          path: 'about',
+          name: 'about',
+          component: () => import('../views/AboutView.vue'),
+          meta: { title: '关于' },
+        },
+        {
           path: 'admin/users',
           name: 'admin-users',
           component: () => import('../views/AdminUsersView.vue'),

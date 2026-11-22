@@ -63,6 +63,7 @@ async function logout(): Promise<void> {
       <div class="nav-section">{{ $t("其他") }}</div>
       <RouterLink :to="{ name: 'settings' }" class="nav-link" :class="{ active: navActive('settings') }" active-class="" exact-active-class="">{{ $t("个人设置") }}</RouterLink>
       <RouterLink :to="{ name: 'help' }" class="nav-link" :class="{ active: navActive('help') }" active-class="" exact-active-class="">{{ $t("帮助") }}</RouterLink>
+      <RouterLink :to="{ name: 'about' }" class="nav-link" :class="{ active: navActive('about') }" active-class="" exact-active-class="">{{ $t("关于") }}</RouterLink>
 
       <div class="sidebar-spacer" />
       <div class="sidebar-footer">
